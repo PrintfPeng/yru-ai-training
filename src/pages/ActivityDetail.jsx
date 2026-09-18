@@ -16,10 +16,12 @@ import {
   Send,
   Info,
   QrCode,
+  Loader2,
+  XCircle,
 } from 'lucide-react';
+import { registrationsApi, ApiError } from '../api';
 
 const ActivityDetail = ({ activity, onBack }) => {
-  // Mockup form state — จะถูกแทนที่ด้วย dynamic form ที่ดึงจากหลังบ้าน (create-form) ทีหลัง
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -29,17 +31,53 @@ const ActivityDetail = ({ activity, onBack }) => {
     note: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: ส่งข้อมูลไป backend เมื่อ dynamic form พร้อม
-    console.log('Register payload (mockup):', { activityId: activity?.id, ...formData });
-    setSubmitted(true);
+    setSubmitError('');
+    if (!activity?.slug) {
+      setSubmitError('ไม่พบข้อมูลหลักสูตร กรุณาลองใหม่');
+      return;
+    }
+    // Split fullName into first + last (best-effort)
+    const [first, ...rest] = formData.fullName.trim().split(/\s+/);
+    const last = rest.join(' ') || '-';
+
+    setSubmitting(true);
+    try {
+      await registrationsApi.publicRegister(
+        activity.slug,
+        {
+          first_name:   first,
+          last_name:    last,
+          email:        formData.email.trim(),
+          phone:        formData.phone.trim(),
+          organization: formData.organization || null,
+          position:     formData.position || null,
+        },
+        formData.note || null,
+      );
+      setSubmitted(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'DUPLICATE_REGISTRATION') {
+        setSubmitError('คุณลงทะเบียนหลักสูตรนี้ไว้แล้ว');
+      } else if (err instanceof ApiError && err.code === 'OVER_CAPACITY') {
+        setSubmitError('หลักสูตรนี้เต็มแล้ว กรุณาติดต่อผู้จัด');
+      } else if (err instanceof ApiError && err.code === 'ACTIVITY_NOT_OPEN') {
+        setSubmitError('หลักสูตรยังไม่เปิดรับสมัคร');
+      } else {
+        setSubmitError(err?.message || 'ส่งไม่สำเร็จ กรุณาลองใหม่');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const levelColor = (level) => {
@@ -336,12 +374,29 @@ const ActivityDetail = ({ activity, onBack }) => {
                     />
                   </div>
 
+                  {submitError && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400">
+                      <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    className="w-full mt-2 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-white bg-gradient-to-r from-yrupink-500 to-yrupink-600 hover:from-yrupink-600 hover:to-yrupink-700 shadow-lg shadow-yrupink-500/20 hover:shadow-yrupink-500/40 transition-all duration-300"
+                    disabled={submitting}
+                    className="w-full mt-2 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-white bg-gradient-to-r from-yrupink-500 to-yrupink-600 hover:from-yrupink-600 hover:to-yrupink-700 disabled:opacity-60 shadow-lg shadow-yrupink-500/20 hover:shadow-yrupink-500/40 transition-all duration-300"
                   >
-                    <Send className="w-4 h-4" />
-                    ลงทะเบียน
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        กำลังส่ง...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        ลงทะเบียน
+                      </>
+                    )}
                   </button>
 
                   <p className="text-xs text-center text-gray-500 dark:text-yrugray-400 mt-2">
