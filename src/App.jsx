@@ -68,8 +68,10 @@ function App() {
         <AssessmentSurvey
           activity={eventState.activity}
           registrant={eventState.registrant}
-          onComplete={() =>
-            setEventState({ ...eventState, step: 'cert' })
+          onComplete={(_answers, result) =>
+            // result = { registration_id, certificate: { certificate_code, ... } }
+            setEventState({ ...eventState, step: 'cert',
+              certificateCode: result?.certificate?.certificate_code })
           }
           onCancel={exitEventFlow}
         />
@@ -80,6 +82,7 @@ function App() {
         <CertificateDownload
           activity={eventState.activity}
           registrant={eventState.registrant}
+          certificateCode={eventState.certificateCode}
           onBackHome={exitEventFlow}
         />
       );

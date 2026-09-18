@@ -1,95 +1,55 @@
-import React, { useState } from 'react';
-import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight, Loader2 } from 'lucide-react';
 import ActivityDetail from './ActivityDetail';
+import { activitiesApi } from '../api';
 
 const TrainingActivity = ({ onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
   const [selectedActivity, setSelectedActivity] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const categories = ['ทั้งหมด', 'พื้นฐาน AI', 'Machine Learning', 'Deep Learning', 'Prompt Engineering', 'AI สำหรับธุรกิจ'];
+  useEffect(() => {
+    let cancelled = false;
+    activitiesApi.list({ status: 'published' })
+      .then((rows) => {
+        if (cancelled) return;
+        // Normalize API rows to the shape the card UI already expects.
+        const mapped = (rows || []).map((r) => ({
+          id: r.id,
+          slug: r.slug,
+          title: r.title,
+          description: r.description,
+          location: r.location,
+          date: new Date(r.start_date).toLocaleDateString('th-TH', {
+            year: 'numeric', month: 'short', day: 'numeric',
+          }),
+          duration: r.end_date && r.start_date
+            ? `${Math.max(1, Math.ceil((new Date(r.end_date) - new Date(r.start_date)) / 86400000))} วัน`
+            : '',
+          seats: r.capacity,
+          seats_left: r.seats_left,
+          image: r.cover_image_url,
+          level: 'เริ่มต้น', // API schema doesn't carry level yet — placeholder
+          category: '',      // same — future field
+          raw: r,
+        }));
+        setActivities(mapped);
+      })
+      .catch((e) => !cancelled && setLoadError(e))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, []);
 
-  // Placeholder data — ในอนาคตดึงจาก API/Admin ได้
-  const activities = [
-    {
-      id: 1,
-      title: 'พื้นฐาน AI สำหรับผู้เริ่มต้น',
-      category: 'พื้นฐาน AI',
-      description: 'เรียนรู้แนวคิดพื้นฐานของปัญญาประดิษฐ์ ประเภทของ AI และการประยุกต์ใช้ในชีวิตประจำวัน',
-      date: '15 ต.ค. 2568',
-      duration: '2 วัน',
-      seats: 30,
-      location: 'ห้องประชุมชั้น 3 อาคาร AI Center',
-      level: 'เริ่มต้น',
-      image: 'https://picsum.photos/seed/ai-intro/800/450',
-    },
-    {
-      id: 2,
-      title: 'Prompt Engineering ขั้นสูง',
-      category: 'Prompt Engineering',
-      description: 'เทคนิคการเขียน Prompt เพื่อสั่งงาน LLM ให้ได้ผลลัพธ์ตามต้องการ พร้อม workshop จริง',
-      date: '22 ต.ค. 2568',
-      duration: '1 วัน',
-      seats: 25,
-      location: 'ห้อง Lab AI Center',
-      level: 'ปานกลาง',
-      image: 'https://picsum.photos/seed/prompt-eng/800/450',
-    },
-    {
-      id: 3,
-      title: 'Machine Learning ด้วย Python',
-      category: 'Machine Learning',
-      description: 'เขียน ML model ด้วย scikit-learn ตั้งแต่ preprocessing ไปจนถึง evaluation',
-      date: '5 พ.ย. 2568',
-      duration: '3 วัน',
-      seats: 20,
-      location: 'ห้อง Lab คอมพิวเตอร์ อาคาร 20',
-      level: 'ปานกลาง',
-      image: 'https://picsum.photos/seed/ml-python/800/450',
-    },
-    {
-      id: 4,
-      title: 'Deep Learning และ Neural Networks',
-      category: 'Deep Learning',
-      description: 'ทำความเข้าใจ Neural Network, CNN, RNN และการสร้างโมเดลด้วย TensorFlow/PyTorch',
-      date: '19 พ.ย. 2568',
-      duration: '4 วัน',
-      seats: 15,
-      location: 'ห้อง Lab AI Center',
-      level: 'ขั้นสูง',
-      image: 'https://picsum.photos/seed/deep-learning/800/450',
-    },
-    {
-      id: 5,
-      title: 'AI สำหรับ SME และผู้ประกอบการ',
-      category: 'AI สำหรับธุรกิจ',
-      description: 'นำ AI มาปรับใช้กับธุรกิจ SME ในพื้นที่ 3 จังหวัดชายแดนใต้ พร้อมกรณีศึกษาจริง',
-      date: '3 ธ.ค. 2568',
-      duration: '2 วัน',
-      seats: 40,
-      location: 'ห้องประชุมใหญ่ มหาวิทยาลัยราชภัฏยะลา',
-      level: 'เริ่มต้น',
-      image: 'https://picsum.photos/seed/ai-sme/800/450',
-    },
-    {
-      id: 6,
-      title: 'สร้าง Chatbot ด้วย AI Agent',
-      category: 'พื้นฐาน AI',
-      description: 'workshop ปฏิบัติจริงในการสร้าง Chatbot ด้วย LLM และ Framework สมัยใหม่',
-      date: '17 ธ.ค. 2568',
-      duration: '2 วัน',
-      seats: 25,
-      location: 'ห้อง Lab AI Center',
-      level: 'ปานกลาง',
-      image: 'https://picsum.photos/seed/chatbot-agent/800/450',
-    },
-  ];
+  // Categories are derived from the loaded rows (extendable when API adds a `category` field)
+  const categories = ['ทั้งหมด'];
 
   const filteredActivities = activities.filter((a) => {
-    const matchCategory = activeCategory === 'ทั้งหมด' || a.category === activeCategory;
-    const matchSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        a.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCategory && matchSearch;
+    const q = searchQuery.toLowerCase();
+    return !q ||
+      (a.title || '').toLowerCase().includes(q) ||
+      (a.description || '').toLowerCase().includes(q);
   });
 
   const levelColor = (level) => {
@@ -175,27 +135,19 @@ const TrainingActivity = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Category chips */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-1.5 rounded-full text-sm border transition-all duration-300 ${
-                  activeCategory === cat
-                    ? 'bg-yrupink-600 text-white border-yrupink-500 shadow-lg shadow-yrupink-500/20'
-                    : 'bg-white/60 dark:bg-yrugray-800/50 text-gray-700 dark:text-yrugray-100 border-gray-200 dark:border-yrugray-700 hover:border-yrupink-400 dark:hover:border-yrupink-500'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
         </section>
 
         {/* Activities Grid */}
         <section>
-          {filteredActivities.length === 0 ? (
+          {loading ? (
+            <div className="glass-card rounded-2xl p-12 text-center flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-yrupink-500 animate-spin" />
+            </div>
+          ) : loadError ? (
+            <div className="glass-card rounded-2xl p-12 text-center">
+              <p className="text-red-500 dark:text-red-400">โหลดหลักสูตรไม่สำเร็จ: {loadError.message}</p>
+            </div>
+          ) : filteredActivities.length === 0 ? (
             <div className="glass-card rounded-2xl p-12 text-center">
               <p className="text-gray-500 dark:text-yrugray-400">ไม่พบหลักสูตรที่ตรงกับการค้นหา</p>
             </div>

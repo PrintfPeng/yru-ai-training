@@ -1,15 +1,50 @@
-import React, { useState, useMemo } from 'react';
-import { ArrowRight, CheckCircle2, AlertCircle, Send, ClipboardList, User } from 'lucide-react';
-import { MOCK_ASSESSMENT } from '../data/mockEventData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ArrowRight, CheckCircle2, AlertCircle, Send, ClipboardList, User, Loader2 } from 'lucide-react';
+import { assessmentsApi, ApiError } from '../api';
 
 const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
-  const assessment = MOCK_ASSESSMENT[activity.id];
+  const [assessment, setAssessment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [answers, setAnswers] = useState({});
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    assessmentsApi.getActiveBySlug(activity.slug)
+      .then((data) => { if (!cancelled) setAssessment(data); })
+      .catch((e) => { if (!cancelled) setLoadError(e); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [activity.slug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-yrugray-950">
+        <Loader2 className="w-8 h-8 text-yrupink-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return <MessageState title="โหลดแบบประเมินไม่สำเร็จ" onBack={onCancel} />;
+  }
   if (!assessment) {
     return <MessageState title="ยังไม่มีแบบประเมินสำหรับกิจกรรมนี้" onBack={onCancel} />;
   }
+
+  // Backend shape: form_schema.fields[] with `label`.
+  // Adapt to the legacy { questions: [{ id, type, question, ... }] } shape the UI uses.
+  const questions = (assessment.form_schema?.fields || []).map((f) => ({
+    id: f.id,
+    type: f.type,
+    question: f.label,
+    options: f.options,
+    required: !!f.required,
+    helpText: f.helpText,
+  }));
 
   const setAnswer = (qid, value) => {
     setAnswers((prev) => ({ ...prev, [qid]: value }));
@@ -18,10 +53,12 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
 
   const validate = () => {
     const errs = {};
-    assessment.questions.forEach((q) => {
+    questions.forEach((q) => {
       if (!q.required) return;
       const val = answers[q.id];
-      if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
+      if (val === undefined || val === null || val === '' ||
+          (typeof val === 'string' && val.trim() === '') ||
+          (Array.isArray(val) && val.length === 0)) {
         errs[q.id] = 'กรุณาตอบข้อนี้';
       }
     });
@@ -29,28 +66,53 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) {
-      const firstErrorId = Object.keys(errors)[0] || Object.keys(validateForm(assessment, answers))[0];
+      const errs = {};
+      questions.forEach((q) => {
+        if (!q.required) return;
+        const v = answers[q.id];
+        if (v === undefined || v === null || v === '' ||
+            (typeof v === 'string' && v.trim() === '') ||
+            (Array.isArray(v) && v.length === 0)) errs[q.id] = 1;
+      });
+      const firstErrorId = Object.keys(errs)[0];
       if (firstErrorId) {
         document.getElementById(`q-${firstErrorId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       return;
     }
-    console.log('Assessment submitted:', { activityId: activity.id, registrantId: registrant.id, answers });
-    onComplete(answers);
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const result = await assessmentsApi.submit(assessment.id, registrant.id, answers);
+      // result = { registration_id, certificate: { id, certificate_code, ... } }
+      onComplete(answers, result);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'ALREADY_SUBMITTED') {
+        setSubmitError('คุณเคยส่งแบบประเมินนี้ไปแล้ว');
+      } else if (err instanceof ApiError && err.code === 'MISSING_REQUIRED_FIELD') {
+        const fid = err.details?.field;
+        if (fid) document.getElementById(`q-${fid}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setSubmitError('มีคำถามที่ต้องตอบยังว่างอยู่');
+      } else {
+        setSubmitError(err?.message || 'ส่งไม่สำเร็จ กรุณาลองใหม่');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const answeredCount = useMemo(
     () =>
-      assessment.questions.filter((q) => {
+      questions.filter((q) => {
         const v = answers[q.id];
         return v !== undefined && v !== null && v !== '' && (!Array.isArray(v) || v.length > 0);
       }).length,
-    [answers, assessment]
+    [answers, questions]
   );
 
-  const progress = Math.round((answeredCount / assessment.questions.length) * 100);
+  const progress = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-yrugray-950 pb-24">
@@ -81,7 +143,7 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
               />
             </div>
             <span className="text-xs text-gray-600 dark:text-yrugray-300 font-medium">
-              {answeredCount}/{assessment.questions.length}
+              {answeredCount}/{questions.length}
             </span>
           </div>
         </div>
@@ -95,9 +157,16 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
           </div>
         )}
 
+        {submitError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {submitError}
+          </div>
+        )}
+
         {/* Questions */}
         <div className="space-y-4">
-          {assessment.questions.map((q, idx) => (
+          {questions.map((q, idx) => (
             <QuestionCard
               key={q.id}
               index={idx + 1}
@@ -119,10 +188,20 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
           </button>
           <button
             onClick={handleSubmit}
-            className="px-6 py-3 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 flex items-center justify-center gap-2 transition-colors"
+            disabled={submitting}
+            className="px-6 py-3 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 disabled:bg-yrugray-400 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 flex items-center justify-center gap-2 transition-colors"
           >
-            <Send className="w-4 h-4" />
-            ส่งแบบประเมิน
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                กำลังส่ง...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                ส่งแบบประเมิน
+              </>
+            )}
           </button>
         </div>
       </main>
@@ -319,18 +398,5 @@ const MessageState = ({ title, onBack }) => (
     </div>
   </div>
 );
-
-// Helper (kept outside so validate() logic stays pure)
-const validateForm = (assessment, answers) => {
-  const errs = {};
-  assessment.questions.forEach((q) => {
-    if (!q.required) return;
-    const val = answers[q.id];
-    if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
-      errs[q.id] = 'กรุณาตอบข้อนี้';
-    }
-  });
-  return errs;
-};
 
 export default AssessmentSurvey;

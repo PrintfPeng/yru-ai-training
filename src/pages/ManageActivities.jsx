@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   BookOpen,
   Search,
@@ -18,8 +18,24 @@ import {
   QrCode,
   Printer,
   Copy,
+  Loader2,
 } from 'lucide-react';
 import ActivityRegistrants from './ActivityRegistrants';
+import { activitiesApi } from '../api';
+
+// Map API status enum → Thai label used in the UI chip filter
+const STATUS_LABEL = {
+  published: 'เปิดรับสมัคร',
+  cancelled: 'ปิดรับสมัคร',
+  completed: 'จบแล้ว',
+  draft: 'ร่าง',
+};
+const STATUS_ENUM = {
+  'เปิดรับสมัคร': 'published',
+  'ปิดรับสมัคร':  'cancelled',
+  'จบแล้ว':       'completed',
+  'ร่าง':         'draft',
+};
 
 // Mock registrants generator — โครงข้อมูลตรงกับที่ frontend submit ในหน้าลงทะเบียน
 const genRegistrants = (activityId, count) => {
@@ -144,7 +160,9 @@ const inputCls =
   'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
 const ManageActivities = ({ onGoCreate }) => {
-  const [activities, setActivities] = useState(INITIAL_ACTIVITIES);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ทั้งหมด');
   const [editing, setEditing] = useState(null);
@@ -152,39 +170,79 @@ const ManageActivities = ({ onGoCreate }) => {
   const [viewingRegistrants, setViewingRegistrants] = useState(null);
   const [viewingQR, setViewingQR] = useState(null);
 
-  const statuses = ['ทั้งหมด', 'เปิดรับสมัคร', 'ปิดรับสมัคร', 'ร่าง'];
+  const statuses = ['ทั้งหมด', 'เปิดรับสมัคร', 'ปิดรับสมัคร', 'จบแล้ว', 'ร่าง'];
+
+  // Map API row → the shape the table + modals expect (legacy Thai status labels)
+  const normalize = (r) => ({
+    id: r.id,
+    title: r.title,
+    slug: r.slug,
+    description: r.description,
+    location: r.location,
+    date: r.start_date ? new Date(r.start_date).toLocaleDateString('th-TH') : '',
+    duration: '',
+    seats: r.capacity,
+    level: 'เริ่มต้น',
+    category: '',
+    image: r.cover_image_url,
+    status: STATUS_LABEL[r.status] || r.status,
+    _apiStatus: r.status,
+    registrants_count: r.total_registered ?? 0,
+    raw: r,
+  });
+
+  const reload = () => {
+    setLoading(true);
+    setLoadError(null);
+    activitiesApi.list()
+      .then((rows) => setActivities((rows || []).map(normalize)))
+      .catch((e) => setLoadError(e))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { reload(); }, []);
 
   const filtered = useMemo(() => {
     return activities.filter((a) => {
       const matchStatus = statusFilter === 'ทั้งหมด' || a.status === statusFilter;
       const q = searchQuery.toLowerCase();
-      const matchSearch = !q || a.title.toLowerCase().includes(q) || a.category.toLowerCase().includes(q);
+      const matchSearch = !q || (a.title || '').toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
   }, [activities, searchQuery, statusFilter]);
 
-  const handleUpdate = (updated) => {
-    setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-    setEditing(null);
+  const handleUpdate = async (updated) => {
+    try {
+      const patch = {
+        title:       updated.title,
+        description: updated.description,
+        location:    updated.location,
+        capacity:    Number(updated.seats) || 0,
+        status:      STATUS_ENUM[updated.status] || updated.status,
+        cover_image_url: updated.image || undefined,
+      };
+      await activitiesApi.update(updated.id, patch);
+      setEditing(null);
+      reload();
+    } catch (e) {
+      alert(`บันทึกไม่สำเร็จ: ${e.message}`);
+    }
   };
 
-  const handleDelete = () => {
-    setActivities((prev) => prev.filter((a) => a.id !== deleting.id));
-    setDeleting(null);
-  };
-
-  const handleRegistrantsChange = (activityId, nextRegistrants) => {
-    setActivities((prev) => prev.map((a) => (a.id === activityId ? { ...a, registrants: nextRegistrants } : a)));
+  const handleDelete = async () => {
+    try {
+      await activitiesApi.remove(deleting.id);
+      setDeleting(null);
+      reload();
+    } catch (e) {
+      alert(`ลบไม่สำเร็จ: ${e.message}`);
+    }
   };
 
   if (viewingRegistrants) {
-    // Always show latest data from activities state
-    const current = activities.find((a) => a.id === viewingRegistrants.id) || viewingRegistrants;
     return (
       <ActivityRegistrants
-        activity={current}
-        onBack={() => setViewingRegistrants(null)}
-        onChange={(next) => handleRegistrantsChange(current.id, next)}
+        activity={viewingRegistrants}
+        onBack={() => { setViewingRegistrants(null); reload(); }}
       />
     );
   }
@@ -289,8 +347,8 @@ const ManageActivities = ({ onGoCreate }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-yrugray-200">
-                        <span className="text-yrupink-400 font-semibold">{a.registrants?.length || 0}</span>
-                        <span className="text-yrugray-500"> / {a.seats} คน</span>
+                        <span className="text-yrupink-400 font-semibold">{a.registrants_count || 0}</span>
+                        <span className="text-yrugray-500"> / {a.seats || '∞'} คน</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -311,9 +369,9 @@ const ManageActivities = ({ onGoCreate }) => {
                           className="p-2 text-yrugray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors relative"
                         >
                           <ClipboardList className="w-4 h-4" />
-                          {a.registrants?.length > 0 && (
+                          {a.registrants_count > 0 && (
                             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-yrupink-500 text-white border-2 border-yrugray-900">
-                              {a.registrants.length}
+                              {a.registrants_count}
                             </span>
                           )}
                         </button>
