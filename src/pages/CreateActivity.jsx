@@ -11,8 +11,10 @@ import {
   X,
   ImagePlus,
   Image as ImageIcon,
+  Loader2,
 } from 'lucide-react';
 import DynamicFormBuilder from '../components/DynamicFormBuilder';
+import { activitiesApi, assessmentsApi, ApiError } from '../api';
 
 const adminInputCls =
   'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
@@ -37,6 +39,9 @@ const CreateActivity = () => {
 
   // Dynamic form questions
   const [questions, setQuestions] = useState([]);
+
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const handleActivityChange = (e) => {
     const { name, value } = e.target;
@@ -66,16 +71,62 @@ const CreateActivity = () => {
     setBannerError('');
   };
 
-  const handleSave = () => {
-    const payload = {
-      ...activity,
-      banner: bannerFile
-        ? { name: bannerFile.name, size: bannerFile.size, type: bannerFile.type }
-        : null,
-      questions,
-    };
-    console.log('Create activity payload:', payload, { bannerFile });
-    alert('บันทึกกิจกรรมเรียบร้อย (mockup) — ดู payload ใน console');
+  const handleSave = async () => {
+    setSaveError('');
+    if (!activity.title.trim() || !activity.date) {
+      setSaveError('กรุณากรอกชื่อหลักสูตรและวันที่จัดอบรม');
+      return;
+    }
+    setSaving(true);
+    try {
+      // Duration is entered as "N วัน" — convert to end_date by adding N-1 days.
+      const days = Math.max(1, parseInt(activity.duration, 10) || 1);
+      const start = `${activity.date} 09:00:00`;
+      const endDate = new Date(activity.date);
+      endDate.setDate(endDate.getDate() + (days - 1));
+      const end = `${endDate.toISOString().slice(0, 10)} 16:30:00`;
+
+      const created = await activitiesApi.create({
+        title:       activity.title.trim(),
+        description: activity.description || undefined,
+        location:    activity.location || undefined,
+        start_date:  start,
+        end_date:    end,
+        capacity:    Number(activity.seats) || 0,
+        status:      'draft',
+        cover_image_url: bannerPreview || undefined,
+      });
+
+      // If admin added dynamic form questions, save them as a satisfaction assessment.
+      if (questions.length > 0) {
+        await assessmentsApi.create(created.id, {
+          title:        `แบบสอบถามความพึงพอใจ — ${activity.title.trim()}`,
+          description:  activity.description || undefined,
+          type:         'satisfaction',
+          form_schema:  { fields: questions.map((q) => ({
+            id: String(q.id), type: q.type, label: q.question,
+            required: !!q.required,
+            options: q.options?.length ? q.options : undefined,
+          })) },
+          is_published: false,
+        });
+      }
+      alert(`บันทึกกิจกรรมเรียบร้อย (id: ${created.id})`);
+      // Reset form
+      setActivity({ title: '', category: '', level: 'เริ่มต้น', description: '',
+                    date: '', duration: '', seats: '', location: '' });
+      setQuestions([]);
+      setBannerFile(null);
+      setBannerPreview('');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'DUPLICATE_SLUG') {
+        setSaveError('มีหลักสูตรชื่อ (slug) นี้อยู่แล้ว กรุณาเปลี่ยนชื่อ');
+      } else {
+        setSaveError(err?.message || 'บันทึกไม่สำเร็จ');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -90,12 +141,20 @@ const CreateActivity = () => {
         </div>
         <button
           onClick={handleSave}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          disabled={saving}
+          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
         >
-          <Save className="w-4 h-4" />
-          บันทึกกิจกรรม
+          {saving
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
+            : <><Save className="w-4 h-4" /> บันทึกกิจกรรม</>}
         </button>
       </div>
+
+      {saveError && (
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300">
+          {saveError}
+        </div>
+      )}
 
       {/* Section: รายละเอียดกิจกรรม */}
       <section className="bg-yrugray-900 border border-yrugray-800 rounded-2xl overflow-hidden">

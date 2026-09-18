@@ -1,22 +1,39 @@
-import React, { useState } from 'react';
-import { Phone, User, ArrowRight, ArrowLeft, CheckCircle2, XCircle, MapPin, Calendar } from 'lucide-react';
-import {
-  MOCK_EVENT_ACTIVITIES,
-  findRegistrantByPhone,
-  normalizePhone,
-} from '../data/mockEventData';
+import React, { useState, useEffect } from 'react';
+import { Phone, User, ArrowRight, ArrowLeft, CheckCircle2, XCircle, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { activitiesApi, registrationsApi, ApiError } from '../api';
 
-const MAX_ATTEMPTS = 5;
+const normalizePhone = (raw) => String(raw || '').replace(/\D/g, '').replace(/^66/, '0');
 
 const EventLanding = ({ activityId, onVerified, onCancel }) => {
-  const activity = MOCK_EVENT_ACTIVITIES[activityId];
+  const [activity, setActivity] = useState(null);
+  const [loadingActivity, setLoadingActivity] = useState(true);
+  const [activityError, setActivityError] = useState(null);
+
   const [step, setStep] = useState('phone'); // 'phone' | 'confirm'
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
-  const [attempts, setAttempts] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [foundRegistrant, setFoundRegistrant] = useState(null);
 
-  if (!activity) {
+  // Load activity by slug (URL param feeds `activityId` which is actually the slug)
+  useEffect(() => {
+    let cancelled = false;
+    activitiesApi.getBySlug(activityId)
+      .then((a) => { if (!cancelled) setActivity(a); })
+      .catch((e) => { if (!cancelled) setActivityError(e); })
+      .finally(() => { if (!cancelled) setLoadingActivity(false); });
+    return () => { cancelled = true; };
+  }, [activityId]);
+
+  if (loadingActivity) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-yrugray-950">
+        <Loader2 className="w-8 h-8 text-yrupink-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (activityError || !activity) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-yrugray-950">
         <div className="max-w-md w-full bg-white dark:bg-yrugray-900 border border-gray-200 dark:border-yrugray-800 rounded-2xl p-8 text-center">
@@ -36,26 +53,42 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
     );
   }
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
     setError('');
-    if (attempts >= MAX_ATTEMPTS) {
-      setError('พยายามเกินจำนวนที่กำหนด กรุณาลองใหม่ใน 15 นาที');
-      return;
-    }
     const cleanPhone = normalizePhone(phone);
     if (cleanPhone.length !== 10) {
       setError('กรุณากรอกเบอร์โทรให้ครบ 10 หลัก');
       return;
     }
-    const reg = findRegistrantByPhone(activityId, phone);
-    if (!reg) {
-      setAttempts((a) => a + 1);
-      setError(`ไม่พบเบอร์นี้ในรายชื่อผู้ลงทะเบียน (พยายามได้อีก ${MAX_ATTEMPTS - attempts - 1} ครั้ง)`);
-      return;
+    setSubmitting(true);
+    try {
+      const { participant } = await registrationsApi.verifyPhone(activity.slug, phone);
+      // Backend returns masked fields — flatten to legacy `fullName` shape
+      // so the confirm step + downstream pages don't need changes.
+      setFoundRegistrant({
+        id: participant.id,
+        fullName: `${participant.first_name} ${participant.last_name}`,
+        first_name: participant.first_name,
+        last_name: participant.last_name,
+        organization: participant.organization,
+        position: participant.position,
+        phone: `••• ••• ${participant.phone_last4}`,
+        email: participant.email_masked,
+        registration_id: participant.registration_id,
+      });
+      setStep('confirm');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'RATE_LIMITED') {
+        setError('พยายามเกินจำนวนที่กำหนด กรุณาลองใหม่ใน 15 นาที');
+      } else if (err instanceof ApiError && err.code === 'NOT_REGISTERED') {
+        setError('ไม่พบเบอร์นี้ในรายชื่อผู้ลงทะเบียนของหลักสูตร');
+      } else {
+        setError(err?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+      }
+    } finally {
+      setSubmitting(false);
     }
-    setFoundRegistrant(reg);
-    setStep('confirm');
   };
 
   const handleConfirm = () => {
@@ -77,8 +110,8 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
 
       {/* Banner */}
       <div className="relative w-full h-40 md:h-56 overflow-hidden bg-yrugray-900">
-        {activity.banner && (
-          <img src={activity.banner} alt="" className="w-full h-full object-cover opacity-80" />
+        {activity.cover_image_url && (
+          <img src={activity.cover_image_url} alt="" className="w-full h-full object-cover opacity-80" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-yrugray-950 via-transparent to-transparent" />
         <button
@@ -91,7 +124,7 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
         <div className="absolute bottom-4 left-6 right-6 z-10">
           <div className="flex items-center gap-2 mb-1 text-xs">
             <span className="px-2 py-0.5 bg-yrupink-500/20 border border-yrupink-500/40 text-yrupink-100 rounded-full backdrop-blur">
-              {activity.category}
+              {activity.status === 'published' ? 'เปิดรับสมัคร' : activity.status}
             </span>
           </div>
           <h1 className="text-2xl md:text-4xl font-extrabold text-white drop-shadow-lg">
@@ -100,12 +133,16 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
           <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-white/90">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              {activity.date}
+              {new Date(activity.start_date).toLocaleDateString('th-TH', {
+                year: 'numeric', month: 'long', day: 'numeric',
+              })}
             </span>
-            <span className="flex items-center gap-1.5">
-              <MapPin className="w-4 h-4" />
-              {activity.location}
-            </span>
+            {activity.location && (
+              <span className="flex items-center gap-1.5">
+                <MapPin className="w-4 h-4" />
+                {activity.location}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -120,7 +157,7 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
               error={error}
               onSubmit={handleSearch}
               onCancel={onCancel}
-              attempts={attempts}
+              submitting={submitting}
             />
           ) : (
             <ConfirmStep
@@ -139,7 +176,7 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
   );
 };
 
-const PhoneStep = ({ phone, setPhone, error, onSubmit, attempts }) => (
+const PhoneStep = ({ phone, setPhone, error, onSubmit, submitting }) => (
   <>
     <div className="px-6 py-5 border-b border-gray-200 dark:border-yrugray-800">
       <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -162,7 +199,8 @@ const PhoneStep = ({ phone, setPhone, error, onSubmit, attempts }) => (
           onChange={(e) => setPhone(e.target.value)}
           placeholder="08X-XXX-XXXX"
           autoFocus
-          className="w-full px-4 py-3 rounded-lg bg-white dark:bg-yrugray-800 border border-gray-300 dark:border-yrugray-700 text-gray-900 dark:text-white text-lg tracking-wide placeholder:text-gray-400 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500"
+          disabled={submitting}
+          className="w-full px-4 py-3 rounded-lg bg-white dark:bg-yrugray-800 border border-gray-300 dark:border-yrugray-700 text-gray-900 dark:text-white text-lg tracking-wide placeholder:text-gray-400 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 disabled:opacity-60"
         />
         {error && (
           <p className="mt-2 text-sm text-red-500 dark:text-red-400 flex items-center gap-1.5">
@@ -174,11 +212,20 @@ const PhoneStep = ({ phone, setPhone, error, onSubmit, attempts }) => (
 
       <button
         type="submit"
-        disabled={!phone.trim() || attempts >= MAX_ATTEMPTS}
+        disabled={!phone.trim() || submitting}
         className="w-full py-3 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 disabled:bg-yrugray-300 dark:disabled:bg-yrugray-700 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 transition-colors flex items-center justify-center gap-2"
       >
-        ค้นหา
-        <ArrowRight className="w-4 h-4" />
+        {submitting ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            กำลังค้นหา...
+          </>
+        ) : (
+          <>
+            ค้นหา
+            <ArrowRight className="w-4 h-4" />
+          </>
+        )}
       </button>
 
       <div className="pt-4 border-t border-gray-200 dark:border-yrugray-800 text-center">
@@ -193,11 +240,6 @@ const PhoneStep = ({ phone, setPhone, error, onSubmit, attempts }) => (
         >
           📱 ติดต่อผู้จัดทาง LINE
         </a>
-      </div>
-
-      {/* Demo hint (mockup only) */}
-      <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-lg text-xs text-yellow-800 dark:text-yellow-300">
-        💡 <strong>สำหรับทดสอบ:</strong> ใช้เบอร์ 0812345678 (สมชาย), 0898765432 (สมหญิง), 0865551234 (อาลี)
       </div>
     </form>
   </>
@@ -225,9 +267,10 @@ const ConfirmStep = ({ registrant, onConfirm, onNotMe }) => (
             <p className="text-xs text-gray-500 dark:text-yrugray-400 uppercase mb-1">ชื่อผู้เข้าอบรม</p>
             <p className="text-lg font-bold text-gray-900 dark:text-white">{registrant.fullName}</p>
             <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-yrugray-300">
-              <p>🏢 {registrant.organization}</p>
-              <p>💼 {registrant.position}</p>
-              <p>📞 {registrant.phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}</p>
+              {registrant.organization && <p>🏢 {registrant.organization}</p>}
+              {registrant.position && <p>💼 {registrant.position}</p>}
+              <p>📞 {registrant.phone}</p>
+              {registrant.email && <p>✉️ {registrant.email}</p>}
             </div>
           </div>
         </div>

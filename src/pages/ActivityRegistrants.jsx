@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft,
   Search,
@@ -19,25 +19,51 @@ import {
   Save,
   Users,
   Download,
+  Loader2,
 } from 'lucide-react';
+import { registrationsApi } from '../api';
 
 const inputCls =
   'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
-const ActivityRegistrants = ({ activity, onBack, onChange }) => {
-  const [registrants, setRegistrantsState] = useState(activity.registrants || []);
+// Map Thai UI status labels ⇄ API enum values
+const STATUS_UI_TO_API = { 'รอตรวจสอบ': 'pending', 'อนุมัติ': 'confirmed', 'ปฏิเสธ': 'cancelled' };
+const STATUS_API_TO_UI = { pending: 'รอตรวจสอบ', confirmed: 'อนุมัติ', attended: 'อนุมัติ', cancelled: 'ปฏิเสธ' };
+
+const ActivityRegistrants = ({ activity, onBack }) => {
+  const [registrants, setRegistrants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ทั้งหมด');
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
-  const setRegistrants = (updater) => {
-    setRegistrantsState((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      onChange?.(next);
-      return next;
-    });
+  // Normalize API row → the shape the table/modal UI expects
+  const normalize = (r) => ({
+    id: r.id,
+    fullName: `${r.first_name} ${r.last_name}`.trim(),
+    first_name: r.first_name,
+    last_name: r.last_name,
+    email: r.email,
+    phone: r.phone,
+    organization: r.organization,
+    position: r.position,
+    registeredAt: r.registered_at ? new Date(r.registered_at).toLocaleDateString('th-TH') : '',
+    status: STATUS_API_TO_UI[r.registration_status] || r.registration_status,
+    note: r.note,
+    _apiStatus: r.registration_status,
+  });
+
+  const reload = () => {
+    setLoading(true);
+    setLoadError(null);
+    registrationsApi.listForActivity(activity.id)
+      .then((rows) => setRegistrants((rows || []).map(normalize)))
+      .catch((e) => setLoadError(e))
+      .finally(() => setLoading(false));
   };
+  useEffect(() => { reload(); }, [activity.id]);
 
   const statuses = ['ทั้งหมด', 'รอตรวจสอบ', 'อนุมัติ', 'ปฏิเสธ'];
 
@@ -64,18 +90,39 @@ const ActivityRegistrants = ({ activity, onBack, onChange }) => {
     [registrants]
   );
 
-  const updateStatus = (id, status) => {
-    setRegistrants((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  const updateStatus = async (id, uiStatus) => {
+    try {
+      await registrationsApi.updateStatus(id, STATUS_UI_TO_API[uiStatus] || uiStatus);
+      reload();
+    } catch (e) {
+      alert(`เปลี่ยนสถานะไม่สำเร็จ: ${e.message}`);
+    }
   };
 
-  const updateRegistrant = (updated) => {
-    setRegistrants((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-    setEditing(null);
+  const updateRegistrant = async (updated) => {
+    // MVP: only status change is round-tripped to backend here.
+    // Full participant edit could POST to /api/participants/:id in a follow-up.
+    try {
+      await registrationsApi.updateStatus(
+        updated.id,
+        STATUS_UI_TO_API[updated.status] || updated.status,
+        updated.note ?? undefined
+      );
+      setEditing(null);
+      reload();
+    } catch (e) {
+      alert(`บันทึกไม่สำเร็จ: ${e.message}`);
+    }
   };
 
-  const removeRegistrant = () => {
-    setRegistrants((prev) => prev.filter((r) => r.id !== deleting.id));
-    setDeleting(null);
+  const removeRegistrant = async () => {
+    try {
+      await registrationsApi.remove(deleting.id);
+      setDeleting(null);
+      reload();
+    } catch (e) {
+      alert(`ลบไม่สำเร็จ: ${e.message}`);
+    }
   };
 
   return (

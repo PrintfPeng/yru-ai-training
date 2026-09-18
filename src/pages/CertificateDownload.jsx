@@ -1,33 +1,71 @@
-import React, { useMemo } from 'react';
-import { Download, Printer, Share2, CheckCircle2, Home, AlertCircle } from 'lucide-react';
-import { MOCK_CERT_TEMPLATE, generateCertId } from '../data/mockEventData';
+import React, { useEffect, useState } from 'react';
+import { Download, Printer, Share2, CheckCircle2, Home, AlertCircle, Loader2 } from 'lucide-react';
+import { certificatesApi } from '../api';
 
-const CertificateDownload = ({ activity, registrant, onBackHome }) => {
-  const cert = MOCK_CERT_TEMPLATE;
-  const certId = useMemo(() => generateCertId(activity.id, registrant.id), [activity.id, registrant.id]);
+/**
+ * Props:
+ *   activity, registrant   — from the trainee flow chain
+ *   certificateCode        — set from AssessmentSurvey submit result;
+ *                            when present we fetch the real cert from API
+ *   onBackHome
+ */
+const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome }) => {
+  const [certData, setCertData] = useState(null);
+  const [loading, setLoading] = useState(!!certificateCode);
+  const [loadError, setLoadError] = useState(null);
 
-  const substitutions = {
-    participantName: registrant.fullName,
-    courseTitle: activity.title,
-    issueDate: new Date().toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }),
-    certificateId: certId,
-    signerName: cert.signerName,
-    signerPosition: cert.signerPosition,
-  };
+  useEffect(() => {
+    if (!certificateCode) return;
+    let cancelled = false;
+    certificatesApi.getByCode(certificateCode)
+      .then((d) => { if (!cancelled) setCertData(d); })
+      .catch((e) => { if (!cancelled) setLoadError(e); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [certificateCode]);
 
   const handlePrint = () => window.print();
 
   const handleShare = () => {
-    const url = `${window.location.origin}/verify/${certId}`;
+    if (!certData) return;
+    const url = `${window.location.origin}/verify/${certData.certificate.code}`;
     navigator.clipboard?.writeText(url).then(
       () => alert('คัดลอกลิงก์ยืนยันแล้ว:\n' + url),
       () => alert('ลิงก์ยืนยัน: ' + url)
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-yrugray-950">
+        <Loader2 className="w-8 h-8 text-yrupink-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (loadError || !certData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-yrugray-950">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-14 h-14 text-red-400 mx-auto mb-3" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">โหลดวุฒิบัตรไม่สำเร็จ</h2>
+          <p className="text-sm text-gray-600 dark:text-yrugray-300 mb-4">
+            {loadError?.message || 'ไม่พบวุฒิบัตรที่ระบุ'}
+          </p>
+          <button
+            onClick={onBackHome}
+            className="px-5 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold rounded-lg"
+          >
+            กลับหน้าแรก
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const cert = certData.certificate.template;
+  const substitutions = certData.substitutions;
+  const certId = certData.certificate.code;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-yrugray-950">
@@ -61,7 +99,9 @@ const CertificateDownload = ({ activity, registrant, onBackHome }) => {
         <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs text-gray-500 dark:text-yrugray-400 uppercase mb-0.5">วุฒิบัตรของ</p>
-            <p className="text-lg font-bold text-gray-900 dark:text-white">{registrant.fullName}</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">
+              {certData.participant.name}
+            </p>
             <p className="text-xs text-gray-500 dark:text-yrugray-400 mt-0.5">เลขที่: {certId}</p>
           </div>
           <span className="px-3 py-1.5 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 text-xs font-semibold rounded-full">
@@ -125,14 +165,17 @@ const CertificateDownload = ({ activity, registrant, onBackHome }) => {
   );
 };
 
-// Read-only cert renderer (mirrors CertificateEditor but no interactivity)
-const CertPreview = ({ cert, substitutions }) => (
+// Read-only cert renderer (mirrors CertificateEditor but no interactivity).
+// Handles both the API shape (backgroundImageUrl) and the older mock shape (backgroundImage).
+const CertPreview = ({ cert, substitutions }) => {
+  const bgUrl = cert.backgroundImageUrl || cert.backgroundImage;
+  return (
   <div
     className="relative aspect-[297/210] w-full bg-gradient-to-br from-yellow-500/20 to-yellow-800/10 bg-yrugray-950"
     style={
-      cert.backgroundImage
+      bgUrl
         ? {
-            backgroundImage: `url(${cert.backgroundImage})`,
+            backgroundImage: `url(${bgUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }
@@ -140,7 +183,7 @@ const CertPreview = ({ cert, substitutions }) => (
     }
   >
     {/* Decorative frame */}
-    {!cert.backgroundImage && (
+    {!bgUrl && (
       <>
         <div className="pointer-events-none absolute inset-4 border border-white/20 rounded-lg" />
         <div className="pointer-events-none absolute inset-6 border border-white/10 rounded-lg" />
@@ -192,6 +235,7 @@ const CertPreview = ({ cert, substitutions }) => (
       );
     })}
   </div>
-);
+  );
+};
 
 export default CertificateDownload;

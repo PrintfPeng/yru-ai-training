@@ -1,12 +1,30 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, User as UserIcon, ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
+import { authApi, ApiError } from '../api';
 
 const AdminLogin = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (onLogin) onLogin();
+    setError('');
+    setSubmitting(true);
+    try {
+      const { admin } = await authApi.login(username.trim(), password);
+      onLogin?.(admin);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'INVALID_CREDENTIALS') {
+        setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      } else {
+        setError(err?.message || 'เข้าสู่ระบบไม่สำเร็จ');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -61,15 +79,20 @@ const AdminLogin = ({ onLogin }) => {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-yrugray-300 ml-1">ชื่อผู้ใช้ หรือ อีเมล</label>
+              <label className="text-sm font-medium text-yrugray-300 ml-1">ชื่อผู้ใช้</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-yrugray-500 group-focus-within:text-yrupink-400 transition-colors" />
+                  <UserIcon className="h-5 w-5 text-yrugray-500 group-focus-within:text-yrupink-400 transition-colors" />
                 </div>
-                <input 
-                  type="email" 
-                  className="w-full bg-yrugray-800/50 border border-yrugray-700 text-white rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yrupink-500/50 focus:border-yrupink-500 transition-all placeholder-yrugray-500 shadow-inner"
-                  placeholder="admin@yru.ac.th"
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoFocus
+                  required
+                  disabled={submitting}
+                  className="w-full bg-yrugray-800/50 border border-yrugray-700 text-white rounded-xl pl-12 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yrupink-500/50 focus:border-yrupink-500 transition-all placeholder-yrugray-500 shadow-inner disabled:opacity-60"
+                  placeholder="superadmin"
                 />
               </div>
             </div>
@@ -80,12 +103,16 @@ const AdminLogin = ({ onLogin }) => {
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-yrugray-500 group-focus-within:text-yrupink-400 transition-colors" />
                 </div>
-                <input 
+                <input
                   type={showPassword ? "text" : "password"}
-                  className="w-full bg-yrugray-800/50 border border-yrugray-700 text-white rounded-xl pl-12 pr-12 py-3.5 focus:outline-none focus:ring-2 focus:ring-yrupink-500/50 focus:border-yrupink-500 transition-all placeholder-yrugray-500 shadow-inner"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={submitting}
+                  className="w-full bg-yrugray-800/50 border border-yrugray-700 text-white rounded-xl pl-12 pr-12 py-3.5 focus:outline-none focus:ring-2 focus:ring-yrupink-500/50 focus:border-yrupink-500 transition-all placeholder-yrugray-500 shadow-inner disabled:opacity-60"
                   placeholder="••••••••"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-4 flex items-center text-yrugray-500 hover:text-yrupink-400 transition-colors"
@@ -94,6 +121,13 @@ const AdminLogin = ({ onLogin }) => {
                 </button>
               </div>
             </div>
+
+            {error && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {error}
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer group">
@@ -109,11 +143,19 @@ const AdminLogin = ({ onLogin }) => {
               </a>
             </div>
 
-            <button 
+            <button
               type="submit"
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-yrupink-600 to-yrupink-500 text-white font-bold text-lg shadow-lg shadow-yrupink-500/25 hover:shadow-yrupink-500/50 hover:-translate-y-0.5 transition-all duration-300 mt-4"
+              disabled={submitting || !username.trim() || !password}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-yrupink-600 to-yrupink-500 text-white font-bold text-lg shadow-lg shadow-yrupink-500/25 hover:shadow-yrupink-500/50 hover:-translate-y-0.5 transition-all duration-300 mt-4 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
             >
-              เข้าสู่ระบบ
+              {submitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  กำลังเข้าสู่ระบบ...
+                </>
+              ) : (
+                'เข้าสู่ระบบ'
+              )}
             </button>
           </form>
 
