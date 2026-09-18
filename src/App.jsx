@@ -9,6 +9,7 @@ import TrainingActivity from './pages/TrainingActivity';
 import EventLanding from './pages/EventLanding';
 import AssessmentSurvey from './pages/AssessmentSurvey';
 import CertificateDownload from './pages/CertificateDownload';
+import { authApi } from './api';
 
 // Detect scanned QR: URL like /?e=<activityId>
 const readEventFromUrl = () => {
@@ -24,6 +25,25 @@ function App() {
   );
 
   const [currentView, setCurrentView] = useState('home');
+  const [admin, setAdmin] = useState(null);       // set from /auth/me — survives reload
+  const [authBooting, setAuthBooting] = useState(true);
+
+  // Bootstrap: try /auth/me on mount. If the httpOnly cookie is still valid,
+  // land straight on the dashboard instead of the login screen.
+  useEffect(() => {
+    if (eventState) { setAuthBooting(false); return; } // skip on trainee flow
+    let cancelled = false;
+    authApi.me()
+      .then(({ admin }) => {
+        if (cancelled) return;
+        setAdmin(admin);
+        setCurrentView('dashboard');
+      })
+      .catch(() => { /* no session → stay on home */ })
+      .finally(() => { if (!cancelled) setAuthBooting(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'light';
     return localStorage.getItem('theme') || 'light';
@@ -41,6 +61,16 @@ function App() {
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
+
+  // While bootstrapping /auth/me, keep the screen minimal so we don't flash the
+  // public home page for the ~200ms round-trip.
+  if (authBooting && !eventState) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-yrugray-950">
+        <div className="w-8 h-8 border-2 border-yrupink-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const exitEventFlow = () => {
     // Clear ?e= param so refresh doesn't re-enter the flow
@@ -92,19 +122,28 @@ function App() {
   if (currentView === 'admin') {
     return (
       <div className="relative">
-        <button 
+        <button
           onClick={() => setCurrentView('home')}
           className="absolute top-6 left-6 z-50 px-4 py-2 bg-white/80 dark:bg-yrugray-800/80 hover:bg-gray-100 dark:hover:bg-yrugray-700 backdrop-blur border border-gray-200 dark:border-yrugray-700 rounded-lg text-sm text-gray-700 dark:text-yrugray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 shadow-lg"
         >
           &larr; กลับสู่หน้าแรก
         </button>
-        <AdminLogin onLogin={() => setCurrentView('dashboard')} />
+        <AdminLogin onLogin={(a) => { setAdmin(a); setCurrentView('dashboard'); }} />
       </div>
     );
   }
 
   if (currentView === 'dashboard') {
-    return <AdminDashboard onLogout={() => setCurrentView('home')} />;
+    return (
+      <AdminDashboard
+        admin={admin}
+        onLogout={async () => {
+          try { await authApi.logout(); } catch (_) { /* ignore */ }
+          setAdmin(null);
+          setCurrentView('home');
+        }}
+      />
+    );
   }
 
   if (currentView === 'training') {

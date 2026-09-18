@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ClipboardCheck,
   Award,
@@ -10,22 +10,14 @@ import {
   Eye,
   Palette,
   Type as TypeIcon,
+  Loader2,
 } from 'lucide-react';
 import DynamicFormBuilder from '../components/DynamicFormBuilder';
 import CertificateEditor, { DEFAULT_ELEMENTS } from '../components/CertificateEditor';
+import { activitiesApi, assessmentsApi, ApiError } from '../api';
 
 const adminInputCls =
   'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
-
-// Mock: activities that this assessment can attach to — ในของจริงดึงจาก API
-const ACTIVITY_OPTIONS = [
-  { id: 1, title: 'พื้นฐาน AI สำหรับผู้เริ่มต้น' },
-  { id: 2, title: 'Prompt Engineering ขั้นสูง' },
-  { id: 3, title: 'Machine Learning ด้วย Python' },
-  { id: 4, title: 'Deep Learning และ Neural Networks' },
-  { id: 5, title: 'AI สำหรับ SME และผู้ประกอบการ' },
-  { id: 6, title: 'สร้าง Chatbot ด้วย AI Agent' },
-];
 
 const CERT_TEMPLATES = [
   { value: 'classic', label: 'Classic (ทางการ)', accent: 'from-yellow-500/30 to-yellow-700/20' },
@@ -34,6 +26,19 @@ const CERT_TEMPLATES = [
 ];
 
 const CreateAssessment = () => {
+  const [activityOptions, setActivityOptions] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  // Load list of activities the admin can attach this survey to.
+  useEffect(() => {
+    let cancelled = false;
+    activitiesApi.list()
+      .then((rows) => { if (!cancelled) setActivityOptions(rows || []); })
+      .catch(() => { if (!cancelled) setActivityOptions([]); });
+    return () => { cancelled = true; };
+  }, []);
+
   const [meta, setMeta] = useState({
     title: '',
     activityId: '',
@@ -60,14 +65,62 @@ const CreateAssessment = () => {
   const changeMeta = (name, value) => setMeta((prev) => ({ ...prev, [name]: value }));
   const changeCert = (name, value) => setCert((prev) => ({ ...prev, [name]: value }));
 
-  const handleSave = () => {
-    const payload = {
-      ...meta,
-      questions,
-      certificate: cert.enabled ? cert : null,
-    };
-    console.log('Create satisfaction survey payload:', payload);
-    alert('บันทึกแบบสอบถามความพึงพอใจเรียบร้อย (mockup) — ดู payload ใน console');
+  const handleSave = async () => {
+    setSaveError('');
+    if (!meta.title.trim() || !meta.activityId) {
+      setSaveError('กรุณากรอกชื่อแบบสอบถามและเลือกหลักสูตร');
+      return;
+    }
+    if (questions.length === 0) {
+      setSaveError('กรุณาสร้างอย่างน้อย 1 คำถาม');
+      return;
+    }
+    setSaving(true);
+    try {
+      // Adapt frontend { id, type, question, options, required } → API form_schema
+      const form_schema = {
+        fields: questions.map((q) => ({
+          id: String(q.id),
+          type: q.type,
+          label: q.question,
+          required: !!q.required,
+          options: q.options?.length ? q.options : undefined,
+        })),
+      };
+      // Store cert config as JSON in the description tail so it survives a round
+      // trip until the API grows a dedicated `certificate_config` column.
+      const description = cert.enabled
+        ? `${meta.description || ''}\n\n<!-- CERT_CONFIG:${JSON.stringify({
+            name: cert.name,
+            template: cert.template,
+            signerName: cert.signerName,
+            signerPosition: cert.signerPosition,
+            backgroundImageUrl: cert.backgroundImage || null,
+            signatureImageUrl: cert.signatureImage || null,
+            elements: cert.elements,
+          })} -->`
+        : meta.description;
+
+      await assessmentsApi.create(Number(meta.activityId), {
+        title: meta.title.trim(),
+        description: description || undefined,
+        type: 'satisfaction',
+        form_schema,
+        is_published: true,
+      });
+      alert('บันทึกแบบสอบถามความพึงพอใจเรียบร้อย');
+      // Reset dynamic form so admin can build another
+      setQuestions([]);
+      setMeta({ ...meta, title: '' });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'NOT_FOUND') {
+        setSaveError('ไม่พบหลักสูตรที่เลือก อาจถูกลบไปแล้ว');
+      } else {
+        setSaveError(err?.message || 'บันทึกไม่สำเร็จ');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selectedTemplate = CERT_TEMPLATES.find((t) => t.value === cert.template);
@@ -84,12 +137,20 @@ const CreateAssessment = () => {
         </div>
         <button
           onClick={handleSave}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          disabled={saving}
+          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
         >
-          <Save className="w-4 h-4" />
-          บันทึกแบบสอบถาม
+          {saving
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
+            : <><Save className="w-4 h-4" /> บันทึกแบบสอบถาม</>}
         </button>
       </div>
+
+      {saveError && (
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300">
+          {saveError}
+        </div>
+      )}
 
       {/* Section: รายละเอียดแบบสอบถาม */}
       <section className="bg-yrugray-900 border border-yrugray-800 rounded-2xl overflow-hidden">
@@ -114,7 +175,7 @@ const CreateAssessment = () => {
               className={adminInputCls}
             >
               <option value="">— เลือกหลักสูตร —</option>
-              {ACTIVITY_OPTIONS.map((a) => (
+              {activityOptions.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.title}
                 </option>
