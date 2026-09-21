@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS `activities` (
   `capacity`        INT UNSIGNED    NOT NULL DEFAULT 0                                      COMMENT 'จำนวนที่รับได้ (0 = ไม่จำกัด)',
   `status`          ENUM('draft','published','completed','cancelled') NOT NULL DEFAULT 'draft'
                                                                                             COMMENT 'draft=ร่าง published=เปิดรับสมัคร completed=จบแล้ว cancelled=ยกเลิก',
-  `cover_image_url` VARCHAR(500)    NULL                                                    COMMENT 'URL รูปแบนเนอร์ (S3/local static)',
+  `cover_image_url` LONGTEXT        NULL                                                    COMMENT 'URL รูปแบนเนอร์ — รองรับทั้ง http(s) URL และ data:image/... base64',
   `created_by`      BIGINT UNSIGNED NULL                                                    COMMENT 'อ้างอิง admin ที่สร้าง (SET NULL ถ้า admin ถูกลบ)',
   `created_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

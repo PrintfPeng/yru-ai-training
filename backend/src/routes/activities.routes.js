@@ -15,6 +15,14 @@ const listQuery = z.object({
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const slugParam = z.object({ slug: z.string().min(1).max(255) });
 
+// cover_image_url accepts either:
+//   - a normal http(s) URL (typically ≤500 chars), or
+//   - a data:image/... base64 string (browser FileReader.readAsDataURL — can be MBs).
+// We only require it to look like one of the two, and cap at ~10 MB of chars.
+const coverImageUrlSchema = z.string()
+  .max(10_000_000)
+  .regex(/^(https?:\/\/|data:image\/)/i, 'cover_image_url must be an http(s) URL or a data:image URI');
+
 const createBody = z.object({
   title:           z.string().min(1).max(255),
   slug:            z.string().min(1).max(255).optional(),
@@ -24,7 +32,7 @@ const createBody = z.object({
   end_date:        z.string().min(1),
   capacity:        z.number().int().min(0).default(0),
   status:          z.enum(['draft', 'published', 'completed', 'cancelled']).default('draft'),
-  cover_image_url: z.string().url().max(500).optional(),
+  cover_image_url: coverImageUrlSchema.optional(),
 });
 
 const updateBody = createBody.partial();

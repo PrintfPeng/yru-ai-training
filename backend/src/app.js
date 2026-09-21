@@ -38,7 +38,7 @@ export function createApp() {
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   }));
 
-  app.use(express.json({ limit: '2mb' })); // JSON body up to 2 MB
+  app.use(express.json({ limit: '15mb' })); // JSON body up to 15 MB (banner data URIs)
   app.use(cookieParser());
 
   if (env.NODE_ENV !== 'test') app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
