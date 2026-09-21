@@ -1,6 +1,6 @@
 import { env } from './config/env.js';
 import { assertDbReady, pool } from './config/db.js';
-import { createApp } from './app.js';
+import { createApp, FRONTEND_READY, DIST_DIR } from './app.js';
 
 const app = createApp();
 
@@ -14,6 +14,13 @@ async function main() {
     console.log(`🚀 API listening on http://${env.HOST}:${env.PORT}  (env=${env.NODE_ENV})`);
     // eslint-disable-next-line no-console
     console.log(`   Health:  ${env.PUBLIC_BASE_URL}/api/health`);
+    if (FRONTEND_READY) {
+      // eslint-disable-next-line no-console
+      console.log(`   Frontend served from  ${DIST_DIR}`);
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('   (no dist/ found — API only)');
+    }
   });
 
   // Graceful shutdown so pool + socket close cleanly
