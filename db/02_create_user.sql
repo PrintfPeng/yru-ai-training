@@ -39,21 +39,21 @@
 --   openssl rand -base64 24
 --   # หรือ pwgen -sy 24 1
 --   # หรือ head -c 24 /dev/urandom | base64
--- นำ output ที่ได้มาแทน <<CHANGE_ME_STRONG_PASSWORD>> ทั้ง 2 ที่
+-- นำ output ที่ได้มาแทน bf88c21f6237b37e974f7c130ee23974433c4a7a9f3b9169 ทั้ง 2 ที่
 -- -----------------------------------------------------------------------------
 
 /* ============================================================================
    1) สร้าง user 2 host
    ============================================================================ */
 CREATE USER IF NOT EXISTS 'yru_app_user'@'localhost'
-  IDENTIFIED WITH caching_sha2_password BY '<<CHANGE_ME_STRONG_PASSWORD>>';
+  IDENTIFIED WITH caching_sha2_password BY 'bf88c21f6237b37e974f7c130ee23974433c4a7a9f3b9169';
 
 CREATE USER IF NOT EXISTS 'yru_app_user'@'10.20.41.%'
-  IDENTIFIED WITH caching_sha2_password BY '<<CHANGE_ME_STRONG_PASSWORD>>';
+  IDENTIFIED WITH caching_sha2_password BY 'bf88c21f6237b37e974f7c130ee23974433c4a7a9f3b9169';
 
 /* ถ้า user มีอยู่แล้วและอยาก reset password ให้ uncomment 2 บรรทัดนี้:
-ALTER USER 'yru_app_user'@'localhost'    IDENTIFIED BY '<<CHANGE_ME_STRONG_PASSWORD>>';
-ALTER USER 'yru_app_user'@'10.20.41.%'   IDENTIFIED BY '<<CHANGE_ME_STRONG_PASSWORD>>';
+ALTER USER 'yru_app_user'@'localhost'    IDENTIFIED BY 'bf88c21f6237b37e974f7c130ee23974433c4a7a9f3b9169';
+ALTER USER 'yru_app_user'@'10.20.41.%'   IDENTIFIED BY 'bf88c21f6237b37e974f7c130ee23974433c4a7a9f3b9169';
 */
 
 
