@@ -17,7 +17,7 @@ import CertificateEditor, { DEFAULT_ELEMENTS } from '../components/CertificateEd
 import { activitiesApi, assessmentsApi, ApiError } from '../api';
 
 const adminInputCls =
-  'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
+  'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
 const CERT_TEMPLATES = [
   { value: 'classic', label: 'Classic (ทางการ)', accent: 'from-yellow-500/30 to-yellow-700/20' },
@@ -130,15 +130,15 @@ const CreateAssessment = () => {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">สร้างแบบฟอร์มประเมินและออกใบรับรอง</h2>
-          <p className="text-sm text-slate-500 dark:text-yrugray-400 mt-1">
+          <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">สร้างแบบฟอร์มประเมินและออกใบรับรอง</h2>
+          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
             ออกแบบแบบสอบถามความพึงพอใจสำหรับผู้เข้าอบรม พร้อมตั้งค่าใบรับรองที่จะออกให้อัตโนมัติเมื่อผู้เข้าอบรมส่งแบบสอบถาม
           </p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
         >
           {saving
             ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
@@ -147,7 +147,7 @@ const CreateAssessment = () => {
       </div>
 
       {saveError && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300">
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-300">
           {saveError}
         </div>
       )}
@@ -155,8 +155,8 @@ const CreateAssessment = () => {
       {/* Section: รายละเอียดแบบสอบถาม */}
       <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center gap-2">
-          <ClipboardCheck className="w-5 h-5 text-yrupink-400" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">รายละเอียดแบบสอบถามความพึงพอใจ</h3>
+          <ClipboardCheck className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">รายละเอียดแบบสอบถามความพึงพอใจ</h3>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <AdminField label="ชื่อแบบสอบถาม" required className="md:col-span-2">
@@ -192,18 +192,18 @@ const CreateAssessment = () => {
               placeholder="0 = ไม่จำกัดเวลา (แนะนำสำหรับความพึงพอใจ)"
               className={adminInputCls}
             />
-            <p className="text-xs text-slate-400 dark:text-yrugray-500 mt-1">💡 แบบสอบถามความพึงพอใจไม่ควรจับเวลา ตั้ง 0 เพื่อไม่จำกัด</p>
+            <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">💡 แบบสอบถามความพึงพอใจไม่ควรจับเวลา ตั้ง 0 เพื่อไม่จำกัด</p>
           </AdminField>
 
           <AdminField label="แก้ไขคำตอบภายหลัง" icon={<Pencil className="w-4 h-4" />}>
-            <label className="flex items-center gap-3 h-[38px] px-3 rounded-lg bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 cursor-pointer select-none">
+            <label className="flex items-center gap-3 h-[42px] px-3 rounded-lg bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={meta.allowEdit}
                 onChange={(e) => changeMeta('allowEdit', e.target.checked)}
                 className="w-4 h-4 accent-yrupink-500"
               />
-              <span className="text-sm text-slate-700 dark:text-yrugray-200">
+              <span className="text-[15px] text-slate-800 dark:text-yrugray-200">
                 {meta.allowEdit ? 'อนุญาตให้แก้ไขคำตอบภายหลังได้' : 'ส่งได้ครั้งเดียว แก้ไขไม่ได้'}
               </span>
             </label>
@@ -234,15 +234,15 @@ const CreateAssessment = () => {
       <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-yrupink-400" />
+            <Award className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">การออกใบรับรอง</h3>
-              <p className="text-xs text-slate-500 dark:text-yrugray-400 mt-0.5">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">การออกใบรับรอง</h3>
+              <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-0.5">
                 ใบรับรองจะถูกออกให้ผู้เข้าอบรมโดยอัตโนมัติเมื่อส่งแบบสอบถามเรียบร้อยแล้ว
               </p>
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-yrugray-200 cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-[15px] text-slate-800 dark:text-yrugray-200 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={cert.enabled}
@@ -285,7 +285,7 @@ const CreateAssessment = () => {
 
             {/* Template picker */}
             <div>
-              <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-2 flex items-center gap-1.5">
+              <label className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 mb-2 flex items-center gap-1.5">
                 <Palette className="w-4 h-4" />
                 เทมเพลตใบรับรอง (ใช้เป็น gradient พื้นหลังเมื่อยังไม่ได้อัปโหลดรูป)
               </label>
@@ -298,14 +298,14 @@ const CreateAssessment = () => {
                     className={`text-left rounded-xl border transition-all overflow-hidden ${
                       cert.template === t.value
                         ? 'border-yrupink-500 ring-2 ring-yrupink-500/30'
-                        : 'border-yrugray-700 hover:border-yrupink-500/50'
+                        : 'border-slate-300 dark:border-yrugray-700 hover:border-yrupink-500/50'
                     }`}
                   >
                     <div className={`aspect-[4/3] bg-gradient-to-br ${t.accent} flex items-center justify-center relative`}>
                       <Award className="w-10 h-10 text-slate-900/60 dark:text-white/60" />
                       <div className="absolute bottom-2 left-2 right-2 h-1 bg-white/30 rounded-full" />
                     </div>
-                    <div className="px-3 py-2 bg-slate-100/70 dark:bg-yrugray-800/70 text-sm text-slate-900 dark:text-white">{t.label}</div>
+                    <div className="px-3 py-2 bg-slate-50 dark:bg-yrugray-800/70 text-[15px] font-medium text-slate-800 dark:text-white">{t.label}</div>
                   </button>
                 ))}
               </div>
@@ -313,7 +313,7 @@ const CreateAssessment = () => {
 
             {/* Interactive certificate editor */}
             <div>
-              <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-2 flex items-center gap-1.5">
+              <label className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 mb-2 flex items-center gap-1.5">
                 <Eye className="w-4 h-4" />
                 ดีไซน์ใบรับรอง (แก้ไข / เลื่อน / ปรับขนาด / เพิ่ม / ลบได้)
               </label>
@@ -330,10 +330,10 @@ const CreateAssessment = () => {
 
 const AdminField = ({ label, icon, required, className = '', children }) => (
   <div className={className}>
-    <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-1.5 flex items-center gap-1.5">
+    <label className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 mb-1.5 flex items-center gap-1.5">
       {icon}
       {label}
-      {required && <span className="text-yrupink-400">*</span>}
+      {required && <span className="text-yrupink-500 dark:text-yrupink-400">*</span>}
     </label>
     {children}
   </div>
