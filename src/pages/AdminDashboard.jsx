@@ -72,6 +72,14 @@ const AdminDashboard = ({ admin, onLogout }) => {
     return () => { cancelled = true; };
   }, [refreshTick]);
 
+  // Enlarge admin UI ~20% via a rem base bump — see html.admin-scale in index.css.
+  // Scoped to the dashboard mount so public pages keep their default size.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('admin-scale');
+    return () => root.classList.remove('admin-scale');
+  }, []);
+
   // Derived stats — all computed from the same activities list (uses v_activity_summary).
   const stats = useMemo(() => {
     const now = Date.now();
