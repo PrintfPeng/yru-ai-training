@@ -28,3 +28,16 @@ body {
     radial-gradient(circle at 85% 30%, rgba(219, 39, 119, 0.12), transparent 25%);
   background-attachment: fixed;
 }
+
+/*
+ * Admin dashboard font scale (~+20%).
+ * The AdminDashboard adds this class to <html> on mount and removes it on
+ * unmount, so the boost applies to every admin page (including modals /
+ * portals that render outside the React tree) without touching the public
+ * pages or the trainee QR flow.
+ * All Tailwind sizes (font/spacing/width) are rem-based, so they scale
+ * together — the whole admin UI enlarges proportionally, layout intact.
+ */
+html.admin-scale {
+  font-size: 120%;
+}
