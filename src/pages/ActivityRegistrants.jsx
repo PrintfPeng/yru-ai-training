@@ -24,7 +24,7 @@ import {
 import { registrationsApi } from '../api';
 
 const inputCls =
-  'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
+  'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
 // Map Thai UI status labels ⇄ API enum values
 const STATUS_UI_TO_API = { 'รอตรวจสอบ': 'pending', 'อนุมัติ': 'confirmed', 'ปฏิเสธ': 'cancelled' };

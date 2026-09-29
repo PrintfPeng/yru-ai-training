@@ -157,7 +157,7 @@ const INITIAL_ACTIVITIES = [
 ];
 
 const inputCls =
-  'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
+  'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
 const ManageActivities = ({ onGoCreate }) => {
   const [activities, setActivities] = useState([]);
@@ -252,14 +252,14 @@ const ManageActivities = ({ onGoCreate }) => {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">จัดการหลักสูตร</h2>
-          <p className="text-sm text-slate-500 dark:text-yrugray-400 mt-1">
+          <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">จัดการหลักสูตร</h2>
+          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
             หลักสูตรทั้งหมด {activities.length} รายการ — ค้นหา แก้ไข หรือลบได้จากตารางด้านล่าง
           </p>
         </div>
         <button
           onClick={onGoCreate}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           สร้างกิจกรรมใหม่
@@ -269,7 +269,7 @@ const ManageActivities = ({ onGoCreate }) => {
       {/* Search + Filter */}
       <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-4 flex flex-col md:flex-row gap-3">
         <div className="relative flex-grow">
-          <Search className="w-4 h-4 text-slate-400 dark:text-yrugray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-500 dark:text-yrugray-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -278,15 +278,15 @@ const ManageActivities = ({ onGoCreate }) => {
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-4 h-4 text-slate-400 dark:text-yrugray-500" />
+          <Filter className="w-4 h-4 text-slate-500 dark:text-yrugray-500" />
           {statuses.map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
+              className={`px-3 py-1.5 rounded-full text-[13px] font-medium border transition-all ${
                 statusFilter === s
                   ? 'bg-yrupink-600 text-white border-yrupink-500'
-                  : 'bg-yrugray-800 text-yrugray-300 border-yrugray-700 hover:border-yrupink-500/50'
+                  : 'bg-white dark:bg-yrugray-800 text-slate-700 dark:text-yrugray-300 border-slate-300 dark:border-yrugray-700 hover:border-yrupink-500/50'
               }`}
             >
               {s}
@@ -300,26 +300,26 @@ const ManageActivities = ({ onGoCreate }) => {
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-14 h-14 bg-slate-100 dark:bg-yrugray-800 rounded-full flex items-center justify-center mx-auto mb-3">
-              <BookOpen className="w-6 h-6 text-slate-400 dark:text-yrugray-500" />
+              <BookOpen className="w-6 h-6 text-slate-500 dark:text-yrugray-500" />
             </div>
-            <p className="text-slate-500 dark:text-yrugray-400 text-sm">ไม่พบหลักสูตรที่ตรงกับเงื่อนไข</p>
+            <p className="text-slate-600 dark:text-yrugray-400 text-[15px]">ไม่พบหลักสูตรที่ตรงกับเงื่อนไข</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-white/50 dark:bg-yrugray-900/50 border-b border-slate-200 dark:border-yrugray-800">
-                <tr className="text-left text-xs font-semibold text-slate-500 dark:text-yrugray-400 uppercase tracking-wider">
-                  <th className="px-6 py-3">หลักสูตร</th>
-                  <th className="px-6 py-3">หมวดหมู่ / ระดับ</th>
-                  <th className="px-6 py-3">วันที่</th>
-                  <th className="px-6 py-3">ที่นั่ง</th>
-                  <th className="px-6 py-3">สถานะ</th>
-                  <th className="px-6 py-3 text-right">การจัดการ</th>
+              <thead className="bg-slate-50 dark:bg-yrugray-900/50 border-b border-slate-200 dark:border-yrugray-800">
+                <tr className="text-left text-[13px] font-semibold text-slate-700 dark:text-yrugray-300 uppercase tracking-wider">
+                  <th className="px-6 py-4">หลักสูตร</th>
+                  <th className="px-6 py-4">หมวดหมู่ / ระดับ</th>
+                  <th className="px-6 py-4">วันที่</th>
+                  <th className="px-6 py-4">ที่นั่ง</th>
+                  <th className="px-6 py-4">สถานะ</th>
+                  <th className="px-6 py-4 text-right">การจัดการ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-yrugray-800">
+              <tbody className="divide-y divide-slate-200 dark:divide-yrugray-800">
                 {filtered.map((a) => (
-                  <tr key={a.id} className="hover:bg-slate-100/40 dark:hover:bg-yrugray-800/40 transition-colors">
+                  <tr key={a.id} className="hover:bg-slate-100/60 dark:hover:bg-yrugray-800/40 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 dark:bg-yrugray-800 shrink-0 border border-slate-300 dark:border-yrugray-700">
@@ -327,28 +327,28 @@ const ManageActivities = ({ onGoCreate }) => {
                             <img src={a.image} alt={a.title} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <ImageIcon className="w-5 h-5 text-slate-400 dark:text-yrugray-500" />
+                              <ImageIcon className="w-5 h-5 text-slate-500 dark:text-yrugray-500" />
                             </div>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[280px]">{a.title}</p>
-                          <p className="text-xs text-slate-500 dark:text-yrugray-400 truncate max-w-[280px] mt-0.5">{a.location}</p>
+                          <p className="text-[15px] font-semibold text-slate-900 dark:text-white truncate max-w-[280px]">{a.title}</p>
+                          <p className="text-sm text-slate-600 dark:text-yrugray-400 truncate max-w-[280px] mt-0.5">{a.location}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-yrupink-400 font-medium">{a.category}</p>
-                      <p className="text-xs text-slate-500 dark:text-yrugray-400 mt-0.5">{a.level}</p>
+                      <p className="text-[15px] text-yrupink-600 dark:text-yrupink-400 font-medium">{a.category}</p>
+                      <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-0.5">{a.level}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-slate-700 dark:text-yrugray-200">{a.date}</p>
-                      <p className="text-xs text-slate-500 dark:text-yrugray-400 mt-0.5">{a.duration}</p>
+                      <p className="text-[15px] text-slate-800 dark:text-yrugray-200 font-medium">{a.date}</p>
+                      <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-0.5">{a.duration}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-slate-700 dark:text-yrugray-200">
-                        <span className="text-yrupink-400 font-semibold">{a.registrants_count || 0}</span>
-                        <span className="text-slate-400 dark:text-yrugray-500"> / {a.seats || '∞'} คน</span>
+                      <div className="text-[15px] text-slate-800 dark:text-yrugray-200 tabular-nums">
+                        <span className="text-yrupink-600 dark:text-yrupink-400 font-semibold">{a.registrants_count || 0}</span>
+                        <span className="text-slate-500 dark:text-yrugray-500"> / {a.seats || '∞'} คน</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -359,18 +359,18 @@ const ManageActivities = ({ onGoCreate }) => {
                         <button
                           onClick={() => setViewingQR(a)}
                           title="แสดง QR ป้ายงาน"
-                          className="p-2 text-slate-500 dark:text-yrugray-400 hover:text-yrupink-400 hover:bg-yrupink-500/10 rounded-lg transition-colors"
+                          className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-yrupink-600 dark:hover:text-yrupink-400 hover:bg-yrupink-500/10 rounded-lg transition-colors"
                         >
                           <QrCode className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setViewingRegistrants(a)}
                           title="ดูรายชื่อผู้ลงทะเบียน"
-                          className="p-2 text-slate-500 dark:text-yrugray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors relative"
+                          className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors relative"
                         >
                           <ClipboardList className="w-4 h-4" />
                           {a.registrants_count > 0 && (
-                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-yrupink-500 text-white border-2 border-slate-200 dark:border-yrugray-900">
+                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-yrupink-500 text-white border-2 border-white dark:border-yrugray-900">
                               {a.registrants_count}
                             </span>
                           )}
@@ -378,14 +378,14 @@ const ManageActivities = ({ onGoCreate }) => {
                         <button
                           onClick={() => setEditing(a)}
                           title="แก้ไข"
-                          className="p-2 text-slate-500 dark:text-yrugray-400 hover:text-yrupink-400 hover:bg-yrupink-500/10 rounded-lg transition-colors"
+                          className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-yrupink-600 dark:hover:text-yrupink-400 hover:bg-yrupink-500/10 rounded-lg transition-colors"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setDeleting(a)}
                           title="ลบ"
-                          className="p-2 text-slate-500 dark:text-yrugray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -475,8 +475,8 @@ const QRModal = ({ activity, onClose }) => {
       <div className="relative bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-yrupink-400" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">QR ป้ายงาน</h3>
+            <QrCode className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">QR ป้ายงาน</h3>
           </div>
           <button onClick={onClose} className="text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white p-1 rounded">
             <X className="w-5 h-5" />
@@ -484,37 +484,37 @@ const QRModal = ({ activity, onClose }) => {
         </div>
 
         <div className="p-6">
-          <p className="text-xs text-slate-500 dark:text-yrugray-400 mb-1">หลักสูตร</p>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{activity.title}</p>
+          <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-1">หลักสูตร</p>
+          <p className="text-[15px] font-semibold text-slate-900 dark:text-white mb-4">{activity.title}</p>
 
-          <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-center border border-slate-200 dark:border-transparent">
             <img src={qrSrc} alt="QR" className="w-64 h-64" />
           </div>
 
           <div className="mb-4">
-            <p className="text-xs text-slate-500 dark:text-yrugray-400 mb-1">URL</p>
+            <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-1">URL</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs text-yrupink-400 bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 rounded-lg px-3 py-2 truncate">
+              <code className="flex-1 text-sm text-yrupink-600 dark:text-yrupink-400 bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 rounded-lg px-3 py-2 truncate">
                 {url}
               </code>
               <button
                 onClick={copyUrl}
                 title="คัดลอก URL"
-                className="p-2 text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg"
+                className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg"
               >
                 <Copy className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="p-3 bg-yrupink-500/10 border border-yrupink-500/30 rounded-lg text-xs text-slate-600 dark:text-yrugray-300 mb-4">
+          <div className="p-3 bg-yrupink-500/10 border border-yrupink-500/30 rounded-lg text-sm text-slate-700 dark:text-yrugray-300 mb-4">
             💡 <strong>วิธีใช้:</strong> พิมพ์ QR ขนาด A4 ติดที่โต๊ะเช็คอิน / ฉายบนจอ — ผู้อบรมสแกน → กรอกเบอร์ที่ลงทะเบียน → ทำแบบประเมิน → โหลดวุฒิบัตร
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={printQR}
-              className="py-2.5 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 flex items-center justify-center gap-2"
+              className="py-2.5 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold shadow-lg shadow-yrupink-500/20 flex items-center justify-center gap-2"
             >
               <Printer className="w-4 h-4" />
               พิมพ์ป้าย A4
@@ -522,7 +522,7 @@ const QRModal = ({ activity, onClose }) => {
             <a
               href={qrSrc}
               download={`qr-${activity.id}.png`}
-              className="py-2.5 rounded-lg bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-300 dark:border-yrugray-700 text-slate-700 dark:text-yrugray-200 text-sm font-semibold flex items-center justify-center gap-2"
+              className="py-2.5 rounded-lg bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-300 dark:border-yrugray-700 text-slate-800 dark:text-yrugray-200 text-[15px] font-semibold flex items-center justify-center gap-2"
             >
               <ImageIcon className="w-4 h-4" />
               ดาวน์โหลด PNG
@@ -538,12 +538,14 @@ const QRModal = ({ activity, onClose }) => {
 
 const StatusBadge = ({ status }) => {
   const map = {
-    'เปิดรับสมัคร': 'bg-green-500/10 text-green-400 border-green-500/30',
-    'ปิดรับสมัคร': 'bg-red-500/10 text-red-400 border-red-500/30',
-    'ร่าง': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+    'เปิดรับสมัคร': 'bg-green-100 text-green-700 border-green-300 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30',
+    'ปิดรับสมัคร':  'bg-red-100 text-red-700 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30',
+    'จบแล้ว':       'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30',
+    'ร่าง':         'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-500/10 dark:text-yellow-400 dark:border-yellow-500/30',
   };
+  const fallback = 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-gray-500/10 dark:text-gray-400 dark:border-gray-500/30';
   return (
-    <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${map[status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30'}`}>
+    <span className={`px-2.5 py-1 text-[13px] font-semibold rounded-full border ${map[status] || fallback}`}>
       {status}
     </span>
   );
@@ -578,8 +580,8 @@ const EditActivityModal = ({ activity, onClose, onSave }) => {
     <ModalShell onClose={onClose} size="lg">
       <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Pencil className="w-5 h-5 text-yrupink-400" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">แก้ไขหลักสูตร</h3>
+          <Pencil className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">แก้ไขหลักสูตร</h3>
         </div>
         <button onClick={onClose} className="text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white p-1 rounded">
           <X className="w-5 h-5" />
@@ -686,17 +688,17 @@ const EditActivityModal = ({ activity, onClose, onSave }) => {
           </Field>
         </div>
 
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-yrugray-800 flex items-center justify-end gap-2 bg-white/50 dark:bg-yrugray-900/50 sticky bottom-0">
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-yrugray-800 flex items-center justify-end gap-2 bg-white dark:bg-yrugray-900/50 sticky bottom-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors"
+            className="px-4 py-2 rounded-lg text-[15px] font-medium text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
-            className="px-5 py-2 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+            className="px-5 py-2 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             บันทึกการแก้ไข
@@ -710,27 +712,27 @@ const EditActivityModal = ({ activity, onClose, onSave }) => {
 const DeleteConfirmModal = ({ activity, onClose, onConfirm }) => (
   <ModalShell onClose={onClose}>
     <div className="p-6 text-center">
-      <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
-        <AlertTriangle className="w-7 h-7 text-red-400" />
+      <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/30 flex items-center justify-center mx-auto mb-4">
+        <AlertTriangle className="w-7 h-7 text-red-600 dark:text-red-400" />
       </div>
-      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">ยืนยันการลบหลักสูตร</h3>
-      <p className="text-sm text-slate-600 dark:text-yrugray-300 mb-1">
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">ยืนยันการลบหลักสูตร</h3>
+      <p className="text-[15px] text-slate-700 dark:text-yrugray-300 mb-1">
         คุณแน่ใจหรือไม่ว่าต้องการลบ
       </p>
-      <p className="text-sm font-semibold text-slate-900 dark:text-white mb-4 line-clamp-2">
+      <p className="text-[15px] font-semibold text-slate-900 dark:text-white mb-4 line-clamp-2">
         "{activity.title}"
       </p>
-      <p className="text-xs text-slate-400 dark:text-yrugray-500 mb-6">การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+      <p className="text-sm text-slate-600 dark:text-yrugray-500 mb-6">การกระทำนี้ไม่สามารถย้อนกลับได้</p>
       <div className="flex items-center justify-center gap-2">
         <button
           onClick={onClose}
-          className="px-5 py-2 rounded-lg text-sm text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors border border-slate-300 dark:border-yrugray-700"
+          className="px-5 py-2 rounded-lg text-[15px] font-medium text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors border border-slate-300 dark:border-yrugray-700"
         >
           ยกเลิก
         </button>
         <button
           onClick={onConfirm}
-          className="px-5 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold shadow-lg shadow-red-500/20 transition-colors flex items-center gap-2"
+          className="px-5 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[15px] font-semibold shadow-lg shadow-red-500/20 transition-colors flex items-center gap-2"
         >
           <Trash2 className="w-4 h-4" />
           ลบหลักสูตร
@@ -742,10 +744,10 @@ const DeleteConfirmModal = ({ activity, onClose, onConfirm }) => (
 
 const Field = ({ label, icon, required, className = '', children }) => (
   <div className={className}>
-    <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-1.5 flex items-center gap-1.5">
+    <label className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 mb-1.5 flex items-center gap-1.5">
       {icon}
       {label}
-      {required && <span className="text-yrupink-400">*</span>}
+      {required && <span className="text-yrupink-500 dark:text-yrupink-400">*</span>}
     </label>
     {children}
   </div>
