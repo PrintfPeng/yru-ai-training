@@ -33,47 +33,19 @@ const AdminLogin = ({ onLogin }) => {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yrupink-600/20 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-      <div className="w-full max-w-5xl bg-white/60 dark:bg-yrugray-900/60 backdrop-blur-xl border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row z-10">
-        
-        {/* Left Branding Panel (Hidden on mobile) */}
-        <div className="hidden md:flex md:w-1/2 p-12 flex-col justify-between bg-gradient-to-br from-yrugray-800/80 to-yrugray-900/80 border-r border-slate-300/50 dark:border-yrugray-700/50 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yrupink-500/10 rounded-full blur-3xl"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-yrupink-400 to-yrupink-700 rounded-xl flex items-center justify-center font-bold text-white shadow-lg text-xl">
-                AI
-              </div>
-              <span className="font-bold text-2xl tracking-wide text-slate-900 dark:text-white">CENTER <span className="text-yrupink-400">YRU</span></span>
-            </div>
-            
-            <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-4 leading-tight">
-              ระบบจัดการ <br />
-              <span className="text-gradient">ส่วนผู้ดูแลระบบ</span>
-            </h1>
-            <p className="text-slate-600 dark:text-yrugray-300 text-lg">
-              จัดการข้อมูลผู้ช่วย AI, หลักสูตรอบรม และการจองห้องประชุม อย่างปลอดภัย
-            </p>
-          </div>
-          
-          <div className="relative z-10 flex items-center gap-2 text-sm text-slate-500 dark:text-yrugray-400">
-            <ShieldCheck className="w-5 h-5 text-yrupink-400" />
-            <span>ระบบเข้าใช้งานที่ปลอดภัย</span>
-          </div>
-        </div>
+      <div className="w-full max-w-md bg-white/60 dark:bg-yrugray-900/60 backdrop-blur-xl border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl overflow-hidden z-10">
 
-        {/* Right Login Form */}
-        <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center bg-white/40 dark:bg-yrugray-900/40">
-          <div className="md:hidden flex items-center gap-2 mb-8 justify-center">
+        {/* Login Form */}
+        <div className="w-full p-8 md:p-10 flex flex-col justify-center bg-white/40 dark:bg-yrugray-900/40">
+          <div className="flex items-center gap-2 mb-8 justify-center">
             <div className="w-10 h-10 bg-gradient-to-br from-yrupink-400 to-yrupink-700 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">
               AI
             </div>
             <span className="font-bold text-xl tracking-wide text-slate-900 dark:text-white">CENTER <span className="text-yrupink-400">YRU</span></span>
           </div>
 
-          <div className="mb-10 text-center md:text-left">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">ยินดีต้อนรับ, ผู้ดูแลระบบ</h2>
+          <div className="mb-10 text-center">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">ยินดีต้อนรับ, ผู้ดูแลระบบ</h2>
             <p className="text-slate-500 dark:text-yrugray-400 text-sm">กรุณาเข้าสู่ระบบเพื่อจัดการระบบ</p>
           </div>
 
