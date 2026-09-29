@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon } from 'lucide-react';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import Footer from './components/Footer';
+import ThemeToggle from './components/ThemeToggle';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import TrainingActivity from './pages/TrainingActivity';
@@ -44,23 +44,6 @@ function App() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'light';
-    return localStorage.getItem('theme') || 'light';
-  });
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
-  };
 
   // While bootstrapping /auth/me, keep the screen minimal so we don't flash the
   // public home page for the ~200ms round-trip.
@@ -82,8 +65,8 @@ function App() {
 
   // Trainee QR flow — takes over the whole page
   if (eventState) {
-    if (eventState.step === 'landing') {
-      return (
+    const traineePage =
+      eventState.step === 'landing' ? (
         <EventLanding
           activityId={eventState.activityId}
           onVerified={(registrant, activity) =>
@@ -91,32 +74,33 @@ function App() {
           }
           onCancel={exitEventFlow}
         />
-      );
-    }
-    if (eventState.step === 'survey') {
-      return (
+      ) : eventState.step === 'survey' ? (
         <AssessmentSurvey
           activity={eventState.activity}
           registrant={eventState.registrant}
           onComplete={(_answers, result) =>
-            // result = { registration_id, certificate: { certificate_code, ... } }
             setEventState({ ...eventState, step: 'cert',
               certificateCode: result?.certificate?.certificate_code })
           }
           onCancel={exitEventFlow}
         />
-      );
-    }
-    if (eventState.step === 'cert') {
-      return (
+      ) : eventState.step === 'cert' ? (
         <CertificateDownload
           activity={eventState.activity}
           registrant={eventState.registrant}
           certificateCode={eventState.certificateCode}
           onBackHome={exitEventFlow}
         />
-      );
-    }
+      ) : null;
+
+    return (
+      <div className="relative">
+        <div className="absolute top-4 right-4 z-50">
+          <ThemeToggle variant="solid" />
+        </div>
+        {traineePage}
+      </div>
+    );
   }
 
   if (currentView === 'admin') {
@@ -128,6 +112,9 @@ function App() {
         >
           &larr; กลับสู่หน้าแรก
         </button>
+        <div className="absolute top-6 right-6 z-50">
+          <ThemeToggle variant="solid" />
+        </div>
         <AdminLogin onLogin={(a) => { setAdmin(a); setCurrentView('dashboard'); }} />
       </div>
     );
@@ -147,7 +134,14 @@ function App() {
   }
 
   if (currentView === 'training') {
-    return <TrainingActivity onBack={() => setCurrentView('home')} />;
+    return (
+      <div className="relative">
+        <div className="absolute top-4 right-4 z-50">
+          <ThemeToggle variant="solid" />
+        </div>
+        <TrainingActivity onBack={() => setCurrentView('home')} />
+      </div>
+    );
   }
 
   return (
@@ -170,13 +164,7 @@ function App() {
             <a href="#about" className="hover:text-yrupink-500 dark:hover:text-yrupink-400 transition-colors">เกี่ยวกับเรา</a>
             <a href="#contact" className="hover:text-yrupink-500 dark:hover:text-yrupink-400 transition-colors">ติดต่อเรา</a>
             
-            <button 
-              onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-yrugray-800 transition-colors text-gray-500 dark:text-yrugray-400 ml-2"
-              aria-label="Toggle Theme"
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            <ThemeToggle className="ml-2" />
 
             {/* Admin Login Button */}
             <button 
@@ -188,12 +176,7 @@ function App() {
             </button>
           </nav>
           <div className="md:hidden flex items-center gap-4">
-            <button 
-              onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-yrugray-800 transition-colors text-gray-500 dark:text-yrugray-400"
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            <ThemeToggle />
             <button className="text-gray-900 dark:text-white">
               {/* Mobile menu icon */}
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>

@@ -171,7 +171,7 @@ const CertPreview = ({ cert, substitutions }) => {
   const bgUrl = cert.backgroundImageUrl || cert.backgroundImage;
   return (
   <div
-    className="relative aspect-[297/210] w-full bg-gradient-to-br from-yellow-500/20 to-yellow-800/10 bg-yrugray-950"
+    className="relative aspect-[297/210] w-full bg-gradient-to-br from-yellow-500/20 to-yellow-800/10 bg-slate-50 dark:bg-yrugray-950"
     style={
       bgUrl
         ? {

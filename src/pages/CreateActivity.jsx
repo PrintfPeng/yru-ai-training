@@ -134,8 +134,8 @@ const CreateActivity = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">สร้างกิจกรรม</h2>
-          <p className="text-sm text-yrugray-400 mt-1">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">สร้างกิจกรรม</h2>
+          <p className="text-sm text-slate-500 dark:text-yrugray-400 mt-1">
             กรอกรายละเอียดกิจกรรม และออกแบบฟอร์มลงทะเบียนแบบไดนามิก
           </p>
         </div>
@@ -157,10 +157,10 @@ const CreateActivity = () => {
       )}
 
       {/* Section: รายละเอียดกิจกรรม */}
-      <section className="bg-yrugray-900 border border-yrugray-800 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-yrugray-800 flex items-center gap-2">
+      <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-yrupink-400" />
-          <h3 className="text-lg font-bold text-white">รายละเอียดกิจกรรม</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">รายละเอียดกิจกรรม</h3>
         </div>
 
         <div className="p-6 pb-0">
@@ -277,7 +277,7 @@ const CreateActivity = () => {
 
 const AdminField = ({ label, icon, required, className = '', children }) => (
   <div className={className}>
-    <label className="text-sm text-yrugray-300 mb-1.5 flex items-center gap-1.5">
+    <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-1.5 flex items-center gap-1.5">
       {icon}
       {label}
       {required && <span className="text-yrupink-400">*</span>}
@@ -306,30 +306,30 @@ const BannerUploader = ({ preview, fileName, fileSize, error, onSelect, onRemove
 
   return (
     <div>
-      <label className="text-sm text-yrugray-300 mb-1.5 flex items-center gap-1.5">
+      <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-1.5 flex items-center gap-1.5">
         <ImageIcon className="w-4 h-4" />
         รูปแบนเนอร์กิจกรรม
-        <span className="text-yrugray-500 font-normal text-xs">(แนะนำอัตราส่วน 16:9, สูงสุด 5MB)</span>
+        <span className="text-slate-400 dark:text-yrugray-500 font-normal text-xs">(แนะนำอัตราส่วน 16:9, สูงสุด 5MB)</span>
       </label>
 
       {preview ? (
-        <div className="relative group rounded-xl overflow-hidden border border-yrugray-700">
+        <div className="relative group rounded-xl overflow-hidden border border-slate-300 dark:border-yrugray-700">
           <img
             src={preview}
             alt="banner preview"
-            className="w-full h-56 md:h-64 object-cover bg-yrugray-800"
+            className="w-full h-56 md:h-64 object-cover bg-slate-100 dark:bg-yrugray-800"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="text-sm text-white">
+            <div className="text-sm text-slate-900 dark:text-white">
               <p className="font-medium truncate max-w-[240px]">{fileName}</p>
-              <p className="text-xs text-yrugray-300">{formatSize(fileSize)}</p>
+              <p className="text-xs text-slate-600 dark:text-yrugray-300">{formatSize(fileSize)}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-white text-xs font-medium flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-slate-900 dark:text-white text-xs font-medium flex items-center gap-1.5"
               >
                 <Upload className="w-3.5 h-3.5" />
                 เปลี่ยนรูป
@@ -363,10 +363,10 @@ const BannerUploader = ({ preview, fileName, fileSize, error, onSelect, onRemove
           <div className="w-12 h-12 rounded-full bg-yrupink-500/10 border border-yrupink-500/30 flex items-center justify-center mb-3">
             <ImagePlus className="w-6 h-6 text-yrupink-400" />
           </div>
-          <p className="text-sm font-semibold text-white mb-1">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
             คลิกเพื่อเลือกรูป หรือ ลากไฟล์มาวางที่นี่
           </p>
-          <p className="text-xs text-yrugray-400">รองรับ JPG, PNG, WebP, GIF ขนาดไม่เกิน 5MB</p>
+          <p className="text-xs text-slate-500 dark:text-yrugray-400">รองรับ JPG, PNG, WebP, GIF ขนาดไม่เกิน 5MB</p>
         </div>
       )}
 

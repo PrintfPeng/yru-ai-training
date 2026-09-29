@@ -215,7 +215,7 @@ const TrainingActivity = ({ onBack }) => {
 
                     <button
                       onClick={() => setSelectedActivity(a)}
-                      className="mt-auto w-full py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-gray-800 bg-gray-100 hover:text-white hover:bg-yrupink-600 border border-gray-200 dark:text-white dark:bg-yrugray-800 dark:hover:bg-yrupink-600 dark:border-yrugray-700 dark:hover:border-yrupink-500 transition-all duration-300"
+                      className="mt-auto w-full py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-gray-800 bg-gray-100 hover:text-slate-900 dark:hover:text-white hover:bg-yrupink-600 border border-gray-200 dark:text-white dark:bg-yrugray-800 dark:hover:bg-yrupink-600 dark:border-yrugray-700 dark:hover:border-yrupink-500 transition-all duration-300"
                     >
                       ดูรายละเอียด
                       <ArrowRight className="w-4 h-4" />
