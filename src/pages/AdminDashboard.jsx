@@ -27,11 +27,13 @@ const ROLE_LABEL = {
 };
 
 const STATUS_META = {
-  draft:      { label: 'ร่าง',       cls: 'bg-yrugray-500/10 text-yrugray-300' },
-  published:  { label: 'เผยแพร่แล้ว', cls: 'bg-green-500/10 text-green-400' },
-  completed:  { label: 'สิ้นสุดแล้ว',  cls: 'bg-blue-500/10 text-blue-400' },
-  cancelled:  { label: 'ยกเลิก',     cls: 'bg-red-500/10 text-red-400' },
+  draft:      { label: 'ร่าง',       cls: 'bg-slate-200 text-slate-700 dark:bg-yrugray-500/10 dark:text-yrugray-300' },
+  published:  { label: 'เผยแพร่แล้ว', cls: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' },
+  completed:  { label: 'สิ้นสุดแล้ว',  cls: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' },
+  cancelled:  { label: 'ยกเลิก',     cls: 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400' },
 };
+
+const STATUS_FALLBACK_CLS = 'bg-slate-200 text-slate-700 dark:bg-yrugray-500/10 dark:text-yrugray-400';
 
 const fmtThaiDate = (iso) => {
   if (!iso) return '-';
@@ -139,14 +141,14 @@ const AdminDashboard = ({ admin, onLogout }) => {
               AI
             </div>
             <div>
-              <span className="font-bold text-lg tracking-wide text-slate-900 dark:text-white block">CENTER <span className="text-yrupink-400">YRU</span></span>
-              <span className="text-xs text-yrupink-400 font-medium bg-yrupink-500/10 px-2 py-0.5 rounded-full inline-block mt-0.5">ADMIN</span>
+              <span className="font-bold text-xl tracking-wide text-slate-900 dark:text-white block leading-tight">CENTER <span className="text-yrupink-500 dark:text-yrupink-400">YRU</span></span>
+              <span className="text-xs text-yrupink-600 dark:text-yrupink-400 font-semibold bg-yrupink-500/10 px-2 py-0.5 rounded-full inline-block mt-1">ADMIN</span>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-grow py-6 px-4 space-y-2 overflow-y-auto">
+        <nav className="flex-grow py-6 px-4 space-y-1.5 overflow-y-auto">
           {menuItems.map((item) => (
             <button
               key={item.name}
@@ -156,12 +158,12 @@ const AdminDashboard = ({ admin, onLogout }) => {
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 activeMenu === item.name
-                ? 'bg-yrupink-600/10 text-yrupink-400 border border-yrupink-500/20 shadow-inner'
-                : 'text-yrugray-400 hover:text-yrugray-100 hover:bg-yrugray-800/50'
+                ? 'bg-yrupink-600/10 text-yrupink-600 dark:text-yrupink-400 border border-yrupink-500/30 shadow-inner font-semibold'
+                : 'text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800/50 font-medium'
               }`}
             >
               {item.icon}
-              <span className="font-medium text-sm">{item.name}</span>
+              <span className="text-[15px] leading-snug text-left">{item.name}</span>
             </button>
           ))}
         </nav>
@@ -170,10 +172,10 @@ const AdminDashboard = ({ admin, onLogout }) => {
         <div className="p-4 border-t border-slate-200 dark:border-yrugray-800">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 dark:text-yrugray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-700 dark:text-yrugray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
           >
             <LogOut className="w-5 h-5" />
-            <span className="font-medium text-sm">ออกจากระบบ</span>
+            <span className="font-semibold text-[15px]">ออกจากระบบ</span>
           </button>
         </div>
       </aside>
@@ -185,24 +187,24 @@ const AdminDashboard = ({ admin, onLogout }) => {
         <header className="h-20 bg-white/80 dark:bg-yrugray-900/80 backdrop-blur-md border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between px-6 sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button
-              className="lg:hidden text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white"
+              className="lg:hidden text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white"
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu className="w-6 h-6" />
             </button>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white hidden sm:block">ภาพรวม / {activeMenu}</h2>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white hidden sm:block leading-tight">ภาพรวม / {activeMenu}</h2>
             </div>
           </div>
 
           <div className="flex items-center gap-6">
             {/* Search */}
             <div className="hidden md:flex items-center relative">
-              <Search className="w-4 h-4 text-slate-400 dark:text-yrugray-500 absolute left-3" />
+              <Search className="w-4 h-4 text-slate-500 dark:text-yrugray-500 absolute left-3" />
               <input
                 type="text"
                 placeholder="ค้นหา..."
-                className="bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-sm rounded-full pl-9 pr-4 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 w-64 transition-all"
+                className="bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-full pl-9 pr-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 w-64 transition-all"
               />
             </div>
 
@@ -210,7 +212,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
             <ThemeToggle />
 
             {/* Notifications */}
-            <button className="relative text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+            <button className="relative text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white transition-colors">
               <Bell className="w-6 h-6" />
               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-yrupink-500 rounded-full border-2 border-slate-200 dark:border-yrugray-900"></span>
             </button>
@@ -218,8 +220,8 @@ const AdminDashboard = ({ admin, onLogout }) => {
             {/* Profile */}
             <div className="flex items-center gap-3 pl-6 border-l border-slate-200 dark:border-yrugray-800 cursor-pointer group">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-slate-900 dark:text-white group-hover:text-yrupink-400 transition-colors">{adminDisplayName}</p>
-                <p className="text-xs text-slate-400 dark:text-yrugray-500">{adminRoleLabel}</p>
+                <p className="text-[15px] font-semibold text-slate-900 dark:text-white group-hover:text-yrupink-500 dark:group-hover:text-yrupink-400 transition-colors">{adminDisplayName}</p>
+                <p className="text-sm text-slate-600 dark:text-yrugray-400">{adminRoleLabel}</p>
               </div>
               <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-yrugray-700 border-2 border-yrupink-500/50 flex items-center justify-center overflow-hidden">
                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`} alt={adminDisplayName} className="w-full h-full object-cover" />
@@ -252,11 +254,11 @@ const AdminDashboard = ({ admin, onLogout }) => {
                         </div>
                       </div>
                       <div>
-                        <h3 className="text-slate-500 dark:text-yrugray-400 text-sm font-medium mb-1">{stat.title}</h3>
-                        <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                          {loading ? <span className="inline-block w-12 h-8 bg-slate-100 dark:bg-yrugray-800 rounded animate-pulse" /> : stat.value.toLocaleString('th-TH')}
+                        <h3 className="text-slate-700 dark:text-yrugray-300 text-[15px] font-semibold mb-1">{stat.title}</h3>
+                        <p className="text-4xl font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight">
+                          {loading ? <span className="inline-block w-16 h-10 bg-slate-100 dark:bg-yrugray-800 rounded animate-pulse" /> : stat.value.toLocaleString('th-TH')}
                         </p>
-                        <p className="text-xs text-slate-400 dark:text-yrugray-500 mt-2">{stat.sub}</p>
+                        <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-2 font-medium">{stat.sub}</p>
                       </div>
                     </div>
                   ))}
@@ -266,8 +268,8 @@ const AdminDashboard = ({ admin, onLogout }) => {
                 <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
                   <div className="p-6 border-b border-slate-200 dark:border-yrugray-800 flex justify-between items-center bg-white/50 dark:bg-yrugray-900/50">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">หลักสูตรล่าสุด</h3>
-                      <p className="text-xs text-slate-400 dark:text-yrugray-500 mt-1">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">หลักสูตรล่าสุด</h3>
+                      <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
                         เรียงตามวันที่จัดล่าสุด — แสดง {recent.length} จาก {activities.length} รายการ
                       </p>
                     </div>
@@ -275,14 +277,14 @@ const AdminDashboard = ({ admin, onLogout }) => {
                       <button
                         onClick={() => setRefreshTick((n) => n + 1)}
                         disabled={loading}
-                        className="p-2 text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg transition-colors disabled:opacity-50"
+                        className="p-2 text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg transition-colors disabled:opacity-50"
                         title="รีเฟรช"
                       >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                       </button>
                       <button
                         onClick={() => setActiveMenu('จัดการหลักสูตร')}
-                        className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors"
+                        className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors"
                       >
                         ดูทั้งหมด
                       </button>
@@ -291,12 +293,12 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
                   {error ? (
                     <div className="p-8 flex flex-col items-center justify-center text-center">
-                      <AlertCircle className="w-12 h-12 text-red-400 mb-3" />
-                      <p className="text-slate-600 dark:text-yrugray-300 font-medium mb-1">โหลดข้อมูลไม่สำเร็จ</p>
-                      <p className="text-xs text-slate-400 dark:text-yrugray-500 mb-4">{error}</p>
+                      <AlertCircle className="w-12 h-12 text-red-500 mb-3" />
+                      <p className="text-slate-800 dark:text-yrugray-200 text-base font-semibold mb-1">โหลดข้อมูลไม่สำเร็จ</p>
+                      <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-4">{error}</p>
                       <button
                         onClick={() => setRefreshTick((n) => n + 1)}
-                        className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-sm rounded-lg"
+                        className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-[15px] font-medium rounded-lg text-slate-800 dark:text-yrugray-200"
                       >
                         ลองใหม่
                       </button>
@@ -310,55 +312,55 @@ const AdminDashboard = ({ admin, onLogout }) => {
                   ) : recent.length === 0 ? (
                     <div className="p-12 flex flex-col items-center justify-center text-center">
                       <div className="w-16 h-16 bg-slate-100 dark:bg-yrugray-800 rounded-full flex items-center justify-center mb-4">
-                        <BookOpen className="w-8 h-8 text-slate-400 dark:text-yrugray-500" />
+                        <BookOpen className="w-8 h-8 text-slate-500 dark:text-yrugray-500" />
                       </div>
-                      <h4 className="text-lg font-bold text-slate-600 dark:text-yrugray-300 mb-2">ยังไม่มีหลักสูตร</h4>
-                      <p className="text-slate-400 dark:text-yrugray-500 mb-6 max-w-md">
+                      <h4 className="text-xl font-bold text-slate-800 dark:text-yrugray-200 mb-2">ยังไม่มีหลักสูตร</h4>
+                      <p className="text-base text-slate-600 dark:text-yrugray-400 mb-6 max-w-md">
                         เริ่มต้นด้วยการสร้างหลักสูตรแรก แล้วเปิดให้ผู้เรียนลงทะเบียนได้ทันที
                       </p>
                       <button
                         onClick={() => setActiveMenu('สร้างกิจกรรม')}
-                        className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold rounded-lg"
+                        className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg"
                       >
                         + สร้างกิจกรรม
                       </button>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-white/50 dark:bg-yrugray-900/50 text-slate-500 dark:text-yrugray-400 text-xs uppercase tracking-wider">
+                      <table className="w-full">
+                        <thead className="bg-slate-50 dark:bg-yrugray-900/50 text-slate-700 dark:text-yrugray-300 text-[13px] uppercase tracking-wider">
                           <tr>
-                            <th className="px-6 py-3 text-left font-medium">หลักสูตร</th>
-                            <th className="px-6 py-3 text-left font-medium hidden md:table-cell">วันที่จัด</th>
-                            <th className="px-6 py-3 text-left font-medium hidden lg:table-cell">สถานที่</th>
-                            <th className="px-6 py-3 text-center font-medium">ผู้ลงทะเบียน</th>
-                            <th className="px-6 py-3 text-center font-medium">สถานะ</th>
+                            <th className="px-6 py-4 text-left font-semibold">หลักสูตร</th>
+                            <th className="px-6 py-4 text-left font-semibold hidden md:table-cell">วันที่จัด</th>
+                            <th className="px-6 py-4 text-left font-semibold hidden lg:table-cell">สถานที่</th>
+                            <th className="px-6 py-4 text-center font-semibold">ผู้ลงทะเบียน</th>
+                            <th className="px-6 py-4 text-center font-semibold">สถานะ</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-yrugray-800">
+                        <tbody className="divide-y divide-slate-200 dark:divide-yrugray-800">
                           {recent.map((a) => {
-                            const status = STATUS_META[a.status] || { label: a.status, cls: 'bg-yrugray-500/10 text-yrugray-400' };
+                            const status = STATUS_META[a.status] || { label: a.status, cls: STATUS_FALLBACK_CLS };
                             const registered = Number(a.total_registered) || 0;
                             const capacity   = Number(a.capacity) || 0;
                             return (
-                              <tr key={a.id} className="hover:bg-slate-100/40 dark:hover:bg-yrugray-800/40 transition-colors">
+                              <tr key={a.id} className="hover:bg-slate-100/60 dark:hover:bg-yrugray-800/40 transition-colors">
                                 <td className="px-6 py-4">
-                                  <p className="font-medium text-slate-900 dark:text-white line-clamp-1">{a.title}</p>
-                                  <p className="text-xs text-slate-400 dark:text-yrugray-500 mt-0.5 md:hidden">
+                                  <p className="font-semibold text-[15px] text-slate-900 dark:text-white line-clamp-1">{a.title}</p>
+                                  <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-0.5 md:hidden">
                                     {fmtThaiDate(a.start_date)}
                                   </p>
                                 </td>
-                                <td className="px-6 py-4 text-slate-600 dark:text-yrugray-300 hidden md:table-cell">
+                                <td className="px-6 py-4 text-[15px] text-slate-800 dark:text-yrugray-200 font-medium hidden md:table-cell">
                                   {fmtThaiDate(a.start_date)}
                                 </td>
-                                <td className="px-6 py-4 text-slate-500 dark:text-yrugray-400 hidden lg:table-cell">
+                                <td className="px-6 py-4 text-[15px] text-slate-700 dark:text-yrugray-300 hidden lg:table-cell">
                                   {a.location || '-'}
                                 </td>
-                                <td className="px-6 py-4 text-center text-slate-600 dark:text-yrugray-300">
+                                <td className="px-6 py-4 text-center text-[15px] text-slate-800 dark:text-yrugray-200 font-semibold tabular-nums">
                                   {registered}{capacity > 0 ? ` / ${capacity}` : ''}
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${status.cls}`}>
+                                  <span className={`text-[13px] font-semibold px-3 py-1 rounded-full ${status.cls}`}>
                                     {status.label}
                                   </span>
                                 </td>
