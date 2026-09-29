@@ -17,7 +17,7 @@ import DynamicFormBuilder from '../components/DynamicFormBuilder';
 import { activitiesApi, assessmentsApi, ApiError } from '../api';
 
 const adminInputCls =
-  'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
+  'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
 const CreateActivity = () => {
   // Activity metadata
@@ -132,17 +132,17 @@ const CreateActivity = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">สร้างกิจกรรม</h2>
-          <p className="text-sm text-slate-500 dark:text-yrugray-400 mt-1">
+          <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">สร้างกิจกรรม</h2>
+          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
             กรอกรายละเอียดกิจกรรม และออกแบบฟอร์มลงทะเบียนแบบไดนามิก
           </p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-sm font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
         >
           {saving
             ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
@@ -151,7 +151,7 @@ const CreateActivity = () => {
       </div>
 
       {saveError && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300">
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-300">
           {saveError}
         </div>
       )}
@@ -159,8 +159,8 @@ const CreateActivity = () => {
       {/* Section: รายละเอียดกิจกรรม */}
       <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-yrupink-400" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">รายละเอียดกิจกรรม</h3>
+          <BookOpen className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">รายละเอียดกิจกรรม</h3>
         </div>
 
         <div className="p-6 pb-0">
@@ -277,10 +277,10 @@ const CreateActivity = () => {
 
 const AdminField = ({ label, icon, required, className = '', children }) => (
   <div className={className}>
-    <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-1.5 flex items-center gap-1.5">
+    <label className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 mb-1.5 flex items-center gap-1.5">
       {icon}
       {label}
-      {required && <span className="text-yrupink-400">*</span>}
+      {required && <span className="text-yrupink-500 dark:text-yrupink-400">*</span>}
     </label>
     {children}
   </div>
