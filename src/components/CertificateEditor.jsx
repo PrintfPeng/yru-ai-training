@@ -34,7 +34,7 @@ export const FONT_OPTIONS = [
 const DEFAULT_FONT = FONT_OPTIONS[0].value;
 
 const inputCls =
-  'w-full bg-yrugray-800 border border-yrugray-700 text-sm rounded-lg px-3 py-2 text-white placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
+  'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
 // Placeholder fields available to add to the canvas
 // หมายเหตุ: ไม่มี placeholder "คะแนน" เพราะเป็นแบบสอบถามความพึงพอใจ ไม่ใช่ทดสอบความรู้
