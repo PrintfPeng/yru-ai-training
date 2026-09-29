@@ -109,7 +109,7 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Banner */}
-      <div className="relative w-full h-40 md:h-56 overflow-hidden bg-yrugray-900">
+      <div className="relative w-full h-40 md:h-56 overflow-hidden bg-white dark:bg-yrugray-900">
         {activity.cover_image_url && (
           <img src={activity.cover_image_url} alt="" className="w-full h-full object-cover opacity-80" />
         )}
@@ -127,10 +127,10 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
               {activity.status === 'published' ? 'เปิดรับสมัคร' : activity.status}
             </span>
           </div>
-          <h1 className="text-2xl md:text-4xl font-extrabold text-white drop-shadow-lg">
+          <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 dark:text-white drop-shadow-lg">
             {activity.title}
           </h1>
-          <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-white/90">
+          <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-slate-900/90 dark:text-white/90">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
               {new Date(activity.start_date).toLocaleDateString('th-TH', {
