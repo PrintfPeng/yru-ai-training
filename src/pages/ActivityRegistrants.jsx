@@ -55,7 +55,7 @@ function exportCsv(activity, rows) {
   URL.revokeObjectURL(a.href);
 }
 
-const ActivityRegistrants = ({ activity, onBack }) => {
+const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
   const [registrants, setRegistrants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -152,34 +152,50 @@ const ActivityRegistrants = ({ activity, onBack }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="p-2 rounded-lg bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-300 dark:border-yrugray-700 text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white transition-colors"
-            title="กลับหน้าจัดการหลักสูตร"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-0.5">รายชื่อผู้ลงทะเบียน</p>
-            <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white line-clamp-1 leading-tight">{activity.title}</h2>
-            <p className="text-sm text-yrupink-600 dark:text-yrupink-400 mt-0.5 font-medium">
-              {activity.date && <>{activity.date} • </>}
-              ที่นั่ง {activity.seats || '∞'} คน
-            </p>
+      {/* Header — hidden when embedded inside another page's own layout */}
+      {!embedded && (
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onBack}
+              className="p-2 rounded-lg bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-300 dark:border-yrugray-700 text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+              title="กลับหน้าจัดการหลักสูตร"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-0.5">รายชื่อผู้ลงทะเบียน</p>
+              <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white line-clamp-1 leading-tight">{activity.title}</h2>
+              <p className="text-sm text-yrupink-600 dark:text-yrupink-400 mt-0.5 font-medium">
+                {activity.date && <>{activity.date} • </>}
+                ที่นั่ง {activity.seats || '∞'} คน
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => exportCsv(activity, filtered)}
+            disabled={filtered.length === 0}
+            className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-slate-800 dark:text-white text-[15px] font-semibold rounded-lg border border-slate-300 dark:border-yrugray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            ส่งออก CSV
+          </button>
         </div>
-        <button
-          onClick={() => exportCsv(activity, filtered)}
-          disabled={filtered.length === 0}
-          className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-slate-800 dark:text-white text-[15px] font-semibold rounded-lg border border-slate-300 dark:border-yrugray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Download className="w-4 h-4" />
-          ส่งออก CSV
-        </button>
-      </div>
+      )}
+
+      {/* When embedded: still expose the CSV button in a lightweight strip */}
+      {embedded && (
+        <div className="flex items-center justify-end">
+          <button
+            onClick={() => exportCsv(activity, filtered)}
+            disabled={filtered.length === 0}
+            className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-slate-800 dark:text-white text-[15px] font-semibold rounded-lg border border-slate-300 dark:border-yrugray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            ส่งออก CSV
+          </button>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
