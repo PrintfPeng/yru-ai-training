@@ -14,11 +14,11 @@ import {
   Briefcase,
   MessageSquare,
   Send,
-  QrCode,
+  Award,
   Loader2,
   XCircle,
 } from 'lucide-react';
-import { activitiesApi, registrationsApi, ApiError } from '../api';
+import { activitiesApi, registrationsApi, assessmentsApi, ApiError } from '../api';
 
 const fmtThaiDate = (iso) => {
   if (!iso) return '-';
@@ -48,6 +48,9 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
   // fetching so the banner + hero don't flicker to empty.
   const [activity, setActivity] = useState(initialActivity || null);
   const [reloading, setReloading] = useState(false);
+  // True iff the admin has published an assessment for this activity.
+  // Drives the "ทำแบบประเมิน..." CTA at the bottom of the form aside.
+  const [assessmentAvailable, setAssessmentAvailable] = useState(false);
 
   useEffect(() => {
     const slug = initialActivity?.slug;
@@ -70,6 +73,13 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
       })
       .catch(() => { /* keep the prop as-is on error */ })
       .finally(() => !cancelled && setReloading(false));
+
+    // Check if a published assessment exists for this activity. 404 = no
+    // published assessment yet → hide the CTA. Any other error is silent.
+    assessmentsApi.getActiveBySlug(slug)
+      .then((row) => { if (!cancelled) setAssessmentAvailable(!!row); })
+      .catch(() => { if (!cancelled) setAssessmentAvailable(false); });
+
     return () => { cancelled = true; };
   }, [initialActivity?.slug]);
 
@@ -424,22 +434,23 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
                 </form>
               )}
 
-              {/* Trainee QR entry — for admin preview / on-site scan */}
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-yrugray-700">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                  สำหรับผู้อบรม (วันจัดกิจกรรม)
-                </p>
-                <a
-                  href={`/?e=${activity?.slug || activity?.id}`}
-                  className="w-full py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-gray-800 dark:text-yrugray-100 bg-white/70 dark:bg-yrugray-800/60 hover:bg-white dark:hover:bg-yrugray-700 backdrop-blur border border-gray-200 dark:border-yrugray-700 shadow-sm transition-all"
-                >
-                  <QrCode className="w-4 h-4 text-yrupink-500" />
-                  scan QR วันงาน (พิมพ์ + ติดที่โต๊ะเช็คอิน)
-                </a>
-                <p className="text-xs text-center text-gray-500 dark:text-yrugray-400 mt-2">
-                  ในการใช้งานจริง ผู้อบรม scan QR ที่ป้ายในสถานที่จัดงาน
-                </p>
-              </div>
+              {/* Assessment CTA — shown only when the admin has published an
+                  assessment for this activity. Jumps into the trainee flow
+                  (App.jsx picks up ?e=<slug>). */}
+              {assessmentAvailable && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-yrugray-700">
+                  <a
+                    href={`/?e=${activity?.slug || activity?.id}`}
+                    className="w-full py-3 rounded-lg flex items-center justify-center gap-2 text-[15px] font-semibold text-white bg-gradient-to-r from-yrupink-500 to-yrupink-600 hover:from-yrupink-600 hover:to-yrupink-700 shadow-lg shadow-yrupink-500/25 hover:shadow-yrupink-500/40 transition-all"
+                  >
+                    <Award className="w-4 h-4" />
+                    ทำแบบประเมินเพื่อรับใบประกาศนียบัตร
+                  </a>
+                  <p className="text-xs text-center text-gray-500 dark:text-yrugray-400 mt-2">
+                    ยืนยันตัวด้วยเบอร์ที่ลงทะเบียน → ทำแบบประเมิน → ดาวน์โหลดใบประกาศนียบัตร
+                  </p>
+                </div>
+              )}
             </div>
           </aside>
         </div>

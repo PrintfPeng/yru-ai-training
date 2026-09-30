@@ -16,9 +16,6 @@ import {
   Image as ImageIcon,
   Filter,
   ClipboardList,
-  QrCode,
-  Printer,
-  Copy,
   Loader2,
   ArrowLeft,
   RefreshCw,
@@ -75,7 +72,6 @@ const ManageActivities = ({ onGoCreate }) => {
   // Selected card → show detail panel (with edit + registrants tabs)
   const [selected, setSelected] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const [viewingQR, setViewingQR] = useState(null);
 
   const statuses = ['ทั้งหมด', 'เปิดรับสมัคร', 'ปิดรับสมัคร', 'จบแล้ว', 'ร่าง'];
 
@@ -138,7 +134,6 @@ const ManageActivities = ({ onGoCreate }) => {
           onBack={() => setSelected(null)}
           onEdit={handleUpdate}
           onDelete={() => setDeleting(selected)}
-          onOpenQR={() => setViewingQR(selected)}
           onReload={reload}
         />
         {deleting && (
@@ -146,12 +141,6 @@ const ManageActivities = ({ onGoCreate }) => {
             activity={deleting}
             onClose={() => setDeleting(null)}
             onConfirm={handleDelete}
-          />
-        )}
-        {viewingQR && (
-          <QRModal
-            activity={viewingQR}
-            onClose={() => setViewingQR(null)}
           />
         )}
       </>
@@ -308,7 +297,7 @@ const ActivityCard = ({ activity, onOpen }) => (
 
 // ────────────────────── Detail Panel (tabs) ──────────────────────
 
-const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onOpenQR, onReload }) => {
+const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onReload }) => {
   const [tab, setTab] = useState('edit'); // 'edit' | 'registrants'
 
   return (
@@ -344,13 +333,6 @@ const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onOpenQR, onR
             className="p-2 rounded-lg text-slate-600 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onOpenQR}
-            className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-slate-800 dark:text-yrugray-200 text-[14px] font-medium flex items-center gap-2 border border-slate-300 dark:border-yrugray-700"
-          >
-            <QrCode className="w-4 h-4" />
-            QR ป้ายงาน
           </button>
           <button
             onClick={onDelete}
@@ -493,99 +475,6 @@ const InlineEditForm = ({ activity, onSave }) => {
         </button>
       </div>
     </form>
-  );
-};
-
-// ────────────────────────── QR Modal ──────────────────────────
-
-const QRModal = ({ activity, onClose }) => {
-  const slug = activity.slug || `activity-${activity.id}`;
-  const url = `${window.location.origin}/?e=${slug}`;
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(url)}`;
-
-  const copyUrl = () => {
-    navigator.clipboard?.writeText(url).then(
-      () => alert('คัดลอกลิงก์แล้ว'),
-      () => alert('URL: ' + url),
-    );
-  };
-
-  const printQR = () => {
-    const w = window.open('', '_blank');
-    w.document.write(`
-      <html><head><title>QR - ${activity.title}</title>
-      <style>
-        body { font-family: 'Noto Sans Thai', sans-serif; margin: 0; padding: 40px; text-align: center; }
-        h1 { font-size: 28px; margin: 0 0 8px; }
-        h2 { font-size: 20px; margin: 0 0 24px; color: #666; }
-        img { max-width: 400px; margin: 24px auto; display: block; border: 2px solid #eee; padding: 12px; }
-        .meta { font-size: 16px; color: #333; margin-bottom: 8px; }
-        .url { font-family: monospace; font-size: 14px; color: #db2777; margin-top: 12px; word-break: break-all; }
-        .hint { font-size: 14px; color: #888; margin-top: 20px; }
-        @media print { body { padding: 0; } }
-      </style>
-      </head><body>
-        <h1>AI Center YRU</h1>
-        <h2>${activity.title}</h2>
-        <div class="meta">📅 ${activity.date}</div>
-        <div class="meta">📍 ${activity.location || ''}</div>
-        <img src="${qrSrc}" alt="QR" />
-        <div class="hint">📱 สแกนเพื่อทำแบบประเมินและดาวน์โหลดวุฒิบัตร</div>
-        <div class="url">${url}</div>
-      </body></html>
-    `);
-    w.document.close();
-    setTimeout(() => { w.print(); }, 500);
-  };
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div onClick={onClose} className="absolute inset-0" />
-      <div className="relative my-8 bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">QR ป้ายงาน</h3>
-          </div>
-          <button onClick={onClose} className="text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white p-1 rounded">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto flex-1">
-          <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-1">หลักสูตร</p>
-          <p className="text-[15px] font-semibold text-slate-900 dark:text-white mb-4">{activity.title}</p>
-
-          <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-center border border-slate-200 dark:border-transparent">
-            <img src={qrSrc} alt="QR" className="w-full max-w-[240px] aspect-square" />
-          </div>
-
-          <div className="mb-4">
-            <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-1">URL</p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-sm text-yrupink-600 dark:text-yrupink-400 bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 rounded-lg px-3 py-2 truncate">
-                {url}
-              </code>
-              <button onClick={copyUrl} title="คัดลอก URL" className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg shrink-0">
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={printQR} className="py-2.5 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold shadow-lg shadow-yrupink-500/20 flex items-center justify-center gap-2">
-              <Printer className="w-4 h-4" />
-              พิมพ์ป้าย A4
-            </button>
-            <a href={qrSrc} download={`qr-${activity.id}.png`} className="py-2.5 rounded-lg bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-300 dark:border-yrugray-700 text-slate-800 dark:text-yrugray-200 text-[15px] font-semibold flex items-center justify-center gap-2">
-              <ImageIcon className="w-4 h-4" />
-              ดาวน์โหลด PNG
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body,
   );
 };
 

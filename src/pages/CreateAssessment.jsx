@@ -55,6 +55,7 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
     description: '',
     timeLimit: 0,       // 0 = ไม่จำกัดเวลา (default สำหรับแบบสอบถามความพึงพอใจ)
     allowEdit: true,    // อนุญาตให้แก้ไขคำตอบภายหลัง
+    publish:   true,    // is_published — ปุ่ม "เปิดให้ทำแบบประเมิน" ในหน้ากิจกรรม public
   });
 
   const [questions, setQuestions] = useState([]);
@@ -116,7 +117,7 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
         description: description || undefined,
         type: 'satisfaction',
         form_schema,
-        is_published: true,
+        is_published: meta.publish,
       });
       setSavedOk(true);
       // In standalone mode: reset for another one. In embedded mode: keep
@@ -233,6 +234,31 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
               <span className="text-[15px] text-slate-800 dark:text-yrugray-200">
                 {meta.allowEdit ? 'อนุญาตให้แก้ไขคำตอบภายหลังได้' : 'ส่งได้ครั้งเดียว แก้ไขไม่ได้'}
               </span>
+            </label>
+          </AdminField>
+
+          {/* Publish toggle — controls whether the "ทำแบบประเมิน..." button
+              shows up on the public activity page. Save resends this. */}
+          <AdminField label="เปิดให้ทำแบบประเมินเพื่อรับใบประกาศนียบัตร" className="md:col-span-2">
+            <label className={`flex items-center gap-3 h-[52px] px-4 rounded-lg cursor-pointer select-none border transition-colors ${
+              meta.publish
+                ? 'bg-green-50 dark:bg-green-500/10 border-green-300 dark:border-green-500/40'
+                : 'bg-white dark:bg-yrugray-800 border-slate-300 dark:border-yrugray-700'
+            }`}>
+              <input
+                type="checkbox"
+                checked={meta.publish}
+                onChange={(e) => changeMeta('publish', e.target.checked)}
+                className="w-5 h-5 accent-yrupink-500"
+              />
+              <div className="flex-1">
+                <p className={`text-[15px] font-semibold ${meta.publish ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-yrugray-300'}`}>
+                  {meta.publish ? '✓ เปิดใช้งาน — ผู้เข้าร่วมเห็นปุ่มทำแบบประเมินในหน้ากิจกรรม' : 'ปิดใช้งาน — ปุ่มจะยังไม่ปรากฏบนหน้ากิจกรรม'}
+                </p>
+                <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-0.5">
+                  บันทึกเพื่อยืนยันสถานะนี้ทั้งเปิดและปิด
+                </p>
+              </div>
             </label>
           </AdminField>
 
