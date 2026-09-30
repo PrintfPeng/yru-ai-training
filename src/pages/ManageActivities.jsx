@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BookOpen,
   Search,
@@ -469,10 +470,10 @@ const QRModal = ({ activity, onClose }) => {
     setTimeout(() => { w.print(); }, 500);
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div onClick={onClose} className="absolute inset-0" />
-      <div className="relative bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="relative my-8 bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <QrCode className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
@@ -530,7 +531,8 @@ const QRModal = ({ activity, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
@@ -553,16 +555,20 @@ const StatusBadge = ({ status }) => {
 
 const ModalShell = ({ children, onClose, size = 'md' }) => {
   const sizeCls = size === 'lg' ? 'max-w-3xl' : 'max-w-md';
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  // Portal to <body> so the modal is never nested inside a stacking context
+  // created by the dashboard's sticky header (backdrop-blur + z-index), which
+  // was clipping the modal top and letting the header render on top.
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div
         onClick={onClose}
         className="absolute inset-0"
       />
-      <div className={`relative bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full ${sizeCls} max-h-[90vh] overflow-hidden flex flex-col`}>
+      <div className={`relative my-8 bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full ${sizeCls} max-h-[90vh] overflow-hidden flex flex-col`}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
