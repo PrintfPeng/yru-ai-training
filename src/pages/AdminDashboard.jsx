@@ -5,7 +5,6 @@ import {
   CalendarCheck,
   LogOut,
   Bell,
-  Search,
   Users,
   Award,
   Menu,
@@ -206,16 +205,6 @@ const AdminDashboard = ({ admin, onLogout }) => {
           </div>
 
           <div className="flex items-center gap-6">
-            {/* Search */}
-            <div className="hidden md:flex items-center relative">
-              <Search className="w-4 h-4 text-slate-500 dark:text-yrugray-500 absolute left-3" />
-              <input
-                type="text"
-                placeholder="ค้นหา..."
-                className="bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-full pl-9 pr-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 w-64 transition-all"
-              />
-            </div>
-
             {/* Theme toggle */}
             <ThemeToggle />
 
