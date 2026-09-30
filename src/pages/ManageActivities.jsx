@@ -515,10 +515,6 @@ const QRModal = ({ activity, onClose }) => {
             </div>
           </div>
 
-          <div className="p-3 bg-yrupink-500/10 border border-yrupink-500/30 rounded-lg text-sm text-slate-700 dark:text-yrugray-300 mb-4">
-            💡 <strong>วิธีใช้:</strong> พิมพ์ QR ขนาด A4 ติดที่โต๊ะเช็คอิน / ฉายบนจอ — ผู้อบรมสแกน → กรอกเบอร์ที่ลงทะเบียน → ทำแบบประเมิน → โหลดวุฒิบัตร
-          </div>
-
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={printQR}
