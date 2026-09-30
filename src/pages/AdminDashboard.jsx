@@ -8,7 +8,6 @@ import {
   Users,
   Award,
   Menu,
-  PlusCircle,
   ClipboardCheck,
   AlertCircle,
   RefreshCw,
@@ -52,9 +51,11 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
+  // Sidebar menu — "สร้างกิจกรรม" ถูกซ่อนออก เพราะมีปุ่ม "+ สร้างกิจกรรมใหม่"
+  // อยู่ในหน้าจัดการหลักสูตรอยู่แล้ว การ render ของหน้านั้นยังเหลือไว้ข้างล่าง
+  // (activeMenu === 'สร้างกิจกรรม') เพื่อให้ปุ่มนั้นยังเปิดหน้า CreateActivity ได้อยู่
   const menuItems = [
     { name: 'ภาพรวมระบบ', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { name: 'สร้างกิจกรรม', icon: <PlusCircle className="w-5 h-5" /> },
     { name: 'จัดการหลักสูตร', icon: <BookOpen className="w-5 h-5" /> },
     { name: 'สร้างแบบฟอร์มประเมินและออกใบรับรอง', icon: <ClipboardCheck className="w-5 h-5" /> },
     { name: 'จัดการการจองห้อง', icon: <CalendarCheck className="w-5 h-5" /> },
