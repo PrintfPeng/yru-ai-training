@@ -471,10 +471,17 @@ const QRModal = ({ activity, onClose }) => {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div onClick={onClose} className="absolute inset-0" />
-      <div className="relative my-8 bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between">
+      {/*
+        max-h-[90vh] + flex flex-col + inner overflow-y-auto keeps the
+        modal fully inside the viewport on short screens (the QR + copy
+        block + tip + buttons together are taller than 720px once the
+        admin-scale font boost is applied). Header stays pinned at top
+        so the close button never scrolls away.
+      */}
+      <div className="relative my-8 bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <QrCode className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">QR ป้ายงาน</h3>
@@ -484,12 +491,12 @@ const QRModal = ({ activity, onClose }) => {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-1">หลักสูตร</p>
           <p className="text-[15px] font-semibold text-slate-900 dark:text-white mb-4">{activity.title}</p>
 
           <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-center border border-slate-200 dark:border-transparent">
-            <img src={qrSrc} alt="QR" className="w-64 h-64" />
+            <img src={qrSrc} alt="QR" className="w-full max-w-[240px] aspect-square" />
           </div>
 
           <div className="mb-4">
@@ -501,7 +508,7 @@ const QRModal = ({ activity, onClose }) => {
               <button
                 onClick={copyUrl}
                 title="คัดลอก URL"
-                className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg"
+                className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg shrink-0"
               >
                 <Copy className="w-4 h-4" />
               </button>
