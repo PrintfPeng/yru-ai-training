@@ -25,23 +25,33 @@ const CERT_TEMPLATES = [
   { value: 'minimal', label: 'Minimal (เรียบง่าย)', accent: 'from-gray-400/20 to-gray-600/10' },
 ];
 
-const CreateAssessment = () => {
+/**
+ * Props:
+ *   activity?  → the pre-selected activity when embedded inside
+ *               ManageActivities detail panel. When provided:
+ *               - activity picker is hidden and locked to that activity
+ *               - top header/save button strip is hidden (parent owns it)
+ *   embedded?  → true when rendered inside another page. Hides the header.
+ */
+const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
   const [activityOptions, setActivityOptions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [savedOk, setSavedOk] = useState(false);
 
-  // Load list of activities the admin can attach this survey to.
+  // Only load the activity dropdown when NOT pre-bound to a specific activity.
   useEffect(() => {
+    if (presetActivity) return;
     let cancelled = false;
     activitiesApi.list()
       .then((rows) => { if (!cancelled) setActivityOptions(rows || []); })
       .catch(() => { if (!cancelled) setActivityOptions([]); });
     return () => { cancelled = true; };
-  }, []);
+  }, [presetActivity]);
 
   const [meta, setMeta] = useState({
-    title: '',
-    activityId: '',
+    title: presetActivity ? `แบบสอบถามความพึงพอใจ — ${presetActivity.title}` : '',
+    activityId: presetActivity ? String(presetActivity.id) : '',
     description: '',
     timeLimit: 0,       // 0 = ไม่จำกัดเวลา (default สำหรับแบบสอบถามความพึงพอใจ)
     allowEdit: true,    // อนุญาตให้แก้ไขคำตอบภายหลัง
@@ -108,10 +118,14 @@ const CreateAssessment = () => {
         form_schema,
         is_published: true,
       });
-      alert('บันทึกแบบสอบถามความพึงพอใจเรียบร้อย');
-      // Reset dynamic form so admin can build another
-      setQuestions([]);
-      setMeta({ ...meta, title: '' });
+      setSavedOk(true);
+      // In standalone mode: reset for another one. In embedded mode: keep
+      // the form filled so the admin can tweak + save again.
+      if (!embedded) {
+        setQuestions([]);
+        setMeta({ ...meta, title: '' });
+      }
+      setTimeout(() => setSavedOk(false), 4000);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'NOT_FOUND') {
         setSaveError('ไม่พบหลักสูตรที่เลือก อาจถูกลบไปแล้ว');
@@ -127,28 +141,35 @@ const CreateAssessment = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">สร้างแบบฟอร์มประเมินและออกใบรับรอง</h2>
-          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
-            ออกแบบแบบสอบถามความพึงพอใจสำหรับผู้เข้าอบรม พร้อมตั้งค่าใบรับรองที่จะออกให้อัตโนมัติเมื่อผู้เข้าอบรมส่งแบบสอบถาม
-          </p>
+      {/* Header — hidden when embedded (parent owns save/back UI) */}
+      {!embedded && (
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">สร้างแบบฟอร์มประเมินและออกใบรับรอง</h2>
+            <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
+              ออกแบบแบบสอบถามความพึงพอใจสำหรับผู้เข้าอบรม พร้อมตั้งค่าใบรับรองที่จะออกให้อัตโนมัติเมื่อผู้เข้าอบรมส่งแบบสอบถาม
+            </p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          >
+            {saving
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
+              : <><Save className="w-4 h-4" /> บันทึกแบบสอบถาม</>}
+          </button>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
-        >
-          {saving
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
-            : <><Save className="w-4 h-4" /> บันทึกแบบสอบถาม</>}
-        </button>
-      </div>
+      )}
 
       {saveError && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-300">
           {saveError}
+        </div>
+      )}
+      {savedOk && (
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm text-green-700 dark:text-green-400">
+          ✓ บันทึกแบบสอบถามความพึงพอใจเรียบร้อยแล้ว
         </div>
       )}
 
@@ -169,18 +190,24 @@ const CreateAssessment = () => {
           </AdminField>
 
           <AdminField label="ผูกกับหลักสูตร" icon={<BookOpen className="w-4 h-4" />} required>
-            <select
-              value={meta.activityId}
-              onChange={(e) => changeMeta('activityId', e.target.value)}
-              className={adminInputCls}
-            >
-              <option value="">— เลือกหลักสูตร —</option>
-              {activityOptions.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.title}
-                </option>
-              ))}
-            </select>
+            {presetActivity ? (
+              <div className="h-[42px] px-3.5 flex items-center rounded-lg bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] text-slate-800 dark:text-yrugray-200 line-clamp-1">
+                {presetActivity.title}
+              </div>
+            ) : (
+              <select
+                value={meta.activityId}
+                onChange={(e) => changeMeta('activityId', e.target.value)}
+                className={adminInputCls}
+              >
+                <option value="">— เลือกหลักสูตร —</option>
+                {activityOptions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title}
+                  </option>
+                ))}
+              </select>
+            )}
           </AdminField>
 
           <AdminField label="เวลาทำ (นาที)" icon={<Timer className="w-4 h-4" />}>
@@ -254,7 +281,7 @@ const CreateAssessment = () => {
         </div>
 
         {cert.enabled && (
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6" id="cert-config-body">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <AdminField label="ชื่อใบรับรอง" icon={<TypeIcon className="w-4 h-4" />} className="md:col-span-2">
                 <input
@@ -322,6 +349,19 @@ const CreateAssessment = () => {
           </div>
         )}
       </section>
+
+      {/* Bottom save button — always visible so admins don't scroll back up */}
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-3 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+        >
+          {saving
+            ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
+            : <><Save className="w-4 h-4" /> บันทึกแบบสอบถาม + ใบรับรอง</>}
+        </button>
+      </div>
     </div>
   );
 };

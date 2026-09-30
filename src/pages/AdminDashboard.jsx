@@ -8,14 +8,12 @@ import {
   Users,
   Award,
   Menu,
-  ClipboardCheck,
   AlertCircle,
   RefreshCw,
   CalendarRange,
 } from 'lucide-react';
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
-import CreateAssessment from './CreateAssessment';
 import ThemeToggle from '../components/ThemeToggle';
 import { activitiesApi } from '../api';
 
@@ -51,13 +49,13 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  // Sidebar menu — "สร้างกิจกรรม" ถูกซ่อนออก เพราะมีปุ่ม "+ สร้างกิจกรรมใหม่"
-  // อยู่ในหน้าจัดการหลักสูตรอยู่แล้ว การ render ของหน้านั้นยังเหลือไว้ข้างล่าง
-  // (activeMenu === 'สร้างกิจกรรม') เพื่อให้ปุ่มนั้นยังเปิดหน้า CreateActivity ได้อยู่
+  // Sidebar menu — "สร้างกิจกรรม" และ "สร้างแบบฟอร์มประเมิน..." ถูกซ่อนออก
+  // เพราะย้ายไปเป็น sub-feature ภายในหน้า "จัดการหลักสูตร" แล้ว
+  // (ปุ่ม + สร้างกิจกรรมใหม่ + แท็บใน detail panel).
+  // render branch ของ 'สร้างกิจกรรม' ยังเหลือไว้ให้ปุ่มนั้นเปิด CreateActivity ได้อยู่
   const menuItems = [
     { name: 'ภาพรวมระบบ', icon: <LayoutDashboard className="w-5 h-5" /> },
     { name: 'จัดการหลักสูตร', icon: <BookOpen className="w-5 h-5" /> },
-    { name: 'สร้างแบบฟอร์มประเมินและออกใบรับรอง', icon: <ClipboardCheck className="w-5 h-5" /> },
     { name: 'จัดการการจองห้อง', icon: <CalendarCheck className="w-5 h-5" /> },
   ];
 
@@ -238,8 +236,6 @@ const AdminDashboard = ({ admin, onLogout }) => {
               <CreateActivity />
             ) : activeMenu === 'จัดการหลักสูตร' ? (
               <ManageActivities onGoCreate={() => setActiveMenu('สร้างกิจกรรม')} />
-            ) : activeMenu === 'สร้างแบบฟอร์มประเมินและออกใบรับรอง' ? (
-              <CreateAssessment />
             ) : (
               <>
                 {/* Quick Stats Row */}

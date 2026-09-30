@@ -22,8 +22,10 @@ import {
   Loader2,
   ArrowLeft,
   RefreshCw,
+  ClipboardCheck,
 } from 'lucide-react';
 import ActivityRegistrants from './ActivityRegistrants';
+import CreateAssessment from './CreateAssessment';
 import { activitiesApi } from '../api';
 
 // Map API status enum ⇄ Thai label used in the UI chip filter
@@ -361,7 +363,7 @@ const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onOpenQR, onR
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 dark:border-yrugray-800 flex gap-1">
+      <div className="border-b border-slate-200 dark:border-yrugray-800 flex gap-1 overflow-x-auto">
         <TabButton active={tab === 'edit'} onClick={() => setTab('edit')} icon={<Pencil className="w-4 h-4" />} label="แก้ไขรายละเอียด" />
         <TabButton
           active={tab === 'registrants'}
@@ -370,14 +372,18 @@ const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onOpenQR, onR
           label="ผู้ลงทะเบียน"
           badge={activity.registrants_count > 0 ? activity.registrants_count : null}
         />
+        <TabButton
+          active={tab === 'assessment'}
+          onClick={() => setTab('assessment')}
+          icon={<ClipboardCheck className="w-4 h-4" />}
+          label="แบบประเมิน + ใบรับรอง"
+        />
       </div>
 
       {/* Tab content */}
-      {tab === 'edit' ? (
-        <InlineEditForm activity={activity} onSave={onEdit} />
-      ) : (
-        <ActivityRegistrants activity={activity} onBack={onBack} embedded />
-      )}
+      {tab === 'edit' && <InlineEditForm activity={activity} onSave={onEdit} />}
+      {tab === 'registrants' && <ActivityRegistrants activity={activity} onBack={onBack} embedded />}
+      {tab === 'assessment' && <CreateAssessment activity={activity} embedded />}
     </div>
   );
 };
