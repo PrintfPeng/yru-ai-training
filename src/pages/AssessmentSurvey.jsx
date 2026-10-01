@@ -153,12 +153,20 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 md:px-6 py-6">
-        {/* Description */}
-        {assessment.description && (
-          <div className="mb-6 p-4 bg-yrupink-500/5 border border-yrupink-500/20 rounded-xl text-sm text-gray-700 dark:text-yrugray-200">
-            💡 {assessment.description}
-          </div>
-        )}
+        {/* Description — strip the hidden <!-- CERT_CONFIG:… --> block the
+            admin create form tacks onto the end so the certificate editor's
+            JSON state can round-trip. Only the human-readable part is shown. */}
+        {(() => {
+          const desc = (assessment.description || '')
+            .replace(/<!--\s*CERT_CONFIG:[\s\S]*?-->/g, '')
+            .trim();
+          if (!desc) return null;
+          return (
+            <div className="mb-6 p-4 bg-yrupink-500/5 border border-yrupink-500/20 rounded-xl text-sm text-gray-700 dark:text-yrugray-200">
+              💡 {desc}
+            </div>
+          );
+        })()}
 
         {submitError && (
           <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
