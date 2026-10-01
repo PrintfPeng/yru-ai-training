@@ -20,6 +20,29 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
     return () => { cancelled = true; };
   }, [activity.slug]);
 
+  // All hooks MUST run on every render, so compute questions + progress
+  // ABOVE the early-return branches below. React error #310 fired when
+  // these were defined after `if (!assessment) return …`.
+  const questions = useMemo(() => {
+    return (assessment?.form_schema?.fields || []).map((f) => ({
+      id: f.id,
+      type: f.type,
+      question: f.label,
+      options: f.options,
+      required: !!f.required,
+      helpText: f.helpText,
+    }));
+  }, [assessment]);
+
+  const answeredCount = useMemo(
+    () =>
+      questions.filter((q) => {
+        const v = answers[q.id];
+        return v !== undefined && v !== null && v !== '' && (!Array.isArray(v) || v.length > 0);
+      }).length,
+    [answers, questions]
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-yrugray-950">
@@ -34,17 +57,6 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
   if (!assessment) {
     return <MessageState title="ยังไม่มีแบบประเมินสำหรับกิจกรรมนี้" onBack={onCancel} />;
   }
-
-  // Backend shape: form_schema.fields[] with `label`.
-  // Adapt to the legacy { questions: [{ id, type, question, ... }] } shape the UI uses.
-  const questions = (assessment.form_schema?.fields || []).map((f) => ({
-    id: f.id,
-    type: f.type,
-    question: f.label,
-    options: f.options,
-    required: !!f.required,
-    helpText: f.helpText,
-  }));
 
   const setAnswer = (qid, value) => {
     setAnswers((prev) => ({ ...prev, [qid]: value }));
@@ -102,15 +114,6 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
       setSubmitting(false);
     }
   };
-
-  const answeredCount = useMemo(
-    () =>
-      questions.filter((q) => {
-        const v = answers[q.id];
-        return v !== undefined && v !== null && v !== '' && (!Array.isArray(v) || v.length > 0);
-      }).length,
-    [answers, questions]
-  );
 
   const progress = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
 
