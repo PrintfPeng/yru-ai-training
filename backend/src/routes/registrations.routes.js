@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validator.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { env } from '../config/env.js';
 import * as ctrl from '../controllers/registrations.controller.js';
 
 const router = Router();
@@ -37,23 +35,12 @@ const statusPatchBody = z.object({
   note:   z.string().max(2000).nullable().optional(),
 });
 
-/* Rate-limit public verify endpoint — same 5/15min policy as env */
-const verifyLimiter = rateLimit({
-  windowMs: env.PUBLIC_RATE_LIMIT_WINDOW_MS,
-  max:      env.PUBLIC_RATE_LIMIT_MAX,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { ok: false, error: { code: 'RATE_LIMITED',
-              message: 'พยายามเกินจำนวนที่กำหนด กรุณาลองใหม่ใน 15 นาที' } },
-});
-
 /* ---------- PUBLIC ---------- */
 router.post('/public/activity/:slug/register',
   validate({ params: slugParam, body: publicRegisterBody }),
   ctrl.publicRegister);
 
 router.post('/public/activity/:slug/verify-phone',
-  verifyLimiter,
   validate({ params: slugParam, body: verifyPhoneBody }),
   ctrl.publicVerifyPhone);
 
