@@ -17,6 +17,15 @@ const readEventFromUrl = () => {
   return new URLSearchParams(window.location.search).get('e');
 };
 
+// Read the current view from URL — only `training` persists; admin/dashboard
+// are gated by auth state so they get hydrated by the /auth/me bootstrap below.
+const PERSISTENT_VIEWS = ['home', 'training'];
+const readViewFromUrl = () => {
+  if (typeof window === 'undefined') return 'home';
+  const v = new URLSearchParams(window.location.search).get('view');
+  return PERSISTENT_VIEWS.includes(v) ? v : 'home';
+};
+
 function App() {
   // Trainee flow state (from QR scan)
   const initialEventId = readEventFromUrl();
@@ -24,9 +33,40 @@ function App() {
     initialEventId ? { step: 'landing', activityId: initialEventId, activity: null, registrant: null } : null
   );
 
-  const [currentView, setCurrentView] = useState('home');
+  // Hydrate currentView from URL so refresh keeps the user on the same page.
+  const [currentView, setCurrentView] = useState(() => readViewFromUrl());
   const [admin, setAdmin] = useState(null);       // set from /auth/me — survives reload
   const [authBooting, setAuthBooting] = useState(true);
+
+  // Push currentView back to the URL whenever it changes, so refresh works
+  // and the browser Back button goes to the previous view. Only persistent
+  // views (home/training) are mirrored to the URL; admin/dashboard are
+  // controlled by the auth bootstrap, so they clear the `view` param instead.
+  useEffect(() => {
+    if (eventState) return; // trainee flow owns the URL (?e=…)
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (PERSISTENT_VIEWS.includes(currentView) && currentView !== 'home') {
+      params.set('view', currentView);
+    } else {
+      params.delete('view');
+    }
+    const qs = params.toString();
+    const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+    if (next !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.pushState({ view: currentView }, '', next);
+    }
+  }, [currentView, eventState]);
+
+  // Browser Back / Forward → re-read URL and update state.
+  useEffect(() => {
+    const onPop = () => {
+      if (readEventFromUrl()) return; // trainee flow handles its own URL
+      setCurrentView(readViewFromUrl());
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Bootstrap: try /auth/me on mount. If the httpOnly cookie is still valid,
   // land straight on the dashboard instead of the login screen.

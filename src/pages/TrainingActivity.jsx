@@ -1,7 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight, Loader2 } from 'lucide-react';
 import ActivityDetail from './ActivityDetail';
 import { activitiesApi } from '../api';
+
+// Normalize an API row into the card shape the UI expects.
+const normalizeRow = (r) => ({
+  id: r.id,
+  slug: r.slug,
+  title: r.title,
+  description: r.description,
+  location: r.location,
+  date: r.start_date
+    ? new Date(r.start_date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+    : '',
+  duration: r.end_date && r.start_date
+    ? `${Math.max(1, Math.ceil((new Date(r.end_date) - new Date(r.start_date)) / 86400000))} วัน`
+    : '',
+  seats: r.capacity,
+  seats_left: r.seats_left,
+  image: r.cover_image_url,
+  level: 'เริ่มต้น',
+  category: '',
+  raw: r,
+});
+
+// Read ?a=<slug> so refresh on the detail view keeps the user there.
+const readSlugFromUrl = () => {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('a');
+};
 
 const TrainingActivity = ({ onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -10,32 +37,44 @@ const TrainingActivity = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+  // Mirror selectedActivity to the URL via ?a=<slug> so F5 stays on the
+  // detail page and the browser Back button pops back to the grid.
+  const setSelectedAndSync = useCallback((activity) => {
+    setSelectedActivity(activity);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (activity?.slug) params.set('a', activity.slug);
+    else params.delete('a');
+    const qs = params.toString();
+    const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+    window.history.pushState({ a: activity?.slug || null }, '', next);
+  }, []);
+
+  // On browser Back/Forward, re-sync local state from the URL.
+  useEffect(() => {
+    const onPop = () => {
+      const slug = readSlugFromUrl();
+      if (!slug) { setSelectedActivity(null); return; }
+      const found = activities.find((a) => a.slug === slug);
+      if (found) setSelectedActivity(found);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [activities]);
+
   useEffect(() => {
     let cancelled = false;
     activitiesApi.list({ status: 'published' })
       .then((rows) => {
         if (cancelled) return;
-        // Normalize API rows to the shape the card UI already expects.
-        const mapped = (rows || []).map((r) => ({
-          id: r.id,
-          slug: r.slug,
-          title: r.title,
-          description: r.description,
-          location: r.location,
-          date: new Date(r.start_date).toLocaleDateString('th-TH', {
-            year: 'numeric', month: 'short', day: 'numeric',
-          }),
-          duration: r.end_date && r.start_date
-            ? `${Math.max(1, Math.ceil((new Date(r.end_date) - new Date(r.start_date)) / 86400000))} วัน`
-            : '',
-          seats: r.capacity,
-          seats_left: r.seats_left,
-          image: r.cover_image_url,
-          level: 'เริ่มต้น', // API schema doesn't carry level yet — placeholder
-          category: '',      // same — future field
-          raw: r,
-        }));
+        const mapped = (rows || []).map(normalizeRow);
         setActivities(mapped);
+        // If URL had ?a=<slug> on mount, restore the detail view immediately.
+        const slug = readSlugFromUrl();
+        if (slug) {
+          const found = mapped.find((a) => a.slug === slug);
+          if (found) setSelectedActivity(found);
+        }
       })
       .catch((e) => !cancelled && setLoadError(e))
       .finally(() => !cancelled && setLoading(false));
@@ -69,7 +108,7 @@ const TrainingActivity = ({ onBack }) => {
     return (
       <ActivityDetail
         activity={selectedActivity}
-        onBack={() => setSelectedActivity(null)}
+        onBack={() => setSelectedAndSync(null)}
       />
     );
   }
@@ -214,7 +253,7 @@ const TrainingActivity = ({ onBack }) => {
                     </div>
 
                     <button
-                      onClick={() => setSelectedActivity(a)}
+                      onClick={() => setSelectedAndSync(a)}
                       className="mt-auto w-full py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-gray-800 bg-gray-100 hover:text-slate-900 dark:hover:text-white hover:bg-yrupink-600 border border-gray-200 dark:text-white dark:bg-yrugray-800 dark:hover:bg-yrupink-600 dark:border-yrugray-700 dark:hover:border-yrupink-500 transition-all duration-300"
                     >
                       ดูรายละเอียด
