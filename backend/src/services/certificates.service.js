@@ -51,21 +51,36 @@ const DEFAULT_TEMPLATE = {
 
 /**
  * Idempotent: return existing cert if any, otherwise create + return.
- * Accepts an optional `conn` so it can be used inside a transaction.
+ * Accepts an optional `conn` so it can be used inside a transaction, and an
+ * optional `template` that overrides DEFAULT_TEMPLATE — this is how the
+ * assessment-submit flow passes the admin's custom certificate design
+ * (background image, elements, signer, …) through to the saved cert row.
  */
-export async function issueCertificateForRegistration(registrationId, conn = pool) {
+export async function issueCertificateForRegistration(registrationId, conn = pool, template = null) {
   const [existing] = await conn.query(
     'SELECT * FROM certificates WHERE registration_id = ? LIMIT 1',
     [registrationId]
   );
   if (existing[0]) return existing[0];
 
+  // Merge supplied template over DEFAULT_TEMPLATE so missing fields fall back
+  // to the built-in defaults. elements[] is replaced wholesale when supplied.
+  const templateData = template
+    ? {
+        ...DEFAULT_TEMPLATE,
+        ...template,
+        elements: Array.isArray(template.elements) && template.elements.length
+          ? template.elements
+          : DEFAULT_TEMPLATE.elements,
+      }
+    : DEFAULT_TEMPLATE;
+
   // Insert placeholder first to get row id → code generation depends on id
   const [ins] = await conn.query(
     `INSERT INTO certificates
        (registration_id, certificate_code, template_data, file_url)
      VALUES (?, ?, CAST(? AS JSON), NULL)`,
-    [registrationId, `YRU-AI-TEMP-${registrationId}`, JSON.stringify(DEFAULT_TEMPLATE)]
+    [registrationId, `YRU-AI-TEMP-${registrationId}`, JSON.stringify(templateData)]
   );
 
   const code = makeCertificateCode(ins.insertId);

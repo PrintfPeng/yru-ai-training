@@ -179,8 +179,27 @@ export async function submitResponse({ assessmentId, participantId, responseData
       );
     }
 
+    // Pull the admin's certificate design out of the assessment description.
+    // CreateAssessment appends it as a trailing <!-- CERT_CONFIG:{…} --> comment
+    // so the whole blob (background image, elements, signer, …) round-trips
+    // without needing a dedicated column yet.
+    const template = parseCertConfig(assessment.description);
+
     // Auto-issue certificate for this registration (idempotent)
-    const cert = await issueCertificateForRegistration(reg.id, conn);
+    const cert = await issueCertificateForRegistration(reg.id, conn, template);
     return { registration_id: reg.id, certificate: cert };
   });
+}
+
+// Extracts the JSON from `<!-- CERT_CONFIG:{…} -->` in an assessment
+// description. Returns null when the comment is absent or malformed.
+function parseCertConfig(desc) {
+  if (!desc) return null;
+  const m = String(desc).match(/<!--\s*CERT_CONFIG:([\s\S]*?)-->/);
+  if (!m) return null;
+  try {
+    return JSON.parse(m[1].trim());
+  } catch {
+    return null;
+  }
 }
