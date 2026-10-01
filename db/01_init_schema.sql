@@ -158,11 +158,14 @@ CREATE TABLE IF NOT EXISTS `registrations` (
 -- }
 -- ------------------------------------------------------------------------
 
+-- `description` is LONGTEXT (not TEXT) because the admin editor stores the
+-- certificate config as a trailing <!-- CERT_CONFIG:{…} --> comment, and that
+-- JSON can include a base64 background image several MB long.
 CREATE TABLE IF NOT EXISTS `assessments` (
   `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `activity_id`     BIGINT UNSIGNED NOT NULL                                                COMMENT 'ผูกกับหลักสูตรที่ประเมิน',
   `title`           VARCHAR(255)    NOT NULL,
-  `description`     TEXT            NULL,
+  `description`     LONGTEXT        NULL,
   `type`            ENUM('pre_test','post_test','satisfaction','custom') NOT NULL DEFAULT 'satisfaction'
                                                                                             COMMENT 'ประเภทแบบประเมิน (satisfaction เป็น default เพราะระบบเราเน้นความพึงพอใจ)',
   `form_schema`     JSON            NOT NULL                                                COMMENT 'โครงสร้างฟอร์ม (fields[]) — ดูตัวอย่างในหัว table',

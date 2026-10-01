@@ -33,11 +33,29 @@ const CERT_TEMPLATES = [
  *               - top header/save button strip is hidden (parent owns it)
  *   embedded?  → true when rendered inside another page. Hides the header.
  */
+// Extract CERT_CONFIG json from an assessment description tail.
+// Returns { desc, cfg } where cfg may be null if nothing is embedded.
+const parseCertConfig = (raw) => {
+  const str = raw || '';
+  const m = str.match(/<!--\s*CERT_CONFIG:([\s\S]*?)-->/);
+  if (!m) return { desc: str.trim(), cfg: null };
+  const cleanDesc = str.replace(m[0], '').trim();
+  try {
+    return { desc: cleanDesc, cfg: JSON.parse(m[1].trim()) };
+  } catch {
+    return { desc: cleanDesc, cfg: null };
+  }
+};
+
 const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
   const [activityOptions, setActivityOptions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [savedOk, setSavedOk] = useState(false);
+  // When editing an activity that already has an assessment, we remember
+  // the row id so the Save button PATCHes it instead of creating a new row.
+  const [existingAssessmentId, setExistingAssessmentId] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(!!presetActivity);
 
   // Only load the activity dropdown when NOT pre-bound to a specific activity.
   useEffect(() => {
@@ -72,6 +90,58 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
     signatureName: '',
     elements: DEFAULT_ELEMENTS(),
   });
+
+  // When embedded, pre-fill the form from the activity's existing assessment
+  // (if any) so uploads like the certificate background don't disappear on
+  // refresh and admins see what they saved last time.
+  useEffect(() => {
+    if (!presetActivity?.id) return;
+    let cancelled = false;
+    setLoadingExisting(true);
+    assessmentsApi.listForActivity(presetActivity.id)
+      .then((rows) => {
+        if (cancelled) return;
+        const existing = (rows || [])[0]; // pick most recent / only one
+        if (!existing) return;             // nothing yet — leave form at defaults
+
+        const { desc, cfg } = parseCertConfig(existing.description);
+        setExistingAssessmentId(existing.id);
+        setMeta((prev) => ({
+          ...prev,
+          title: existing.title || prev.title,
+          description: desc,
+          publish: existing.is_published !== 0 && existing.is_published !== false,
+        }));
+        // Rebuild questions from form_schema.fields
+        const fields = existing.form_schema?.fields || [];
+        setQuestions(fields.map((f) => ({
+          id: f.id,
+          type: f.type,
+          question: f.label,
+          options: f.options || [],
+          required: !!f.required,
+        })));
+        // Rebuild cert config
+        if (cfg) {
+          setCert((prev) => ({
+            ...prev,
+            enabled: true,
+            name:          cfg.name          ?? prev.name,
+            template:      cfg.template      ?? prev.template,
+            signerName:    cfg.signerName    ?? prev.signerName,
+            signerPosition: cfg.signerPosition ?? prev.signerPosition,
+            backgroundImage: cfg.backgroundImageUrl ?? '',
+            signatureImage:  cfg.signatureImageUrl  ?? '',
+            elements:      Array.isArray(cfg.elements) && cfg.elements.length
+                           ? cfg.elements
+                           : prev.elements,
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingExisting(false); });
+    return () => { cancelled = true; };
+  }, [presetActivity?.id]);
 
   const changeMeta = (name, value) => setMeta((prev) => ({ ...prev, [name]: value }));
   const changeCert = (name, value) => setCert((prev) => ({ ...prev, [name]: value }));
@@ -112,13 +182,26 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
           })} -->`
         : meta.description;
 
-      await assessmentsApi.create(Number(meta.activityId), {
-        title: meta.title.trim(),
-        description: description || undefined,
-        type: 'satisfaction',
-        form_schema,
-        is_published: meta.publish,
-      });
+      if (existingAssessmentId) {
+        // Patch existing assessment (keeps the same id, same slug on cert etc.)
+        await assessmentsApi.update(existingAssessmentId, {
+          title: meta.title.trim(),
+          description: description || undefined,
+          form_schema,
+          is_published: meta.publish,
+        });
+      } else {
+        const created = await assessmentsApi.create(Number(meta.activityId), {
+          title: meta.title.trim(),
+          description: description || undefined,
+          type: 'satisfaction',
+          form_schema,
+          is_published: meta.publish,
+        });
+        // Remember the new id so a second Save in this session PATCHes
+        // instead of creating a duplicate row.
+        if (created?.id) setExistingAssessmentId(created.id);
+      }
       setSavedOk(true);
       // In standalone mode: reset for another one. In embedded mode: keep
       // the form filled so the admin can tweak + save again.

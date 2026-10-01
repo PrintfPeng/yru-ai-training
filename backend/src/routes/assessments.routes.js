@@ -25,7 +25,11 @@ const formSchema = z.object({ fields: z.array(formField).min(1) });
 
 const createBody = z.object({
   title:        z.string().min(1).max(255),
-  description:  z.string().max(65535).nullable().optional(),
+  // description holds the user-visible text plus the admin's certificate
+  // config as a trailing <!-- CERT_CONFIG:{…} --> comment. The cert config
+  // can include a base64 background image, which blows past TEXT's 64KB
+  // limit — allow up to ~10 MB of chars here, matched by LONGTEXT in DB.
+  description:  z.string().max(10_000_000).nullable().optional(),
   type:         z.enum(['pre_test', 'post_test', 'satisfaction', 'custom']).default('satisfaction'),
   form_schema:  formSchema,
   is_published: z.boolean().default(false),
