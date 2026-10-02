@@ -16,8 +16,13 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: apiTarget,
-          changeOrigin: true,
+          changeOrigin: true,   // rewrites Host → target
           secure: false,
+          // Browsers attach `Origin: http://localhost:5173` on writes (POST/
+          // PATCH/DELETE). The backend CORS whitelist only knows the prod
+          // origin, so it rejected those with a 500. Rewrite Origin to the
+          // target so same-origin dev writes are accepted. Dev-only.
+          headers: { Origin: apiTarget },
         },
       },
     },
