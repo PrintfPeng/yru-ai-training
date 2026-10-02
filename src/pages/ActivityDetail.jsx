@@ -121,8 +121,8 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
       setSubmitError('กรุณากรอกอีเมลให้ถูกต้อง เช่น name@example.com');
       return;
     }
-    if (phoneDigits.length < 9) {
-      setSubmitError('กรุณากรอกเบอร์โทรศัพท์ให้ครบ (อย่างน้อย 9 หลัก)');
+    if (phoneDigits.length !== 10) {
+      setSubmitError('กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก');
       return;
     }
 
