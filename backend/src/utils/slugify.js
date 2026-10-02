@@ -27,11 +27,14 @@ export function normalizePhone(raw) {
 }
 
 /**
- * Generate a certificate code YRU-AI-{BE_YEAR}-{6-digit sequence}.
- * Sequence comes from the DB row id (padded), so no extra table needed.
+ * Generate an official certificate code: ควท.มรย.{BE_YEAR}/03/{running}.
+ *   ควท = คณะวิทยาศาสตร์เทคโนโลยีและการเกษตร
+ *   มรย = มหาวิทยาลัยราชภัฏยะลา
+ *   03  = ศูนย์ปัญญาประดิษฐ์ (constant)
+ * `beYear` is the Buddhist year (derived from the activity start_date) and
+ * `runningNo` is the per-year running number from the cert_counters table.
  */
-export function makeCertificateCode(rowId, issuedAt = new Date()) {
-  const buddhistYear = issuedAt.getFullYear() + 543;
-  const seq = String(rowId).padStart(6, '0');
-  return `YRU-AI-${buddhistYear}-${seq}`;
+export function makeCertificateCode(beYear, runningNo) {
+  const seq = String(runningNo).padStart(3, '0');
+  return `ควท.มรย.${beYear}/03/${seq}`;
 }

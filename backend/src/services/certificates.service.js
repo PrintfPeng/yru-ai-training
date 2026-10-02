@@ -75,17 +75,35 @@ export async function issueCertificateForRegistration(registrationId, conn = poo
       }
     : DEFAULT_TEMPLATE;
 
-  // Insert placeholder first to get row id → code generation depends on id
+  // Buddhist year from the activity's start_date (fallback: issue year).
+  const [[act]] = await conn.query(
+    `SELECT a.start_date
+       FROM registrations r
+       JOIN activities    a ON a.id = r.activity_id
+      WHERE r.id = ? LIMIT 1`,
+    [registrationId]
+  );
+  const startYear = act?.start_date
+    ? new Date(act.start_date).getFullYear()
+    : new Date().getFullYear();
+  const beYear = startYear + 543;
+
+  // Next per-year running number, race-safe via connection-scoped
+  // LAST_INSERT_ID() (works with or without an enclosing transaction).
+  await conn.query(
+    `INSERT INTO cert_counters (be_year, last_no) VALUES (?, LAST_INSERT_ID(1))
+       ON DUPLICATE KEY UPDATE last_no = LAST_INSERT_ID(last_no + 1)`,
+    [beYear]
+  );
+  const [[{ no: runningNo }]] = await conn.query('SELECT LAST_INSERT_ID() AS no');
+
+  const code = makeCertificateCode(beYear, runningNo);
   const [ins] = await conn.query(
     `INSERT INTO certificates
        (registration_id, certificate_code, template_data, file_url)
      VALUES (?, ?, CAST(? AS JSON), NULL)`,
-    [registrationId, `YRU-AI-TEMP-${registrationId}`, JSON.stringify(templateData)]
+    [registrationId, code, JSON.stringify(templateData)]
   );
-
-  const code = makeCertificateCode(ins.insertId);
-  await conn.query('UPDATE certificates SET certificate_code = ? WHERE id = ?',
-    [code, ins.insertId]);
 
   const [rows] = await conn.query('SELECT * FROM certificates WHERE id = ?', [ins.insertId]);
   return rows[0];

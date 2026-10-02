@@ -7,6 +7,7 @@ import * as svc from '../services/certificates.service.js';
  * (or verifiers can confirm authenticity).
  */
 export const getByCode = asyncHandler(async (req, res) => {
-  const data = await svc.getCertificateByCode(req.params.code);
+  const code = req.query.code || req.params.code;
+  const data = await svc.getCertificateByCode(code);
   res.json({ ok: true, data });
 });
