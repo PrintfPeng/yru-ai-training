@@ -107,7 +107,26 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
       setSubmitError('ไม่พบข้อมูลหลักสูตร กรุณาลองใหม่');
       return;
     }
-    const [first, ...rest] = formData.fullName.trim().split(/\s+/);
+    // Validate on the client with clear Thai messages so the user knows which
+    // field is wrong, instead of a generic "Request validation failed".
+    const fullName = formData.fullName.trim();
+    const email = formData.email.trim();
+    const phoneDigits = formData.phone.replace(/\D/g, ''); // keep digits only
+
+    if (!fullName) {
+      setSubmitError('กรุณากรอกชื่อ - นามสกุล');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setSubmitError('กรุณากรอกอีเมลให้ถูกต้อง เช่น name@example.com');
+      return;
+    }
+    if (phoneDigits.length < 9) {
+      setSubmitError('กรุณากรอกเบอร์โทรศัพท์ให้ครบ (อย่างน้อย 9 หลัก)');
+      return;
+    }
+
+    const [first, ...rest] = fullName.split(/\s+/);
     const last = rest.join(' ') || '-';
 
     setSubmitting(true);
@@ -117,8 +136,8 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
         {
           first_name:   first,
           last_name:    last,
-          email:        formData.email.trim(),
-          phone:        formData.phone.trim(),
+          email:        email,
+          phone:        phoneDigits,
           organization: formData.organization || null,
           position:     formData.position || null,
         },
@@ -136,6 +155,8 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
         setSubmitError('หลักสูตรนี้เต็มแล้ว กรุณาติดต่อผู้จัด');
       } else if (err instanceof ApiError && err.code === 'ACTIVITY_NOT_OPEN') {
         setSubmitError('หลักสูตรยังไม่เปิดรับสมัคร');
+      } else if (err instanceof ApiError && err.code === 'VALIDATION_ERROR') {
+        setSubmitError('ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบชื่อ-นามสกุล อีเมล และเบอร์โทรศัพท์อีกครั้ง');
       } else {
         setSubmitError(err?.message || 'ส่งไม่สำเร็จ กรุณาลองใหม่');
       }
