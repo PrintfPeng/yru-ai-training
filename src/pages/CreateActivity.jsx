@@ -130,24 +130,15 @@ const CreateActivity = () => {
   };
 
   return (
-    <div className="space-y-6">
+    // pb-28 reserves space below for the floating save button so the last
+    // form row isn't hidden behind it on short viewports.
+    <div className="space-y-6 pb-28">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">สร้างกิจกรรม</h2>
-          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
-            กรอกรายละเอียดกิจกรรม และออกแบบฟอร์มลงทะเบียนแบบไดนามิก
-          </p>
-        </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
-        >
-          {saving
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
-            : <><Save className="w-4 h-4" /> บันทึกกิจกรรม</>}
-        </button>
+      <div>
+        <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">สร้างกิจกรรม</h2>
+        <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
+          กรอกรายละเอียดกิจกรรม และออกแบบฟอร์มลงทะเบียนแบบไดนามิก
+        </p>
       </div>
 
       {saveError && (
@@ -269,6 +260,17 @@ const CreateActivity = () => {
         title="ฟอร์มลงทะเบียน (Dynamic Form)"
         description="ออกแบบคำถามที่ต้องการให้ผู้ลงทะเบียนกรอก — ลากเพื่อจัดลำดับ (จะเปิดใช้ในเวอร์ชันถัดไป)"
       />
+
+      {/* Floating save button — bottom-right, visible while scrolling. */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="fixed bottom-6 right-6 z-40 px-6 py-3.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-xl shadow-2xl shadow-yrupink-500/30 hover:shadow-yrupink-500/50 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+      >
+        {saving
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
+          : <><Save className="w-4 h-4" /> บันทึกกิจกรรม</>}
+      </button>
     </div>
   );
 };
