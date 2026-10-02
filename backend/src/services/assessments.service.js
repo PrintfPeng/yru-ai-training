@@ -113,7 +113,7 @@ export async function submitResponse({ assessmentId, participantId, responseData
   return withTransaction(async (conn) => {
     // Load assessment + validate window
     const [[assessment]] = await conn.query(
-      `SELECT id, activity_id, form_schema, is_published, open_at, close_at
+      `SELECT id, activity_id, form_schema, description, is_published, open_at, close_at
          FROM assessments WHERE id = ? LIMIT 1`,
       [assessmentId]
     );
