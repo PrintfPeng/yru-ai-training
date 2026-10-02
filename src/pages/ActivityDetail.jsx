@@ -37,6 +37,7 @@ const durationInDays = (start, end) => {
 
 const STATUS_LABEL = {
   published: 'เปิดรับสมัคร',
+  assessment: 'เปิดทำแบบประเมิน',
   draft: 'ยังไม่เปิดรับสมัคร',
   completed: 'จบไปแล้ว',
   cancelled: 'ยกเลิก',
@@ -168,6 +169,7 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
   const seatsLeft = Number(activity?.seats_left ?? activity?.capacity ?? 0);
   const capacity  = Number(activity?.capacity ?? activity?.seats ?? 0);
   const registered = Math.max(0, capacity - seatsLeft);
+  const assessmentMode = activity?.status === 'assessment';
   const isOpen = activity?.status === 'published' && seatsLeft > 0;
   const cannotRegister = activity && activity.status !== 'published'
     ? 'หลักสูตรยังไม่เปิดรับสมัคร'
@@ -331,13 +333,36 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
           <aside className="lg:col-span-1">
             <div className="glass-card rounded-2xl p-6 lg:sticky lg:top-24">
               <div className="mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">แบบฟอร์มลงทะเบียน</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {assessmentMode ? 'ทำแบบประเมิน' : 'แบบฟอร์มลงทะเบียน'}
+                </h2>
                 <p className="text-xs text-gray-500 dark:text-yrugray-400 mt-1">
-                  กรอกข้อมูลเพื่อสำรองสิทธิ์เข้าร่วมอบรม
+                  {assessmentMode
+                    ? 'หลักสูตรนี้ปิดรับสมัครแล้ว — เปิดให้ผู้ลงทะเบียนทำแบบประเมิน'
+                    : 'กรอกข้อมูลเพื่อสำรองสิทธิ์เข้าร่วมอบรม'}
                 </p>
               </div>
 
-              {submitted ? (
+              {assessmentMode ? (
+                <div className="text-center py-6">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-yrupink-500/10 border border-yrupink-500/30 mb-3">
+                    <Award className="w-7 h-7 text-yrupink-600 dark:text-yrupink-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                    หลักสูตรนี้เปิดให้ทำแบบประเมิน
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-yrugray-300 mb-4">
+                    ผู้ที่ลงทะเบียนไว้แล้ว ยืนยันตัวด้วยเบอร์โทรเพื่อทำแบบประเมินและรับใบประกาศนียบัตร
+                  </p>
+                  <a
+                    href={`/?e=${activity?.slug || activity?.id}`}
+                    className="w-full py-3 rounded-lg flex items-center justify-center gap-2 text-[15px] font-semibold text-white bg-gradient-to-r from-yrupink-500 to-yrupink-600 hover:from-yrupink-600 hover:to-yrupink-700 shadow-lg shadow-yrupink-500/25 hover:shadow-yrupink-500/40 transition-all"
+                  >
+                    <Award className="w-4 h-4" />
+                    ทำแบบประเมิน
+                  </a>
+                </div>
+              ) : submitted ? (
                 <div className="text-center py-8">
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-500/10 border border-green-500/30 mb-3">
                     <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-400" />
@@ -458,7 +483,7 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
               {/* Assessment CTA — shown only when the admin has published an
                   assessment for this activity. Jumps into the trainee flow
                   (App.jsx picks up ?e=<slug>). */}
-              {assessmentAvailable && (
+              {assessmentAvailable && !assessmentMode && (
                 <div className="mt-6 pt-6 border-t border-gray-200 dark:border-yrugray-700">
                   <a
                     href={`/?e=${activity?.slug || activity?.id}`}

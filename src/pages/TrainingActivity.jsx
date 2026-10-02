@@ -64,10 +64,18 @@ const TrainingActivity = ({ onBack }) => {
 
   useEffect(() => {
     let cancelled = false;
-    activitiesApi.list({ status: 'published' })
-      .then((rows) => {
+    // Public list shows courses open for registration ('published') and those
+    // in the assessment phase ('assessment') so trainees can still reach the
+    // "ทำแบบประเมิน" button from the browse list.
+    Promise.all([
+      activitiesApi.list({ status: 'published' }),
+      // Best-effort: on older backends that don't know the 'assessment' status
+      // this 422s — fall back to [] so the published list still loads.
+      activitiesApi.list({ status: 'assessment' }).catch(() => []),
+    ])
+      .then(([pub, assess]) => {
         if (cancelled) return;
-        const mapped = (rows || []).map(normalizeRow);
+        const mapped = [...(pub || []), ...(assess || [])].map(normalizeRow);
         setActivities(mapped);
         // If URL had ?a=<slug> on mount, restore the detail view immediately.
         const slug = readSlugFromUrl();
@@ -219,6 +227,12 @@ const TrainingActivity = ({ onBack }) => {
                     <span className={`absolute top-3 right-3 px-2.5 py-1 text-xs font-medium rounded-full border backdrop-blur ${levelColor(a.level)}`}>
                       {a.level}
                     </span>
+                    {/* Assessment-phase badge */}
+                    {a.raw?.status === 'assessment' && (
+                      <span className="absolute top-3 left-3 px-2.5 py-1 text-xs font-semibold rounded-full border backdrop-blur bg-blue-100/90 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/40">
+                        เปิดทำแบบประเมิน
+                      </span>
+                    )}
                   </div>
 
                   {/* Content */}

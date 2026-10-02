@@ -7,7 +7,7 @@ import * as ctrl from '../controllers/activities.controller.js';
 const router = Router();
 
 const listQuery = z.object({
-  status: z.enum(['draft', 'published', 'completed', 'cancelled']).optional(),
+  status: z.enum(['draft', 'published', 'assessment', 'completed', 'cancelled']).optional(),
   limit:  z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
@@ -31,7 +31,7 @@ const createBody = z.object({
   start_date:      z.string().min(1),               // ISO or 'YYYY-MM-DD HH:MM:SS'
   end_date:        z.string().min(1),
   capacity:        z.number().int().min(0).default(0),
-  status:          z.enum(['draft', 'published', 'completed', 'cancelled']).default('draft'),
+  status:          z.enum(['draft', 'published', 'assessment', 'completed', 'cancelled']).default('draft'),
   cover_image_url: coverImageUrlSchema.optional(),
 });
 

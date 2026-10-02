@@ -27,16 +27,18 @@ import { activitiesApi } from '../api';
 
 // Map API status enum ⇄ Thai label used in the UI chip filter
 const STATUS_LABEL = {
-  published: 'เปิดรับสมัคร',
-  cancelled: 'ปิดรับสมัคร',
-  completed: 'จบแล้ว',
-  draft:     'ร่าง',
+  published:  'เปิดรับสมัคร',
+  assessment: 'เปิดทำแบบประเมิน',
+  cancelled:  'ปิดรับสมัคร',
+  completed:  'จบโครงการ',
+  draft:      'ร่าง',
 };
 const STATUS_ENUM = {
-  'เปิดรับสมัคร': 'published',
-  'ปิดรับสมัคร':  'cancelled',
-  'จบแล้ว':       'completed',
-  'ร่าง':         'draft',
+  'เปิดรับสมัคร':     'published',
+  'เปิดทำแบบประเมิน': 'assessment',
+  'ปิดรับสมัคร':      'cancelled',
+  'จบโครงการ':        'completed',
+  'ร่าง':             'draft',
 };
 
 const inputCls =
@@ -73,7 +75,7 @@ const ManageActivities = ({ onGoCreate }) => {
   const [selected, setSelected] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
-  const statuses = ['ทั้งหมด', 'เปิดรับสมัคร', 'ปิดรับสมัคร', 'จบแล้ว', 'ร่าง'];
+  const statuses = ['ทั้งหมด', 'เปิดรับสมัคร', 'เปิดทำแบบประเมิน', 'ปิดรับสมัคร', 'จบโครงการ', 'ร่าง'];
 
   const reload = () => {
     setLoading(true);
@@ -436,8 +438,9 @@ const InlineEditForm = ({ activity, onSave }) => {
           <select value={form.status} onChange={(e) => change('status', e.target.value)} className={inputCls}>
             <option value="ร่าง">ร่าง (ยังไม่เปิดสาธารณะ)</option>
             <option value="เปิดรับสมัคร">เปิดรับสมัคร</option>
+            <option value="เปิดทำแบบประเมิน">เปิดทำแบบประเมิน (ปิดสมัคร เหลือแบบประเมิน)</option>
             <option value="ปิดรับสมัคร">ปิดรับสมัคร</option>
-            <option value="จบแล้ว">จบแล้ว</option>
+            <option value="จบโครงการ">จบโครงการ</option>
           </select>
         </Field>
 
@@ -509,10 +512,11 @@ const DeleteConfirmModal = ({ activity, onClose, onConfirm }) => createPortal(
 
 const StatusBadge = ({ status }) => {
   const map = {
-    'เปิดรับสมัคร': 'bg-green-100 text-green-700 border-green-300 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30',
-    'ปิดรับสมัคร':  'bg-red-100 text-red-700 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30',
-    'จบแล้ว':       'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30',
-    'ร่าง':         'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-500/10 dark:text-yellow-400 dark:border-yellow-500/30',
+    'เปิดรับสมัคร':     'bg-green-100 text-green-700 border-green-300 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30',
+    'เปิดทำแบบประเมิน': 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30',
+    'ปิดรับสมัคร':      'bg-red-100 text-red-700 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30',
+    'จบโครงการ':        'bg-red-100 text-red-700 border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30',
+    'ร่าง':             'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/30',
   };
   const fallback = 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-gray-500/10 dark:text-gray-400 dark:border-gray-500/30';
   return (
