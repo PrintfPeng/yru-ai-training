@@ -10,7 +10,7 @@
 - โปรเจกต์: ระบบจัดการอบรม AI Center มหาวิทยาลัยราชภัฏยะลา (React + Vite / Node Express / MySQL 8)
 - **Production ใช้งานจริงแล้ว:** https://aicenter.yru.ac.th
 - GitHub: https://github.com/PrintfPeng/yru-ai-training (branch `main`)
-- Deploy ล่าสุด commit: `715257d`
+- Deploy ล่าสุดที่ live: `2ae71df` (Phase 1 เลข cert) — **Phase 2+3 (`ff4c6de`) committed แล้ว รอ deploy** (ดูข้อ 6)
 - **สื่อสารกับผู้ใช้เป็นภาษาไทย** (มี skill `concise-thai` เปิดอยู่ — ตอบสั้น กระชับ ภาษาไทย ใช้อังกฤษเท่าที่จำเป็น)
 - ผู้ใช้ไม่มี `gh` auth บนเครื่อง → เปิด/merge PR ไม่ได้ผ่าน CLI แต่ **push ตรง main ได้** (ใช้ workflow push→pull→deploy ตรง ๆ ไม่ผ่าน PR)
 
@@ -151,11 +151,34 @@ yru-ai-training/
 6. **Admin font scale**: `html.admin-scale { font-size: 120% }` (AdminDashboard ใส่ class ตอน mount)
 7. **URL state**: F5 ไม่เด้งหน้าแรกแล้ว — App.jsx sync `?view=`, TrainingActivity sync `?a=<slug>`
 8. **No rate limit** บน verify-phone แล้ว (เอาออกตามคำขอผู้ใช้)
+9. **เลข cert รูปแบบใหม่** `ควท.มรย.{ปีพ.ศ.}/03/{run3หลัก}` (เช่น `ควท.มรย.2570/03/001`)
+   - ปี พ.ศ. = ปีจาก `activity.start_date` + 543
+   - เลขรัน **ต่อเนื่องต่อปี** ทั้งศูนย์ ผ่านตาราง `cert_counters(be_year,last_no)` — atomic ด้วย `LAST_INSERT_ID()`
+   - code มี `/` → **lookup ใช้ query param** `GET /api/certificates/public?code=...` (path `/public/:code` คงไว้สำหรับใบเก่า)
+   - ใบเก่า format `YRU-AI-2569-xxxxxx` ยังเปิดดูได้ (regex รับทั้ง 2 format)
+   - ดีไซน์ cert เก็บแบบ **snapshot** ใน `certificates.template_data` ตอนออก → แก้ดีไซน์ทีหลังไม่กระทบใบเก่า
+10. **Status กิจกรรมเพิ่ม `assessment`** (เปิดทำแบบประเมิน): ENUM = `draft,published,assessment,completed,cancelled`
+    - `assessment` → ActivityDetail ซ่อนฟอร์มสมัคร เหลือปุ่ม "ทำแบบประเมิน"; list สาธารณะโชว์ด้วย (badge ฟ้า)
+    - badge สี: ร่าง🟠 / เปิดรับสมัคร🟢 / เปิดทำแบบประเมิน🔵 / ปิดรับสมัคร🔴 / จบโครงการ🔴
+    - label `completed` = "จบโครงการ" (เดิม "จบแล้ว")
+11. **Submit แบบประเมิน self-heal**: ส่งซ้ำไม่ error แล้ว → ถ้าไม่มี cert จะออกให้ (ใช้ regenerate ใบหลังลบ)
+12. **เบอร์โทร register** ต้อง 10 หลักพอดี (strip อักขระไม่ใช่ตัวเลขก่อนเช็ก) + validate ฝั่ง client ข้อความไทยราย field
 
 ---
 
 ## 5) งานที่เพิ่งทำเสร็จ (recent commits)
 
+**รอบ 2026-10-02 (session ล่าสุด):**
+- `ff4c6de` **Phase 2+3** — status `assessment` (ซ่อนฟอร์ม เหลือปุ่มประเมิน) + badge แยกสี  ⏳ *รอ deploy*
+- `2ae71df` **Phase 1** — เลข cert `ควท.มรย.{ปี}/03/{run}` + `cert_counters` + lookup query param  ✅ deployed
+- `050f4b6` submit แบบประเมิน self-heal (ส่งซ้ำออกใบใหม่ได้)  ✅ deployed
+- `8d68c41` คนทำประเมินแล้ว ใส่เบอร์ → ข้าม survey ไปหน้า cert เลย  ✅ deployed
+- `3fd65de` register เบอร์ต้อง 10 หลัก
+- `3fc3cb0` register validate ฝั่ง client + ข้อความไทยราย field
+- `107b31a` (dev) vite proxy เขียน Origin → แก้ 500 ตอน dev
+- `cc2c93c` cert fix: SELECT assessment.description → CERT_CONFIG ได้ bg
+
+**ก่อนหน้า:**
 - `715257d` ปุ่มบันทึกกิจกรรมลอยขวาล่าง
 - `1186348` cert ออกตาม template admin (ไม่ใช่ default) — parse CERT_CONFIG ตอน submit
 - `9f08b4a` CreateAssessment โหลด existing + UPDATE/CREATE + description LONGTEXT
@@ -168,23 +191,27 @@ yru-ai-training/
 
 ## 6) 🔴 งานค้าง / กำลังเทส
 
-### A. เทสใบรับรอง custom bg (in-progress)
-เพิ่ง deploy fix `1186348` + ลบ cert เก่าใน DB แล้ว กำลังรอผู้ใช้เทส flow:
-1. Admin upload bg ใน tab "แบบประเมิน + ใบรับรอง" → บันทึก
-2. Trainee ทำแบบประเมิน → cert ที่ได้ **ต้องมี bg ที่ admin ออกแบบ**
-
-ถ้ายังไม่ขึ้น bg → debug:
+### A. 🚀 Deploy Phase 2+3 (`ff4c6de`) — ยังไม่ขึ้น server
 ```bash
-# เช็ค template_data ของ cert ล่าสุดมี backgroundImageUrl ไหม
+cd /home/aicenter/htdocs/aicenter.yru.ac.th && git pull origin main
 DB_PASS=$(grep '^DB_PASSWORD' backend/.env | cut -d= -f2-)
-mysql -h 127.0.0.1 -u aicenter-aiapp -p"$DB_PASS" aicenter-maindb -e \
- "SELECT id, LEFT(JSON_EXTRACT(template_data,'\$.backgroundImageUrl'),40) FROM certificates ORDER BY id DESC LIMIT 3;"
+mysql -h 127.0.0.1 -u aicenter-aiapp -p"$DB_PASS" aicenter-maindb < db/migrations/2026-10-02_activity_status_assessment.sql
+npm run build && pm2 restart yru-api && sleep 3 && curl -sS http://127.0.0.1:3008/api/health; echo
 ```
-- ถ้า NULL → assessment.description ไม่มี CERT_CONFIG หรือ parse พลาด (เช็ค assessments.description)
-- ถ้ามี data: → ปัญหาที่ CertificateDownload render (cert.backgroundImageUrl)
+เทสหลัง deploy: ตั้งกิจกรรมสถานะ "เปิดทำแบบประเมิน" → หน้า public ฟอร์มหาย เหลือปุ่มประเมิน + badge สีตรง
 
-### B. vite.config.js ยังไม่ commit
-แก้ default proxy → `https://aicenter.yru.ac.th` (จากเดิม 10.20.41.108) ยังไม่ push
+### B. ใบ cer custom bg — ✅ เสร็จแล้ว
+ต้นเหตุ: query submit ไม่ได้ SELECT `description` (fix `cc2c93c`) + ใบเก่าถูก cache (snapshot)
+วิธี regenerate ใบเก่าให้ได้ bg/format ใหม่: ลบใบ → ให้ส่งแบบประเมินซ้ำ (self-heal `050f4b6`)
+```bash
+# ลบใบทั้งหลักสูตรเพื่อ regenerate (ออกใหม่ได้เลข+bg ปัจจุบัน)
+mysql -h 127.0.0.1 -u aicenter-aiapp -p"$DB_PASS" aicenter-maindb -e \
+ "DELETE c FROM certificates c JOIN registrations r ON r.id=c.registration_id JOIN activities a ON a.id=r.activity_id WHERE a.slug='ai-engineering';"
+```
+
+### D. ปรับปรุงอนาคต (ยังไม่ทำ)
+- bg เก็บเป็น base64 → description + ทุกใบ snapshot ~5.6MB → DB โตเร็วถ้าคนเยอะ ควรย้ายไปเก็บไฟล์แล้วอ้าง URL
+- ปุ่ม admin "regenerate ใบทั้งหลักสูตร" (ตอนนี้ต้องลบ DB เอง)
 
 ### C. Security — ทำแล้ว (ยืนยันกับผู้ใช้ว่าครบ)
 - ✅ เปลี่ยนรหัส DB (จาก `aicenterdb2569` ที่หลุด chat → ใหม่)
