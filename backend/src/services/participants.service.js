@@ -38,13 +38,18 @@ export async function findParticipantByPhoneAndActivity(phone, activitySlug) {
   const normalized = normalizePhone(phone);
   if (!normalized || normalized.length !== 10) return null;
 
+  // LEFT JOIN certificates: a cert row exists only after the trainee submits
+  // the assessment, so `certificate_code` doubles as the "already completed"
+  // flag that lets the UI skip the survey and jump straight to the cert.
   const [rows] = await pool.query(
     `SELECT p.id, p.first_name, p.last_name, p.email, p.phone,
             p.organization, p.position,
-            r.id AS registration_id, r.registration_status
+            r.id AS registration_id, r.registration_status,
+            c.certificate_code
        FROM participants  p
        JOIN registrations r ON r.participant_id = p.id
        JOIN activities    a ON a.id = r.activity_id
+       LEFT JOIN certificates c ON c.registration_id = r.id
       WHERE a.slug = ?
         AND p.phone = ?
         AND r.registration_status IN ('confirmed', 'attended')

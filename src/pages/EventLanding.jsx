@@ -76,6 +76,8 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
         phone: `••• ••• ${participant.phone_last4}`,
         email: participant.email_masked,
         registration_id: participant.registration_id,
+        // Set when the assessment was already done → skip survey, go to cert
+        certificate_code: participant.certificate_code || null,
       });
       setStep('confirm');
     } catch (err) {
@@ -245,7 +247,9 @@ const PhoneStep = ({ phone, setPhone, error, onSubmit, submitting }) => (
   </>
 );
 
-const ConfirmStep = ({ registrant, onConfirm, onNotMe }) => (
+const ConfirmStep = ({ registrant, onConfirm, onNotMe }) => {
+  const alreadyDone = !!registrant.certificate_code;
+  return (
   <>
     <div className="px-6 py-5 border-b border-gray-200 dark:border-yrugray-800 bg-green-50/50 dark:bg-green-500/5">
       <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -293,15 +297,18 @@ const ConfirmStep = ({ registrant, onConfirm, onNotMe }) => (
           className="py-3 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 transition-colors flex items-center justify-center gap-2"
         >
           <CheckCircle2 className="w-4 h-4" />
-          ใช่, เริ่มเลย
+          {alreadyDone ? 'ใช่, ดูใบรับรอง' : 'ใช่, เริ่มเลย'}
         </button>
       </div>
 
       <p className="text-xs text-center text-gray-500 dark:text-yrugray-400 pt-2">
-        เมื่อยืนยันแล้วจะเข้าสู่แบบประเมินความพึงพอใจ
+        {alreadyDone
+          ? 'คุณทำแบบประเมินนี้แล้ว — ยืนยันเพื่อดู/ดาวน์โหลดใบรับรองของคุณ'
+          : 'เมื่อยืนยันแล้วจะเข้าสู่แบบประเมินความพึงพอใจ'}
       </p>
     </div>
   </>
-);
+  );
+};
 
 export default EventLanding;

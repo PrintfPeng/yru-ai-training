@@ -110,7 +110,14 @@ function App() {
         <EventLanding
           activityId={eventState.activityId}
           onVerified={(registrant, activity) =>
-            setEventState({ step: 'survey', activityId: activity.id, activity, registrant })
+            // Already submitted the assessment → skip the survey, jump to the
+            // existing certificate. Otherwise start the survey as usual.
+            setEventState(
+              registrant.certificate_code
+                ? { step: 'cert', activityId: activity.id, activity, registrant,
+                    certificateCode: registrant.certificate_code }
+                : { step: 'survey', activityId: activity.id, activity, registrant }
+            )
           }
           onCancel={exitEventFlow}
         />

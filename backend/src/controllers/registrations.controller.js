@@ -51,6 +51,9 @@ export const publicVerifyPhone = asyncHandler(async (req, res) => {
         email_masked: p.email.replace(/^(.).*(@.*)$/, '$1***$2'),
         registration_id: p.registration_id,
         registration_status: p.registration_status,
+        // Present only when the assessment was already submitted → UI can
+        // skip the survey and show the existing certificate directly.
+        certificate_code: p.certificate_code || null,
       },
     },
   });
