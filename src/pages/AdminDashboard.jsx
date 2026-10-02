@@ -40,9 +40,38 @@ const fmtThaiDate = (iso) => {
   } catch { return iso; }
 };
 
+// Dashboard section ⇄ URL ?tab= slug, so F5 keeps the current section.
+const TAB_SLUG = {
+  'ภาพรวมระบบ': 'overview',
+  'จัดการหลักสูตร': 'courses',
+  'จัดการการจองห้อง': 'rooms',
+  'สร้างกิจกรรม': 'create',
+};
+const SLUG_TAB = Object.fromEntries(Object.entries(TAB_SLUG).map(([k, v]) => [v, k]));
+const readTab = () => {
+  try {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    return SLUG_TAB[t] || 'ภาพรวมระบบ';
+  } catch { return 'ภาพรวมระบบ'; }
+};
+
 const AdminDashboard = ({ admin, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState('ภาพรวมระบบ');
+  const [activeMenu, setActiveMenu] = useState(() => readTab());
+
+  // Keep ?tab= in sync with the active section (replaceState: no history spam).
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const slug = TAB_SLUG[activeMenu] || 'overview';
+      if (slug === 'overview') params.delete('tab'); else params.set('tab', slug);
+      const qs = params.toString();
+      const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      if (next !== window.location.pathname + window.location.search + window.location.hash) {
+        window.history.replaceState(window.history.state, '', next);
+      }
+    } catch { /* ignore */ }
+  }, [activeMenu]);
 
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);

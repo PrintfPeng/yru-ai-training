@@ -17,39 +17,57 @@ const readEventFromUrl = () => {
   return new URLSearchParams(window.location.search).get('e');
 };
 
-// Read the current view from URL — only `training` persists; admin/dashboard
-// are gated by auth state so they get hydrated by the /auth/me bootstrap below.
-const PERSISTENT_VIEWS = ['home', 'training'];
+// Every top-level view is mirrored to the URL so F5 keeps the user exactly
+// where they were. `dashboard` additionally requires a valid session (checked
+// after the /auth/me bootstrap) — if there is none it falls back to the login
+// screen, but the URL stays put.
+const ALL_VIEWS = ['home', 'training', 'admin', 'dashboard'];
 const readViewFromUrl = () => {
   if (typeof window === 'undefined') return 'home';
   const v = new URLSearchParams(window.location.search).get('view');
-  return PERSISTENT_VIEWS.includes(v) ? v : 'home';
+  return ALL_VIEWS.includes(v) ? v : 'home';
+};
+
+// Trainee flow (QR → verify → survey → cert) is persisted in sessionStorage so
+// a refresh on any step stays on that step (same browser tab). We strip heavy
+// fields (cover image / description) from the stored activity to stay well
+// within the sessionStorage quota.
+const EVENT_SS_KEY = 'yru_event_state';
+const slimActivity = (a) =>
+  a ? { id: a.id, slug: a.slug, title: a.title, start_date: a.start_date, location: a.location, status: a.status } : a;
+const readEventState = () => {
+  const slug = readEventFromUrl();
+  if (!slug) return null;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(EVENT_SS_KEY) || 'null');
+    if (saved && saved.activityId === slug) return saved;
+  } catch { /* ignore */ }
+  return { step: 'landing', activityId: slug, activity: null, registrant: null };
 };
 
 function App() {
-  // Trainee flow state (from QR scan)
-  const initialEventId = readEventFromUrl();
-  const [eventState, setEventState] = useState(
-    initialEventId ? { step: 'landing', activityId: initialEventId, activity: null, registrant: null } : null
-  );
+  // Trainee flow state (from QR scan) — restored from sessionStorage on refresh
+  const [eventState, setEventState] = useState(() => readEventState());
 
   // Hydrate currentView from URL so refresh keeps the user on the same page.
   const [currentView, setCurrentView] = useState(() => readViewFromUrl());
   const [admin, setAdmin] = useState(null);       // set from /auth/me — survives reload
   const [authBooting, setAuthBooting] = useState(true);
 
-  // Push currentView back to the URL whenever it changes, so refresh works
-  // and the browser Back button goes to the previous view. Only persistent
-  // views (home/training) are mirrored to the URL; admin/dashboard are
-  // controlled by the auth bootstrap, so they clear the `view` param instead.
+  // Mirror state → URL on every change so refresh (F5) restores the exact page,
+  // and the Back button walks the history. The trainee flow owns the URL via
+  // ?e=<slug>; otherwise ?view=<view> (home = no param). Other params (?a, ?tab)
+  // are preserved untouched.
   useEffect(() => {
-    if (eventState) return; // trainee flow owns the URL (?e=…)
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    if (PERSISTENT_VIEWS.includes(currentView) && currentView !== 'home') {
-      params.set('view', currentView);
-    } else {
+    if (eventState) {
+      params.set('e', eventState.activityId);
       params.delete('view');
+    } else {
+      params.delete('e');
+      if (currentView !== 'home') params.set('view', currentView);
+      else params.delete('view');
     }
     const qs = params.toString();
     const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
@@ -58,28 +76,38 @@ function App() {
     }
   }, [currentView, eventState]);
 
+  // Persist the trainee flow in sessionStorage (slim activity) so a refresh on
+  // the survey/cert step restores it instead of bouncing back to landing.
+  useEffect(() => {
+    try {
+      if (eventState) {
+        sessionStorage.setItem(EVENT_SS_KEY,
+          JSON.stringify({ ...eventState, activity: slimActivity(eventState.activity) }));
+      } else {
+        sessionStorage.removeItem(EVENT_SS_KEY);
+      }
+    } catch { /* ignore quota/availability */ }
+  }, [eventState]);
+
   // Browser Back / Forward → re-read URL and update state.
   useEffect(() => {
     const onPop = () => {
-      if (readEventFromUrl()) return; // trainee flow handles its own URL
+      setEventState(readEventState());
       setCurrentView(readViewFromUrl());
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  // Bootstrap: try /auth/me on mount. If the httpOnly cookie is still valid,
-  // land straight on the dashboard instead of the login screen.
+  // Bootstrap: hydrate the session from /auth/me. We do NOT force a view here —
+  // the view comes from the URL; a 'dashboard' URL without a valid session
+  // falls back to the login screen in the render below.
   useEffect(() => {
     if (eventState) { setAuthBooting(false); return; } // skip on trainee flow
     let cancelled = false;
     authApi.me()
-      .then(({ admin }) => {
-        if (cancelled) return;
-        setAdmin(admin);
-        setCurrentView('dashboard');
-      })
-      .catch(() => { /* no session → stay on home */ })
+      .then(({ admin }) => { if (!cancelled) setAdmin(admin); })
+      .catch(() => { /* no session */ })
       .finally(() => { if (!cancelled) setAuthBooting(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,10 +124,8 @@ function App() {
   }
 
   const exitEventFlow = () => {
-    // Clear ?e= param so refresh doesn't re-enter the flow
-    if (typeof window !== 'undefined' && window.history.replaceState) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
+    // Drop the saved flow; the URL effect clears ?e= so refresh won't re-enter.
+    try { sessionStorage.removeItem(EVENT_SS_KEY); } catch { /* ignore */ }
     setEventState(null);
   };
 
@@ -150,7 +176,9 @@ function App() {
     );
   }
 
-  if (currentView === 'admin') {
+  // Dashboard requires a live session; without one, show the login screen
+  // (the URL keeps ?view=dashboard so a successful login lands right back).
+  if (currentView === 'admin' || (currentView === 'dashboard' && !admin)) {
     return (
       <div className="relative">
         <button
@@ -167,7 +195,7 @@ function App() {
     );
   }
 
-  if (currentView === 'dashboard') {
+  if (currentView === 'dashboard' && admin) {
     return (
       <AdminDashboard
         admin={admin}
@@ -215,7 +243,7 @@ function App() {
 
             {/* Admin Login Button */}
             <button 
-              onClick={() => setCurrentView('admin')}
+              onClick={() => setCurrentView(admin ? 'dashboard' : 'admin')}
               className="px-4 py-2 rounded-lg bg-yrupink-500/10 dark:bg-yrupink-600/20 text-yrupink-600 dark:text-yrupink-400 border border-yrupink-500/30 hover:bg-yrupink-500 hover:text-white dark:hover:bg-yrupink-600 dark:hover:text-white dark:hover:border-yrupink-500 transition-all duration-300 ml-2 flex items-center gap-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
