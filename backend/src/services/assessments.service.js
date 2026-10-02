@@ -152,7 +152,10 @@ export async function submitResponse({ assessmentId, participantId, responseData
         `Field "${f.id}" is required`, 422, { field: f.id });
     }
 
-    // Insert response (UNIQUE key guards against double-submit)
+    // Insert response (UNIQUE key guards against double-submit). A duplicate is
+    // NOT a hard error: we fall through to (re-)issue the certificate so a
+    // participant whose cert was removed/regenerated can still get it, and a
+    // double-submit just returns the existing cert idempotently.
     try {
       await conn.query(
         `INSERT INTO assessment_responses
@@ -161,11 +164,8 @@ export async function submitResponse({ assessmentId, participantId, responseData
         [assessmentId, participantId, JSON.stringify(responseData)]
       );
     } catch (err) {
-      if (err.code === 'ER_DUP_ENTRY') {
-        throw new AppError('ALREADY_SUBMITTED',
-          'You have already submitted this assessment', 409);
-      }
-      throw err;
+      if (err.code !== 'ER_DUP_ENTRY') throw err;
+      // already submitted — keep going to ensure a certificate exists
     }
 
     // Mark attendance now if not already
