@@ -83,10 +83,12 @@ export async function issueCertificateForRegistration(registrationId, conn = poo
       WHERE r.id = ? LIMIT 1`,
     [registrationId]
   );
-  const startYear = act?.start_date
+  // start_date is stored with a Buddhist year already (e.g. 2569-11-01), so its
+  // year IS the พ.ศ. — do NOT add 543 (that double-converted to 3112). Fallback
+  // only (no start_date): convert the current Gregorian year.
+  const beYear = act?.start_date
     ? new Date(act.start_date).getFullYear()
-    : new Date().getFullYear();
-  const beYear = startYear + 543;
+    : new Date().getFullYear() + 543;
 
   // Next per-year running number, race-safe via connection-scoped
   // LAST_INSERT_ID() (works with or without an enclosing transaction).

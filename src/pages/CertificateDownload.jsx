@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Download, Printer, Share2, CheckCircle2, Home, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Download, Share2, CheckCircle2, Home, AlertCircle, Loader2 } from 'lucide-react';
 import { certificatesApi } from '../api';
 
 /**
@@ -9,10 +9,12 @@ import { certificatesApi } from '../api';
  *                            when present we fetch the real cert from API
  *   onBackHome
  */
-const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome }) => {
+const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome, verify = false }) => {
   const [certData, setCertData] = useState(null);
   const [loading, setLoading] = useState(!!certificateCode);
   const [loadError, setLoadError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+  const certRef = useRef(null);
 
   useEffect(() => {
     if (!certificateCode) return;
@@ -24,11 +26,39 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
     return () => { cancelled = true; };
   }, [certificateCode]);
 
-  const handlePrint = () => window.print();
+  // Render the certificate element to an A4-landscape PDF and download it.
+  // jsPDF + html2canvas are dynamically imported so they don't bloat the main
+  // bundle — they only load when the user actually clicks download.
+  const handleDownloadPdf = async () => {
+    if (!certRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
+      const canvas = await html2canvas(certRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const img = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      pdf.addImage(img, 'JPEG', 0, 0,
+        pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+      // '/' is illegal in filenames → swap for '-'
+      const code = certData?.certificate?.code || 'certificate';
+      pdf.save(`${String(code).replace(/[\\/]/g, '-')}.pdf`);
+    } catch (e) {
+      alert('ดาวน์โหลด PDF ไม่สำเร็จ กรุณาลองใหม่');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleShare = () => {
     if (!certData) return;
-    const url = `${window.location.origin}/verify/${certData.certificate.code}`;
+    const url = `${window.location.origin}/?verify=${encodeURIComponent(certData.certificate.code)}`;
     navigator.clipboard?.writeText(url).then(
       () => alert('คัดลอกลิงก์ยืนยันแล้ว:\n' + url),
       () => alert('ลิงก์ยืนยัน: ' + url)
@@ -86,10 +116,12 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
             <CheckCircle2 className="w-8 h-8 text-green-500 dark:text-green-400" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            ขอบคุณสำหรับความคิดเห็น
+            {verify ? 'ตรวจสอบวุฒิบัตร' : 'ขอบคุณสำหรับความคิดเห็น'}
           </h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-yrugray-300 max-w-lg mx-auto">
-            ข้อเสนอแนะของคุณช่วยให้ศูนย์ AI YRU พัฒนาหลักสูตรให้ดียิ่งขึ้น — วุฒิบัตรของคุณพร้อมดาวน์โหลดแล้ว
+            {verify
+              ? 'วุฒิบัตรนี้ออกโดยศูนย์ปัญญาประดิษฐ์ มหาวิทยาลัยราชภัฏยะลา'
+              : 'ข้อเสนอแนะของคุณช่วยให้ศูนย์ AI YRU พัฒนาหลักสูตรให้ดียิ่งขึ้น — วุฒิบัตรของคุณพร้อมดาวน์โหลดแล้ว'}
           </p>
         </div>
       </div>
@@ -109,18 +141,28 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
           </span>
         </div>
 
-        <div className="cert-print-area rounded-2xl overflow-hidden shadow-2xl">
+        <div ref={certRef} className="cert-print-area rounded-2xl overflow-hidden shadow-2xl">
           <CertPreview cert={cert} substitutions={substitutions} />
         </div>
 
         {/* Actions */}
         <div className="no-print mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button
-            onClick={handlePrint}
-            className="py-3 px-4 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 flex items-center justify-center gap-2 transition-colors sm:col-span-2"
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="py-3 px-4 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-lg shadow-yrupink-500/20 flex items-center justify-center gap-2 transition-colors sm:col-span-2"
           >
-            <Download className="w-4 h-4" />
-            ดาวน์โหลด PDF / พิมพ์
+            {downloading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                กำลังสร้าง PDF...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                ดาวน์โหลด PDF
+              </>
+            )}
           </button>
           <button
             onClick={handleShare}
@@ -156,8 +198,8 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
         {/* Verify note */}
         <div className="no-print mt-8 pb-8 text-center text-xs text-gray-500 dark:text-yrugray-500">
           🔗 ลิงก์ยืนยันสาธารณะ: <br />
-          <code className="text-yrupink-500 dark:text-yrupink-400">
-            aicenter.yru.ac.th/verify/{certId}
+          <code className="text-yrupink-500 dark:text-yrupink-400 break-all">
+            aicenter.yru.ac.th/?verify={certId}
           </code>
         </div>
       </main>

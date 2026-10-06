@@ -17,6 +17,12 @@ const readEventFromUrl = () => {
   return new URLSearchParams(window.location.search).get('e');
 };
 
+// Public certificate verify link: /?verify=<code>
+const readVerifyFromUrl = () => {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('verify');
+};
+
 // Every top-level view is mirrored to the URL so F5 keeps the user exactly
 // where they were. `dashboard` additionally requires a valid session (checked
 // after the /auth/me bootstrap) — if there is none it falls back to the login
@@ -48,6 +54,8 @@ const readEventState = () => {
 function App() {
   // Trainee flow state (from QR scan) — restored from sessionStorage on refresh
   const [eventState, setEventState] = useState(() => readEventState());
+  // Public certificate verify view (?verify=<code>)
+  const [verifyCode, setVerifyCode] = useState(() => readVerifyFromUrl());
 
   // Hydrate currentView from URL so refresh keeps the user on the same page.
   const [currentView, setCurrentView] = useState(() => readViewFromUrl());
@@ -93,6 +101,7 @@ function App() {
   useEffect(() => {
     const onPop = () => {
       setEventState(readEventState());
+      setVerifyCode(readVerifyFromUrl());
       setCurrentView(readViewFromUrl());
     };
     window.addEventListener('popstate', onPop);
@@ -103,7 +112,7 @@ function App() {
   // the view comes from the URL; a 'dashboard' URL without a valid session
   // falls back to the login screen in the render below.
   useEffect(() => {
-    if (eventState) { setAuthBooting(false); return; } // skip on trainee flow
+    if (eventState || verifyCode) { setAuthBooting(false); return; } // skip on public views
     let cancelled = false;
     authApi.me()
       .then(({ admin }) => { if (!cancelled) setAdmin(admin); })
@@ -115,7 +124,7 @@ function App() {
 
   // While bootstrapping /auth/me, keep the screen minimal so we don't flash the
   // public home page for the ~200ms round-trip.
-  if (authBooting && !eventState) {
+  if (authBooting && !eventState && !verifyCode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-yrugray-950">
         <div className="w-8 h-8 border-2 border-yrupink-500 border-t-transparent rounded-full animate-spin" />
@@ -128,6 +137,25 @@ function App() {
     try { sessionStorage.removeItem(EVENT_SS_KEY); } catch { /* ignore */ }
     setEventState(null);
   };
+
+  // Public certificate verify view (?verify=<code>) — takes over the page
+  if (verifyCode) {
+    const exitVerify = () => {
+      const params = new URLSearchParams(window.location.search);
+      params.delete('verify');
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      setVerifyCode(null);
+    };
+    return (
+      <div className="relative">
+        <div className="absolute top-4 right-4 z-50">
+          <ThemeToggle variant="solid" />
+        </div>
+        <CertificateDownload certificateCode={verifyCode} onBackHome={exitVerify} verify />
+      </div>
+    );
+  }
 
   // Trainee QR flow — takes over the whole page
   if (eventState) {
