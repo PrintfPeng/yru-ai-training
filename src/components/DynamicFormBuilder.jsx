@@ -167,11 +167,14 @@ const QuestionEditor = ({ index, question, onUpdate, onRemove, onAddOption, onUp
             </div>
           </div>
 
-          <input
+          <textarea
             value={question.question}
             onChange={(e) => onUpdate({ question: e.target.value })}
-            placeholder={question.type === 'rating_matrix' ? 'หัวข้อ (เช่น อำนวยความสะดวก)' : 'พิมพ์คำถามของคุณ...'}
-            className={inputCls}
+            placeholder={question.type === 'rating_matrix'
+              ? 'หัวข้อ (เช่น อำนวยความสะดวก) — กด Enter เพื่อขึ้นบรรทัดใหม่ใส่หมายเหตุได้'
+              : 'พิมพ์คำถามของคุณ... (กด Enter เพื่อขึ้นบรรทัดใหม่)'}
+            rows={2}
+            className={`${inputCls} resize-y`}
           />
 
           {question.type === 'rating_matrix' && (

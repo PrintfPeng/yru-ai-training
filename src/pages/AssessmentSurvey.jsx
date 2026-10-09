@@ -233,7 +233,7 @@ const QuestionCard = ({ index, question, value, error, onChange }) => (
         {index}
       </span>
       <div className="flex-1">
-        <p className="text-base font-semibold text-gray-900 dark:text-white leading-snug">
+        <p className="text-base font-semibold text-gray-900 dark:text-white leading-snug whitespace-pre-line">
           {question.question || '(ไม่มีคำถาม)'}
           {question.required && <span className="text-red-500 ml-1">*</span>}
         </p>
@@ -406,7 +406,8 @@ const AnswerInput = ({ question, value, onChange }) => {
                 {row || `ข้อย่อย ${i + 1}`}
               </span>
               <div className="flex gap-1.5 flex-wrap">
-                {Array.from({ length: max }, (_, k) => k + 1).map((score) => {
+                {/* Highest score on the left, 1 on the right */}
+                {Array.from({ length: max }, (_, k) => max - k).map((score) => {
                   const active = cur[i] === score;
                   return (
                     <button
