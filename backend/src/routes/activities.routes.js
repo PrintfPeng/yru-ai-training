@@ -33,6 +33,18 @@ const createBody = z.object({
   capacity:        z.number().int().min(0).default(0),
   status:          z.enum(['draft', 'published', 'assessment', 'completed', 'cancelled']).default('draft'),
   cover_image_url: coverImageUrlSchema.optional(),
+  // ----- richer detail fields (course detail page) -----
+  batch_no:            z.number().int().min(1).nullable().optional(),
+  title_en:            z.string().max(255).nullable().optional(),
+  register_close_date: z.string().min(1).nullable().optional(),   // 'YYYY-MM-DD' or ISO
+  has_selection:       z.boolean().optional(),
+  fee_text:            z.string().max(255).nullable().optional(),
+  travel_text:         z.string().max(500).nullable().optional(),
+  venue_links:         z.array(z.object({
+                         label: z.string().min(1).max(100),
+                         url:   z.string().min(1).max(500),
+                       })).nullable().optional(),
+  note_text:           z.string().max(2000).nullable().optional(),
 });
 
 const updateBody = createBody.partial();
