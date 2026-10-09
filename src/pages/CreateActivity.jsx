@@ -23,14 +23,22 @@ const CreateActivity = () => {
   // Activity metadata
   const [activity, setActivity] = useState({
     title: '',
+    titleEn: '',
+    batchNo: '',
     category: '',
     level: 'เริ่มต้น',
     description: '',
-    date: '',
-    duration: '',
+    startDate: '',
+    endDate: '',
+    registerCloseDate: '',
+    hasSelection: false,
+    feeText: '',
+    travelText: '',
+    noteText: '',
     seats: '',
     location: '',
   });
+  const [venueLinks, setVenueLinks] = useState([]); // [{label, url}]
 
   // Banner image
   const [bannerFile, setBannerFile] = useState(null);
@@ -44,9 +52,15 @@ const CreateActivity = () => {
   const [saveError, setSaveError] = useState('');
 
   const handleActivityChange = (e) => {
-    const { name, value } = e.target;
-    setActivity((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setActivity((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
+
+  // venue_links repeater helpers
+  const addVenueLink = () => setVenueLinks((p) => [...p, { label: '', url: '' }]);
+  const updateVenueLink = (i, key, val) =>
+    setVenueLinks((p) => p.map((v, idx) => (idx === i ? { ...v, [key]: val } : v)));
+  const removeVenueLink = (i) => setVenueLinks((p) => p.filter((_, idx) => idx !== i));
 
   const handleBannerSelect = (file) => {
     setBannerError('');
@@ -73,25 +87,34 @@ const CreateActivity = () => {
 
   const handleSave = async () => {
     setSaveError('');
-    if (!activity.title.trim() || !activity.date) {
-      setSaveError('กรุณากรอกชื่อหลักสูตรและวันที่จัดอบรม');
+    if (!activity.title.trim() || !activity.startDate || !activity.endDate) {
+      setSaveError('กรุณากรอกชื่อหลักสูตร วันเริ่ม และวันสิ้นสุดอบรม');
+      return;
+    }
+    if (activity.endDate < activity.startDate) {
+      setSaveError('วันสิ้นสุดต้องไม่ก่อนวันเริ่มอบรม');
       return;
     }
     setSaving(true);
     try {
-      // Duration is entered as "N วัน" — convert to end_date by adding N-1 days.
-      const days = Math.max(1, parseInt(activity.duration, 10) || 1);
-      const start = `${activity.date} 09:00:00`;
-      const endDate = new Date(activity.date);
-      endDate.setDate(endDate.getDate() + (days - 1));
-      const end = `${endDate.toISOString().slice(0, 10)} 16:30:00`;
+      const start = `${activity.startDate} 09:00:00`;
+      const end = `${activity.endDate} 16:30:00`;
+      const links = venueLinks.filter((v) => v.label.trim() && v.url.trim());
 
       const created = await activitiesApi.create({
         title:       activity.title.trim(),
+        title_en:    activity.titleEn.trim() || undefined,
+        batch_no:    activity.batchNo ? Number(activity.batchNo) : undefined,
         description: activity.description || undefined,
         location:    activity.location || undefined,
         start_date:  start,
         end_date:    end,
+        register_close_date: activity.registerCloseDate || undefined,
+        has_selection: activity.hasSelection,
+        fee_text:    activity.feeText.trim() || undefined,
+        travel_text: activity.travelText.trim() || undefined,
+        note_text:   activity.noteText.trim() || undefined,
+        venue_links: links.length ? links : undefined,
         capacity:    Number(activity.seats) || 0,
         status:      'draft',
         cover_image_url: bannerPreview || undefined,
@@ -113,8 +136,11 @@ const CreateActivity = () => {
       }
       alert(`บันทึกกิจกรรมเรียบร้อย (id: ${created.id})`);
       // Reset form
-      setActivity({ title: '', category: '', level: 'เริ่มต้น', description: '',
-                    date: '', duration: '', seats: '', location: '' });
+      setActivity({ title: '', titleEn: '', batchNo: '', category: '', level: 'เริ่มต้น',
+                    description: '', startDate: '', endDate: '', registerCloseDate: '',
+                    hasSelection: false, feeText: '', travelText: '', noteText: '',
+                    seats: '', location: '' });
+      setVenueLinks([]);
       setQuestions([]);
       setBannerFile(null);
       setBannerPreview('');
@@ -176,6 +202,28 @@ const CreateActivity = () => {
             />
           </AdminField>
 
+          <AdminField label="ชื่อภาษาอังกฤษ (subtitle)">
+            <input
+              name="titleEn"
+              value={activity.titleEn}
+              onChange={handleActivityChange}
+              placeholder="e.g. Advanced Prompt Engineering"
+              className={adminInputCls}
+            />
+          </AdminField>
+
+          <AdminField label="รุ่นที่">
+            <input
+              type="number"
+              min={1}
+              name="batchNo"
+              value={activity.batchNo}
+              onChange={handleActivityChange}
+              placeholder="เช่น 1"
+              className={adminInputCls}
+            />
+          </AdminField>
+
           <AdminField label="หมวดหมู่">
             <input
               name="category"
@@ -199,24 +247,22 @@ const CreateActivity = () => {
             </select>
           </AdminField>
 
-          <AdminField label="วันที่จัดอบรม" icon={<Calendar className="w-4 h-4" />}>
+          <AdminField label="วันเริ่มอบรม" required icon={<Calendar className="w-4 h-4" />}>
             <input
               type="date"
-              name="date"
-              value={activity.date}
+              name="startDate"
+              value={activity.startDate}
               onChange={handleActivityChange}
               className={adminInputCls}
             />
           </AdminField>
 
-          <AdminField label="ระยะเวลา (วัน)" icon={<Clock className="w-4 h-4" />}>
+          <AdminField label="วันสิ้นสุดอบรม" required icon={<Calendar className="w-4 h-4" />}>
             <input
-              type="number"
-              min={1}
-              name="duration"
-              value={activity.duration}
+              type="date"
+              name="endDate"
+              value={activity.endDate}
               onChange={handleActivityChange}
-              placeholder="เช่น 2"
               className={adminInputCls}
             />
           </AdminField>
@@ -249,6 +295,96 @@ const CreateActivity = () => {
               onChange={handleActivityChange}
               rows={4}
               placeholder="อธิบายเนื้อหาและวัตถุประสงค์ของหลักสูตร..."
+              className={`${adminInputCls} resize-none`}
+            />
+          </AdminField>
+
+          <AdminField label="วันปิดรับสมัคร" icon={<Calendar className="w-4 h-4" />}>
+            <input
+              type="date"
+              name="registerCloseDate"
+              value={activity.registerCloseDate}
+              onChange={handleActivityChange}
+              className={adminInputCls}
+            />
+          </AdminField>
+
+          <AdminField label="การพิจารณาคัดเลือก">
+            <label className="flex items-center gap-2 h-full text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                name="hasSelection"
+                checked={activity.hasSelection}
+                onChange={handleActivityChange}
+                className="w-4 h-4 accent-yrupink-500"
+              />
+              มีการพิจารณาคัดเลือก
+            </label>
+          </AdminField>
+
+          <AdminField label="ค่าลงทะเบียน">
+            <input
+              name="feeText"
+              value={activity.feeText}
+              onChange={handleActivityChange}
+              placeholder="เช่น ไม่มีค่าลงทะเบียน"
+              className={adminInputCls}
+            />
+          </AdminField>
+
+          <AdminField label="ค่าเดินทาง">
+            <input
+              name="travelText"
+              value={activity.travelText}
+              onChange={handleActivityChange}
+              placeholder="เช่น สนับสนุนแบบเหมาจ่าย ท่านละ 1,000 บาท"
+              className={adminInputCls}
+            />
+          </AdminField>
+
+          <AdminField label="ลิงก์สถานที่ (แผนที่ / เว็บไซต์)" className="md:col-span-2">
+            <div className="space-y-2">
+              {venueLinks.map((v, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={v.label}
+                    onChange={(e) => updateVenueLink(i, 'label', e.target.value)}
+                    placeholder="ชื่อ (เช่น โรงแรม / ห้องประชุม)"
+                    className={`${adminInputCls} flex-1`}
+                  />
+                  <input
+                    value={v.url}
+                    onChange={(e) => updateVenueLink(i, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className={`${adminInputCls} flex-1`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeVenueLink(i)}
+                    className="px-3 text-slate-500 hover:text-red-500"
+                    title="ลบ"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addVenueLink}
+                className="text-[15px] font-medium text-yrupink-600 dark:text-yrupink-400 hover:underline"
+              >
+                + เพิ่มลิงก์สถานที่
+              </button>
+            </div>
+          </AdminField>
+
+          <AdminField label="หมายเหตุ" className="md:col-span-2">
+            <textarea
+              name="noteText"
+              value={activity.noteText}
+              onChange={handleActivityChange}
+              rows={2}
+              placeholder="เช่น รายชื่อและจำนวนผู้สมัครได้รับการยืนยันสิทธิ์แล้ว..."
               className={`${adminInputCls} resize-none`}
             />
           </AdminField>

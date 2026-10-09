@@ -24,7 +24,7 @@ import {
 import ActivityRegistrants from './ActivityRegistrants';
 import CreateAssessment from './CreateAssessment';
 import { activitiesApi } from '../api';
-import { formatThaiDate, toDateInputValue, durationDays } from '../utils/thaiDate';
+import { formatThaiDate, toDateInputValue } from '../utils/thaiDate';
 
 // Map API status enum ⇄ Thai label used in the UI chip filter
 const STATUS_LABEL = {
@@ -52,9 +52,18 @@ const normalize = (r) => ({
   slug:        r.slug,
   description: r.description,
   location:    r.location,
-  date:        toDateInputValue(r.start_date),          // "2569-11-01" for <input type=date>
+  startDate:   toDateInputValue(r.start_date),          // "2569-11-01" for <input type=date>
+  endDate:     toDateInputValue(r.end_date),
   dateDisplay: r.start_date ? formatThaiDate(r.start_date) : '', // "1 พ.ย. 2569" for the card
-  duration:    r.start_date && r.end_date ? durationDays(r.start_date, r.end_date) : 1,
+  // richer detail fields
+  batchNo:     r.batch_no ?? '',
+  titleEn:     r.title_en ?? '',
+  registerCloseDate: toDateInputValue(r.register_close_date),
+  hasSelection: !!r.has_selection,
+  feeText:     r.fee_text ?? '',
+  travelText:  r.travel_text ?? '',
+  noteText:    r.note_text ?? '',
+  venueLinks:  Array.isArray(r.venue_links) ? r.venue_links : [],
   seats:       r.capacity,
   level:       'เริ่มต้น',
   category:    '',
@@ -110,16 +119,19 @@ const ManageActivities = ({ onGoCreate }) => {
         capacity:        Number(updated.seats) || 0,
         status:          STATUS_ENUM[updated.status] || updated.status,
         cover_image_url: updated.image || undefined,
+        // richer detail fields
+        title_en:        updated.titleEn || null,
+        batch_no:        updated.batchNo ? Number(updated.batchNo) : null,
+        register_close_date: updated.registerCloseDate || null,
+        has_selection:   !!updated.hasSelection,
+        fee_text:        updated.feeText || null,
+        travel_text:     updated.travelText || null,
+        note_text:       updated.noteText || null,
+        venue_links:     (updated.venueLinks || []).filter((v) => v.label?.trim() && v.url?.trim()),
       };
-      // Save date + duration too (previously dropped). `date` is "YYYY-MM-DD"
-      // from the date picker; duration (days) becomes end_date = start + (N-1).
-      if (updated.date) {
-        const days = Math.max(1, parseInt(updated.duration, 10) || 1);
-        const endDate = new Date(updated.date);
-        endDate.setDate(endDate.getDate() + (days - 1));
-        patch.start_date = `${updated.date} 09:00:00`;
-        patch.end_date = `${endDate.toISOString().slice(0, 10)} 16:30:00`;
-      }
+      // Start/end dates come straight from the two date pickers.
+      if (updated.startDate) patch.start_date = `${updated.startDate} 09:00:00`;
+      if (updated.endDate)   patch.end_date = `${updated.endDate} 16:30:00`;
       await activitiesApi.update(updated.id, patch);
       reload();
     } catch (e) {
@@ -433,16 +445,43 @@ const InlineEditForm = ({ activity, onSave }) => {
           <input value={form.title} onChange={(e) => change('title', e.target.value)} required className={inputCls} />
         </Field>
 
-        <Field label="วันที่" icon={<Calendar className="w-4 h-4" />}>
-          <input type="date" value={form.date} onChange={(e) => change('date', e.target.value)} className={inputCls} />
+        <Field label="ชื่อภาษาอังกฤษ (subtitle)" className="md:col-span-2">
+          <input value={form.titleEn || ''} onChange={(e) => change('titleEn', e.target.value)} className={inputCls} placeholder="e.g. Advanced Prompt Engineering" />
         </Field>
 
-        <Field label="ระยะเวลา (วัน)" icon={<Clock className="w-4 h-4" />}>
-          <input type="number" min={1} value={form.duration} onChange={(e) => change('duration', Number(e.target.value))} className={inputCls} placeholder="เช่น 2" />
+        <Field label="รุ่นที่">
+          <input type="number" min={1} value={form.batchNo || ''} onChange={(e) => change('batchNo', e.target.value)} className={inputCls} placeholder="เช่น 1" />
         </Field>
 
         <Field label="จำนวนที่รับ" icon={<Users className="w-4 h-4" />}>
           <input type="number" value={form.seats} onChange={(e) => change('seats', Number(e.target.value))} className={inputCls} />
+        </Field>
+
+        <Field label="วันเริ่มอบรม" icon={<Calendar className="w-4 h-4" />}>
+          <input type="date" value={form.startDate || ''} onChange={(e) => change('startDate', e.target.value)} className={inputCls} />
+        </Field>
+
+        <Field label="วันสิ้นสุดอบรม" icon={<Calendar className="w-4 h-4" />}>
+          <input type="date" value={form.endDate || ''} onChange={(e) => change('endDate', e.target.value)} className={inputCls} />
+        </Field>
+
+        <Field label="วันปิดรับสมัคร" icon={<Calendar className="w-4 h-4" />}>
+          <input type="date" value={form.registerCloseDate || ''} onChange={(e) => change('registerCloseDate', e.target.value)} className={inputCls} />
+        </Field>
+
+        <Field label="การพิจารณาคัดเลือก">
+          <label className="flex items-center gap-2 h-full text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
+            <input type="checkbox" checked={!!form.hasSelection} onChange={(e) => change('hasSelection', e.target.checked)} className="w-4 h-4 accent-yrupink-500" />
+            มีการพิจารณาคัดเลือก
+          </label>
+        </Field>
+
+        <Field label="ค่าลงทะเบียน">
+          <input value={form.feeText || ''} onChange={(e) => change('feeText', e.target.value)} className={inputCls} placeholder="เช่น ไม่มีค่าลงทะเบียน" />
+        </Field>
+
+        <Field label="ค่าเดินทาง">
+          <input value={form.travelText || ''} onChange={(e) => change('travelText', e.target.value)} className={inputCls} placeholder="เช่น เหมาจ่าย 1,000 บาท" />
         </Field>
 
         <Field label="สถานะ">
@@ -470,6 +509,35 @@ const InlineEditForm = ({ activity, onSave }) => {
 
         <Field label="รายละเอียด" className="md:col-span-2">
           <textarea value={form.description || ''} onChange={(e) => change('description', e.target.value)} rows={5} className={`${inputCls} resize-none`} />
+        </Field>
+
+        <Field label="ลิงก์สถานที่ (แผนที่ / เว็บไซต์)" className="md:col-span-2">
+          <div className="space-y-2">
+            {(form.venueLinks || []).map((v, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  value={v.label}
+                  onChange={(e) => change('venueLinks', (form.venueLinks || []).map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))}
+                  placeholder="ชื่อ (เช่น โรงแรม / ห้องประชุม)"
+                  className={`${inputCls} flex-1`}
+                />
+                <input
+                  value={v.url}
+                  onChange={(e) => change('venueLinks', (form.venueLinks || []).map((x, idx) => idx === i ? { ...x, url: e.target.value } : x))}
+                  placeholder="https://..."
+                  className={`${inputCls} flex-1`}
+                />
+                <button type="button" onClick={() => change('venueLinks', (form.venueLinks || []).filter((_, idx) => idx !== i))} className="px-3 text-slate-500 hover:text-red-500" title="ลบ">✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => change('venueLinks', [...(form.venueLinks || []), { label: '', url: '' }])} className="text-[15px] font-medium text-yrupink-600 dark:text-yrupink-400 hover:underline">
+              + เพิ่มลิงก์สถานที่
+            </button>
+          </div>
+        </Field>
+
+        <Field label="หมายเหตุ" className="md:col-span-2">
+          <textarea value={form.noteText || ''} onChange={(e) => change('noteText', e.target.value)} rows={2} className={`${inputCls} resize-none`} placeholder="เช่น รายชื่อและจำนวนผู้สมัครได้รับการยืนยันสิทธิ์แล้ว..." />
         </Field>
       </div>
 
