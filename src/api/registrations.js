@@ -6,6 +6,10 @@ export const registrationsApi = {
     client.post(`/registrations/public/activity/${encodeURIComponent(slug)}/register`,
       { participant, note }),
 
+  // Public — masked registrant list shown on the registration page
+  publicList: (slug) =>
+    client.get(`/registrations/public/activity/${encodeURIComponent(slug)}/registrants`),
+
   // Public — trainee QR flow (EventLanding)
   verifyPhone: (slug, phone) =>
     client.post(`/registrations/public/activity/${encodeURIComponent(slug)}/verify-phone`,

@@ -52,11 +52,19 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
   // True iff the admin has published an assessment for this activity.
   // Drives the "ทำแบบประเมิน..." CTA at the bottom of the form aside.
   const [assessmentAvailable, setAssessmentAvailable] = useState(false);
+  // Masked list of people already registered (public confirmation list).
+  const [registrants, setRegistrants] = useState([]);
+
+  const loadRegistrants = (slug) =>
+    registrationsApi.publicList(slug)
+      .then((rows) => setRegistrants(Array.isArray(rows) ? rows : []))
+      .catch(() => setRegistrants([]));
 
   useEffect(() => {
     const slug = initialActivity?.slug;
     if (!slug) return;
     let cancelled = false;
+    loadRegistrants(slug);
     setReloading(true);
     activitiesApi.getBySlug(slug)
       .then((row) => {
@@ -145,6 +153,7 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
         formData.note || null,
       );
       setSubmitted(true);
+      loadRegistrants(activity.slug); // show the new (masked) name in the list
       // Refresh seats_left after a successful signup
       activitiesApi.getBySlug(activity.slug)
         .then((row) => setActivity((prev) => ({ ...prev, ...row, seats: row.capacity })))
@@ -326,6 +335,36 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
                   </>
                 )}
               </div>
+            </section>
+
+            {/* Public registrants (masked) — lets applicants confirm their signup */}
+            <section className="glass-card rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                รายชื่อผู้ลงทะเบียน
+                {registrants.length > 0 && (
+                  <span className="text-sm font-normal text-gray-500 dark:text-yrugray-400"> ({registrants.length})</span>
+                )}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-yrugray-400 mb-4">
+                แสดงชื่อแบบปิดบางส่วนเพื่อความเป็นส่วนตัว — ตรวจสอบว่าคุณลงทะเบียนสำเร็จ
+              </p>
+              {registrants.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-yrugray-400">ยังไม่มีผู้ลงทะเบียน</p>
+              ) : (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {registrants.map((r, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center gap-2 text-sm text-gray-700 dark:text-yrugray-200 bg-white/50 dark:bg-yrugray-900/40 rounded-lg px-3 py-2 border border-gray-200 dark:border-yrugray-700"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-yrupink-500/10 text-yrupink-600 dark:text-yrupink-400 text-xs font-semibold flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <span className="truncate">{r.first_name} {r.last_name_masked}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           </div>
 

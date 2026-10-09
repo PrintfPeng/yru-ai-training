@@ -93,17 +93,14 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
   const statuses = ['ทั้งหมด', 'รอตรวจสอบ', 'อนุมัติ', 'ปฏิเสธ'];
 
   const filtered = useMemo(() => {
-    return registrants.filter((r) => {
-      const matchStatus = statusFilter === 'ทั้งหมด' || r.status === statusFilter;
-      const q = searchQuery.toLowerCase();
-      const matchSearch =
-        !q ||
-        r.fullName.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        (r.organization || '').toLowerCase().includes(q);
-      return matchStatus && matchSearch;
-    });
-  }, [registrants, searchQuery, statusFilter]);
+    const q = searchQuery.toLowerCase();
+    return registrants.filter((r) =>
+      !q ||
+      r.fullName.toLowerCase().includes(q) ||
+      r.email.toLowerCase().includes(q) ||
+      (r.organization || '').toLowerCase().includes(q)
+    );
+  }, [registrants, searchQuery]);
 
   const counts = useMemo(
     () => ({
@@ -197,8 +194,8 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Stats — approval removed: everyone is auto-confirmed */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard
           icon={<Users className="w-5 h-5 text-yrupink-400" />}
           label="ผู้ลงทะเบียนทั้งหมด"
@@ -206,22 +203,10 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
           hint={`${Math.round((counts.total / activity.seats) * 100 || 0)}% ของที่นั่ง`}
         />
         <StatCard
-          icon={<ClockIcon className="w-5 h-5 text-yellow-400" />}
-          label="รอตรวจสอบ"
-          value={counts.pending}
-          hint="รอผู้ดูแลอนุมัติ"
-        />
-        <StatCard
           icon={<CheckCircle2 className="w-5 h-5 text-green-400" />}
-          label="อนุมัติแล้ว"
-          value={counts.approved}
-          hint="ยืนยันสิทธิ์เข้าอบรม"
-        />
-        <StatCard
-          icon={<XCircle className="w-5 h-5 text-red-400" />}
-          label="ปฏิเสธ"
-          value={counts.rejected}
-          hint="ไม่ผ่านเงื่อนไข"
+          label="อนุมัติอัตโนมัติ"
+          value={counts.total}
+          hint="ผู้สมัครทุกคนได้รับการอนุมัติทันที"
         />
       </div>
 
@@ -235,22 +220,6 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
             placeholder="ค้นหา ชื่อ, อีเมล, หน่วยงาน..."
             className={`${inputCls} pl-9`}
           />
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-4 h-4 text-slate-500 dark:text-yrugray-500" />
-          {statuses.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-medium border transition-all ${
-                statusFilter === s
-                  ? 'bg-yrupink-600 text-white border-yrupink-500'
-                  : 'bg-white dark:bg-yrugray-800 text-slate-700 dark:text-yrugray-300 border-slate-300 dark:border-yrugray-700 hover:border-yrupink-500/50'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -342,24 +311,6 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        {r.status !== 'อนุมัติ' && (
-                          <button
-                            onClick={() => updateStatus(r.id, 'อนุมัติ')}
-                            title="อนุมัติ"
-                            className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        {r.status !== 'ปฏิเสธ' && (
-                          <button
-                            onClick={() => updateStatus(r.id, 'ปฏิเสธ')}
-                            title="ปฏิเสธ"
-                            className="p-2 text-slate-600 dark:text-yrugray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        )}
                         <button
                           onClick={() => setEditing(r)}
                           title="แก้ไข"

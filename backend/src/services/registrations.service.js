@@ -26,6 +26,29 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
 }
 
 /**
+ * Public list of registrants for an activity (shown on the registration page
+ * so applicants can confirm their sign-up). Names are masked: full first name
+ * + first 4 chars of the last name + "*****". Only approved/attended rows.
+ */
+export async function listPublicRegistrants(activitySlug) {
+  const [rows] = await pool.query(
+    `SELECT p.first_name, p.last_name
+       FROM registrations r
+       JOIN participants  p ON p.id = r.participant_id
+       JOIN activities    a ON a.id = r.activity_id
+      WHERE a.slug = ?
+        AND r.registration_status IN ('confirmed', 'attended')
+      ORDER BY r.registered_at ASC`,
+    [activitySlug]
+  );
+  const maskLast = (ln) => `${String(ln || '').slice(0, 4)}*****`;
+  return rows.map((r) => ({
+    first_name: r.first_name,
+    last_name_masked: maskLast(r.last_name),
+  }));
+}
+
+/**
  * Register a participant for an activity. Enforces capacity check with
  * `SELECT ... FOR UPDATE` inside a transaction to prevent race conditions.
  *
@@ -65,10 +88,12 @@ export async function registerForActivity(activityId, participantInput, note) {
 
     // Attempt the registration insert
     try {
+      // Auto-approve: every applicant is confirmed immediately (no admin
+      // approval step) so they can proceed to the assessment right away.
       const [rRes] = await conn.query(
         `INSERT INTO registrations
            (activity_id, participant_id, registration_status, note)
-         VALUES (?, ?, 'pending', ?)`,
+         VALUES (?, ?, 'confirmed', ?)`,
         [activityId, participantId, note ?? null]
       );
       return { registration_id: rRes.insertId, participant_id: participantId };

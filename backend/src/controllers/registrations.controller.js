@@ -25,6 +25,14 @@ export const publicRegister = asyncHandler(async (req, res) => {
 });
 
 /**
+ * PUBLIC — masked list of registrants for the activity registration page.
+ */
+export const publicListRegistrants = asyncHandler(async (req, res) => {
+  const data = await svc.listPublicRegistrants(req.params.slug);
+  res.json({ ok: true, data });
+});
+
+/**
  * PUBLIC — trainee QR flow, step 1: verify phone.
  * Body: { phone } — activity slug in URL param.
  * Returns participant (masked email/phone) so the confirm screen can show them.

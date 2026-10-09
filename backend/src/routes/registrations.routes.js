@@ -36,6 +36,10 @@ const statusPatchBody = z.object({
 });
 
 /* ---------- PUBLIC ---------- */
+router.get('/public/activity/:slug/registrants',
+  validate({ params: slugParam }),
+  ctrl.publicListRegistrants);
+
 router.post('/public/activity/:slug/register',
   validate({ params: slugParam, body: publicRegisterBody }),
   ctrl.publicRegister);
