@@ -120,6 +120,7 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
           question: f.label,
           options: f.options || [],
           required: !!f.required,
+          ...(f.scaleMax ? { scaleMax: f.scaleMax } : {}),
         })));
         // Rebuild cert config
         if (cfg) {
@@ -166,6 +167,8 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
           label: q.question,
           required: !!q.required,
           options: q.options?.length ? q.options : undefined,
+          // rating_matrix: persist the numeric scale (rows live in `options`)
+          scaleMax: q.type === 'rating_matrix' ? (q.scaleMax ?? 5) : undefined,
         })),
       };
       // Store cert config as JSON in the description tail so it survives a round
@@ -362,9 +365,11 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
         questions={questions}
         onChange={setQuestions}
         title="คำถามในแบบสอบถาม (Dynamic Form)"
-        description="ออกแบบคำถามที่ต้องการให้ผู้เข้าอบรมตอบ — รองรับ 8 ประเภทคำถาม (เหมาะกับ Likert, ตัวเลือก, ข้อความ)"
+        description="ออกแบบคำถามที่ต้องการให้ผู้เข้าอบรมตอบ — รองรับหลายประเภท รวมตารางให้คะแนน (Rating matrix)"
         emptyText='ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่มต้น'
       />
+
+      {existingAssessmentId && <ResponsesSummary assessmentId={existingAssessmentId} />}
 
       {/* Section: ใบรับรอง */}
       <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
@@ -487,5 +492,70 @@ const AdminField = ({ label, icon, required, className = '', children }) => (
     {children}
   </div>
 );
+
+// Average-score summary for rating_matrix questions. Renders nothing when the
+// assessment has no matrix questions.
+const ResponsesSummary = ({ assessmentId }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    assessmentsApi.getSummary(assessmentId)
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch(() => { if (!cancelled) setData(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [assessmentId]);
+
+  if (loading) return null;
+  if (!data || !data.matrices?.length) return null; // no matrix questions → hide
+
+  return (
+    <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">สรุปผลประเมิน (ค่าเฉลี่ย)</h3>
+        <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-0.5">
+          จากผู้ตอบทั้งหมด {data.response_count} คน
+        </p>
+      </div>
+      <div className="p-6 space-y-6">
+        {data.response_count === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-yrugray-500">ยังไม่มีผู้ตอบแบบสอบถาม</p>
+        ) : (
+          data.matrices.map((m) => (
+            <div key={m.field_id}>
+              <div className="flex items-baseline justify-between mb-2">
+                <h4 className="font-semibold text-slate-800 dark:text-yrugray-100">{m.label}</h4>
+                {m.overall_avg != null && (
+                  <span className="text-sm text-slate-600 dark:text-yrugray-400">
+                    เฉลี่ยรวม <b className="text-yrupink-600 dark:text-yrupink-400">{m.overall_avg}</b> / {m.scaleMax}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {m.rows.map((r) => (
+                  <div key={r.index} className="flex items-center gap-3">
+                    <span className="w-40 shrink-0 text-sm text-slate-700 dark:text-yrugray-200 truncate">{r.label}</span>
+                    <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-yrugray-800 overflow-hidden">
+                      <div
+                        className="h-full bg-yrupink-500"
+                        style={{ width: `${r.avg != null ? (r.avg / m.scaleMax) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="w-24 shrink-0 text-right text-sm tabular-nums text-slate-600 dark:text-yrugray-300">
+                      {r.avg != null ? `${r.avg} / ${m.scaleMax}` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+};
 
 export default CreateAssessment;

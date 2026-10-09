@@ -6,6 +6,7 @@ export const assessmentsApi = {
   create:          (activityId, body) => client.post(`/assessments/by-activity/${activityId}`, body),
   // Admin — by id
   getById:         (id) => client.get(`/assessments/${id}`),
+  getSummary:      (id) => client.get(`/assessments/${id}/summary`),
   update:          (id, patch) => client.patch(`/assessments/${id}`, patch),
   remove:          (id) => client.delete(`/assessments/${id}`),
   // Public — trainee flow

@@ -13,10 +13,11 @@ const formField = z.object({
   id:         z.string().min(1).max(40),
   type:       z.enum(['short_answer', 'paragraph', 'multiple_choice',
                       'checkboxes', 'dropdown', 'file_upload',
-                      'date', 'time', 'rating']),
+                      'date', 'time', 'rating', 'rating_matrix']),
   label:      z.string().min(1).max(500),
   required:   z.boolean().optional(),
   options:    z.array(z.string()).optional(),
+  scaleMax:   z.number().int().min(2).max(10).optional(), // rating_matrix: top of the score scale
   helpText:   z.string().max(500).optional(),
   validation: z.record(z.any()).optional(),
 });
@@ -53,6 +54,9 @@ router.post('/by-activity/:id',
   validate({ params: idParam, body: createBody }), ctrl.create);
 
 /* ---------- ADMIN — by assessment id ---------- */
+router.get   ('/:id/summary',
+  requireAuth, validate({ params: idParam }), ctrl.getSummary);
+
 router.get   ('/:id',
   requireAuth, validate({ params: idParam }), ctrl.getById);
 

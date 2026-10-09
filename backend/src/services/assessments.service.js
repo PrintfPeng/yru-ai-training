@@ -143,11 +143,18 @@ export async function submitResponse({ assessmentId, participantId, responseData
     for (const f of fields) {
       if (!f.required) continue;
       const v = responseData[f.id];
-      const isEmpty =
-        v === undefined ||
-        v === null ||
-        (typeof v === 'string' && v.trim() === '') ||
-        (Array.isArray(v) && v.length === 0);
+      let isEmpty;
+      if (f.type === 'rating_matrix') {
+        // Every sub-row (options[]) must have a score.
+        const rows = f.options || [];
+        isEmpty = !v || typeof v !== 'object' || rows.some((_, i) => v[i] == null);
+      } else {
+        isEmpty =
+          v === undefined ||
+          v === null ||
+          (typeof v === 'string' && v.trim() === '') ||
+          (Array.isArray(v) && v.length === 0);
+      }
       if (isEmpty) throw new AppError('MISSING_REQUIRED_FIELD',
         `Field "${f.id}" is required`, 422, { field: f.id });
     }
@@ -189,6 +196,61 @@ export async function submitResponse({ assessmentId, participantId, responseData
     const cert = await issueCertificateForRegistration(reg.id, conn, template);
     return { registration_id: reg.id, certificate: cert };
   });
+}
+
+/**
+ * Aggregate rating_matrix answers into per-row averages for an assessment.
+ * Returns { response_count, matrices: [{ field_id, label, scaleMax, overall_avg,
+ * rows: [{ index, label, avg, count }] }] }. Other question types are ignored.
+ */
+export async function getResponseSummary(assessmentId) {
+  const [[assessment]] = await pool.query(
+    'SELECT id, form_schema FROM assessments WHERE id = ? LIMIT 1',
+    [assessmentId]
+  );
+  if (!assessment) throw new AppError('NOT_FOUND', 'Assessment not found', 404);
+
+  const [rows] = await pool.query(
+    'SELECT response_data FROM assessment_responses WHERE assessment_id = ?',
+    [assessmentId]
+  );
+
+  // mysql2 may hand back a JSON column as an object or as a raw string.
+  const parse = (d) => {
+    if (d && typeof d === 'object') return d;
+    try { return JSON.parse(d); } catch { return {}; }
+  };
+  const responses = rows.map((r) => parse(r.response_data));
+
+  const fields = assessment.form_schema?.fields || [];
+  const matrices = fields
+    .filter((f) => f.type === 'rating_matrix')
+    .map((f) => {
+      const acc = (f.options || []).map((label, i) => ({ index: i, label, sum: 0, count: 0 }));
+      for (const data of responses) {
+        const v = data?.[f.id];
+        if (!v || typeof v !== 'object') continue;
+        acc.forEach((row, i) => {
+          const score = Number(v[i]);
+          if (Number.isFinite(score)) { row.sum += score; row.count += 1; }
+        });
+      }
+      const outRows = acc.map((r) => ({
+        index: r.index, label: r.label, count: r.count,
+        avg: r.count ? +(r.sum / r.count).toFixed(2) : null,
+      }));
+      const totalSum = acc.reduce((a, r) => a + r.sum, 0);
+      const totalCount = acc.reduce((a, r) => a + r.count, 0);
+      return {
+        field_id: String(f.id),
+        label: f.label,
+        scaleMax: f.scaleMax || 5,
+        overall_avg: totalCount ? +(totalSum / totalCount).toFixed(2) : null,
+        rows: outRows,
+      };
+    });
+
+  return { response_count: rows.length, matrices };
 }
 
 // Extracts the JSON from `<!-- CERT_CONFIG:{…} -->` in an assessment

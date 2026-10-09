@@ -11,6 +11,7 @@ import {
   Upload,
   Calendar as CalendarIcon,
   Clock as ClockIcon,
+  Table2,
   X,
 } from 'lucide-react';
 
@@ -24,7 +25,12 @@ export const QUESTION_TYPES = [
   { value: 'file_upload', label: 'อัปโหลดไฟล์ (File upload)', icon: Upload, hasOptions: false },
   { value: 'date', label: 'วันที่ (Date)', icon: CalendarIcon, hasOptions: false },
   { value: 'time', label: 'เวลา (Time)', icon: ClockIcon, hasOptions: false },
+  // Matrix of sub-questions sharing one numeric score scale (1..scaleMax).
+  // `options[]` is reused as the row labels (ข้อย่อย/ด้าน…).
+  { value: 'rating_matrix', label: 'ตารางให้คะแนน (Rating matrix)', icon: Table2, hasOptions: true },
 ];
+
+export const DEFAULT_SCALE_MAX = 5;
 
 export const makeEmptyQuestion = () => ({
   id: Date.now() + Math.random(),
@@ -164,9 +170,28 @@ const QuestionEditor = ({ index, question, onUpdate, onRemove, onAddOption, onUp
           <input
             value={question.question}
             onChange={(e) => onUpdate({ question: e.target.value })}
-            placeholder="พิมพ์คำถามของคุณ..."
+            placeholder={question.type === 'rating_matrix' ? 'หัวข้อ (เช่น อำนวยความสะดวก)' : 'พิมพ์คำถามของคุณ...'}
             className={inputCls}
           />
+
+          {question.type === 'rating_matrix' && (
+            <div className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300">
+              <span>ระดับคะแนนสูงสุด</span>
+              <input
+                type="number"
+                min={2}
+                max={10}
+                value={question.scaleMax ?? DEFAULT_SCALE_MAX}
+                onChange={(e) =>
+                  onUpdate({ scaleMax: Math.max(2, Math.min(10, Number(e.target.value) || DEFAULT_SCALE_MAX)) })
+                }
+                className={`${inputCls} w-20`}
+              />
+              <span className="text-slate-500 dark:text-yrugray-500">
+                (ผู้ตอบให้คะแนน 1 ถึง {question.scaleMax ?? DEFAULT_SCALE_MAX} ต่อข้อย่อย)
+              </span>
+            </div>
+          )}
 
           {currentType?.hasOptions ? (
             <OptionsEditor
@@ -206,7 +231,11 @@ const QuestionEditor = ({ index, question, onUpdate, onRemove, onAddOption, onUp
 };
 
 const OptionsEditor = ({ type, options, onAdd, onUpdate, onRemove }) => {
-  const markerIcon = () => {
+  const isMatrix = type === 'rating_matrix';
+  const noun = isMatrix ? 'ข้อย่อย' : 'ตัวเลือก';
+  const marker = (i) => {
+    if (isMatrix)
+      return <span className="text-slate-500 dark:text-yrugray-500 text-xs font-medium w-4 text-center">{i + 1}.</span>;
     if (type === 'multiple_choice') return <CircleDot className="w-4 h-4 text-slate-500 dark:text-yrugray-500" />;
     if (type === 'checkboxes') return <CheckSquare className="w-4 h-4 text-slate-500 dark:text-yrugray-500" />;
     return <span className="text-slate-500 dark:text-yrugray-500 text-xs font-medium w-4 text-center">{'▾'}</span>;
@@ -216,19 +245,19 @@ const OptionsEditor = ({ type, options, onAdd, onUpdate, onRemove }) => {
     <div className="space-y-2 pl-1">
       {options.map((opt, i) => (
         <div key={i} className="flex items-center gap-2">
-          {markerIcon()}
+          {marker(i)}
           <input
             value={opt}
             onChange={(e) => onUpdate(i, e.target.value)}
             className={`${inputCls} flex-1`}
-            placeholder={`ตัวเลือก ${i + 1}`}
+            placeholder={isMatrix ? `ข้อย่อย ${i + 1} (เช่น ด้านสถานที่)` : `ตัวเลือก ${i + 1}`}
           />
           {options.length > 1 && (
             <button
               type="button"
               onClick={() => onRemove(i)}
               className="text-slate-500 dark:text-yrugray-500 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded transition-colors"
-              title="ลบตัวเลือก"
+              title={`ลบ${noun}`}
             >
               <X className="w-4 h-4" />
             </button>
@@ -241,7 +270,7 @@ const OptionsEditor = ({ type, options, onAdd, onUpdate, onRemove }) => {
         className="text-[15px] font-medium text-yrupink-600 dark:text-yrupink-400 hover:text-yrupink-500 dark:hover:text-yrupink-300 flex items-center gap-1.5 mt-1 ml-6"
       >
         <Plus className="w-3.5 h-3.5" />
-        เพิ่มตัวเลือก
+        เพิ่ม{noun}
       </button>
     </div>
   );

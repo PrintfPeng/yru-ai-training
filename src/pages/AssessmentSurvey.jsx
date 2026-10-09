@@ -29,17 +29,23 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
       type: f.type,
       question: f.label,
       options: f.options,
+      scaleMax: f.scaleMax,
       required: !!f.required,
       helpText: f.helpText,
     }));
   }, [assessment]);
 
+  // A rating_matrix counts as answered only when every row has a score.
+  const isAnswered = (q, v) => {
+    if (q.type === 'rating_matrix') {
+      const rows = q.options || [];
+      return rows.length > 0 && rows.every((_, i) => v && v[i] != null);
+    }
+    return v !== undefined && v !== null && v !== '' && (!Array.isArray(v) || v.length > 0);
+  };
+
   const answeredCount = useMemo(
-    () =>
-      questions.filter((q) => {
-        const v = answers[q.id];
-        return v !== undefined && v !== null && v !== '' && (!Array.isArray(v) || v.length > 0);
-      }).length,
+    () => questions.filter((q) => isAnswered(q, answers[q.id])).length,
     [answers, questions]
   );
 
@@ -67,11 +73,8 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
     const errs = {};
     questions.forEach((q) => {
       if (!q.required) return;
-      const val = answers[q.id];
-      if (val === undefined || val === null || val === '' ||
-          (typeof val === 'string' && val.trim() === '') ||
-          (Array.isArray(val) && val.length === 0)) {
-        errs[q.id] = 'กรุณาตอบข้อนี้';
+      if (!isAnswered(q, answers[q.id])) {
+        errs[q.id] = q.type === 'rating_matrix' ? 'กรุณาให้คะแนนครบทุกข้อย่อย' : 'กรุณาตอบข้อนี้';
       }
     });
     setErrors(errs);
@@ -82,11 +85,7 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
     if (!validate()) {
       const errs = {};
       questions.forEach((q) => {
-        if (!q.required) return;
-        const v = answers[q.id];
-        if (v === undefined || v === null || v === '' ||
-            (typeof v === 'string' && v.trim() === '') ||
-            (Array.isArray(v) && v.length === 0)) errs[q.id] = 1;
+        if (q.required && !isAnswered(q, answers[q.id])) errs[q.id] = 1;
       });
       const firstErrorId = Object.keys(errs)[0];
       if (firstErrorId) {
@@ -390,6 +389,46 @@ const AnswerInput = ({ question, value, onChange }) => {
           className={baseCls}
         />
       );
+
+    case 'rating_matrix': {
+      const max = question.scaleMax || 5;
+      const rows = question.options || [];
+      const cur = value && typeof value === 'object' ? value : {};
+      const setRow = (i, score) => onChange({ ...cur, [i]: score });
+      return (
+        <div className="space-y-2">
+          {rows.map((row, i) => (
+            <div
+              key={i}
+              className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-yrugray-800 border border-gray-200 dark:border-yrugray-700"
+            >
+              <span className="flex-1 text-sm text-gray-800 dark:text-yrugray-100">
+                {row || `ข้อย่อย ${i + 1}`}
+              </span>
+              <div className="flex gap-1.5 flex-wrap">
+                {Array.from({ length: max }, (_, k) => k + 1).map((score) => {
+                  const active = cur[i] === score;
+                  return (
+                    <button
+                      key={score}
+                      type="button"
+                      onClick={() => setRow(i, score)}
+                      className={`w-9 h-9 rounded-lg text-sm font-semibold border transition-colors ${
+                        active
+                          ? 'bg-yrupink-600 border-yrupink-600 text-white'
+                          : 'bg-white dark:bg-yrugray-900 border-gray-300 dark:border-yrugray-600 text-gray-700 dark:text-yrugray-200 hover:border-yrupink-500'
+                      }`}
+                    >
+                      {score}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
 
     default:
       return <p className="text-sm text-gray-400">คำถามประเภทไม่รู้จัก: {question.type}</p>;

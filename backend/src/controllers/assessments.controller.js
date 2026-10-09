@@ -13,6 +13,11 @@ export const getById = asyncHandler(async (req, res) => {
   res.json({ ok: true, data });
 });
 
+export const getSummary = asyncHandler(async (req, res) => {
+  const data = await svc.getResponseSummary(req.params.id);
+  res.json({ ok: true, data });
+});
+
 export const create = asyncHandler(async (req, res) => {
   const data = await svc.createAssessment(req.params.id, req.body);
   res.status(201).json({ ok: true, data });
