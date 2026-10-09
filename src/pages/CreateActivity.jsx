@@ -209,12 +209,14 @@ const CreateActivity = () => {
             />
           </AdminField>
 
-          <AdminField label="ระยะเวลา" icon={<Clock className="w-4 h-4" />}>
+          <AdminField label="ระยะเวลา (วัน)" icon={<Clock className="w-4 h-4" />}>
             <input
+              type="number"
+              min={1}
               name="duration"
               value={activity.duration}
               onChange={handleActivityChange}
-              placeholder="เช่น 2 วัน"
+              placeholder="เช่น 2"
               className={adminInputCls}
             />
           </AdminField>

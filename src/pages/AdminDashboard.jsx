@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { formatThaiDate as fmtThaiDate } from '../utils/thaiDate';
 import {
   LayoutDashboard,
   BookOpen,
@@ -31,14 +32,6 @@ const STATUS_META = {
 
 const STATUS_FALLBACK_CLS = 'bg-slate-200 text-slate-700 dark:bg-yrugray-500/10 dark:text-yrugray-400';
 
-const fmtThaiDate = (iso) => {
-  if (!iso) return '-';
-  try {
-    return new Date(iso).toLocaleDateString('th-TH', {
-      day: 'numeric', month: 'short', year: 'numeric',
-    });
-  } catch { return iso; }
-};
 
 // Dashboard section ⇄ URL ?tab= slug, so F5 keeps the current section.
 const TAB_SLUG = {

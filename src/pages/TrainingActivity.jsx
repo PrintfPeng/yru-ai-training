@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight, Loader2 } from 'lucide-react';
 import ActivityDetail from './ActivityDetail';
 import { activitiesApi } from '../api';
+import { formatThaiDate, durationText } from '../utils/thaiDate';
 
 // Normalize an API row into the card shape the UI expects.
 const normalizeRow = (r) => ({
@@ -10,12 +11,8 @@ const normalizeRow = (r) => ({
   title: r.title,
   description: r.description,
   location: r.location,
-  date: r.start_date
-    ? new Date(r.start_date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
-    : '',
-  duration: r.end_date && r.start_date
-    ? `${Math.max(1, Math.ceil((new Date(r.end_date) - new Date(r.start_date)) / 86400000))} วัน`
-    : '',
+  date: r.start_date ? formatThaiDate(r.start_date) : '',
+  duration: r.end_date && r.start_date ? durationText(r.start_date, r.end_date) : '',
   seats: r.capacity,
   seats_left: r.seats_left,
   image: r.cover_image_url,

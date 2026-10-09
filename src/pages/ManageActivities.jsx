@@ -24,6 +24,7 @@ import {
 import ActivityRegistrants from './ActivityRegistrants';
 import CreateAssessment from './CreateAssessment';
 import { activitiesApi } from '../api';
+import { formatThaiDate, toDateInputValue, durationDays } from '../utils/thaiDate';
 
 // Map API status enum ⇄ Thai label used in the UI chip filter
 const STATUS_LABEL = {
@@ -51,8 +52,9 @@ const normalize = (r) => ({
   slug:        r.slug,
   description: r.description,
   location:    r.location,
-  date:        r.start_date ? new Date(r.start_date).toLocaleDateString('th-TH') : '',
-  duration:    '',
+  date:        toDateInputValue(r.start_date),          // "2569-11-01" for <input type=date>
+  dateDisplay: r.start_date ? formatThaiDate(r.start_date) : '', // "1 พ.ย. 2569" for the card
+  duration:    r.start_date && r.end_date ? durationDays(r.start_date, r.end_date) : 1,
   seats:       r.capacity,
   level:       'เริ่มต้น',
   category:    '',
@@ -109,6 +111,15 @@ const ManageActivities = ({ onGoCreate }) => {
         status:          STATUS_ENUM[updated.status] || updated.status,
         cover_image_url: updated.image || undefined,
       };
+      // Save date + duration too (previously dropped). `date` is "YYYY-MM-DD"
+      // from the date picker; duration (days) becomes end_date = start + (N-1).
+      if (updated.date) {
+        const days = Math.max(1, parseInt(updated.duration, 10) || 1);
+        const endDate = new Date(updated.date);
+        endDate.setDate(endDate.getDate() + (days - 1));
+        patch.start_date = `${updated.date} 09:00:00`;
+        patch.end_date = `${endDate.toISOString().slice(0, 10)} 16:30:00`;
+      }
       await activitiesApi.update(updated.id, patch);
       reload();
     } catch (e) {
@@ -274,7 +285,7 @@ const ActivityCard = ({ activity, onOpen }) => (
       <div className="space-y-2 text-[14px] text-slate-700 dark:text-yrugray-300 mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400 shrink-0" />
-          <span>{activity.date || 'ยังไม่ระบุวันที่'}</span>
+          <span>{activity.dateDisplay || 'ยังไม่ระบุวันที่'}</span>
         </div>
         <div className="flex items-start gap-2">
           <MapPin className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400 shrink-0 mt-0.5" />
@@ -322,7 +333,7 @@ const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onReload }) =
             <div className="flex items-center gap-2 mt-1.5">
               <StatusBadge status={activity.status} />
               <span className="text-sm text-slate-600 dark:text-yrugray-400">
-                {activity.date} · {activity.registrants_count || 0} / {activity.seats || '∞'} คน
+                {activity.dateDisplay} · {activity.registrants_count || 0} / {activity.seats || '∞'} คน
               </span>
             </div>
           </div>
@@ -423,11 +434,11 @@ const InlineEditForm = ({ activity, onSave }) => {
         </Field>
 
         <Field label="วันที่" icon={<Calendar className="w-4 h-4" />}>
-          <input value={form.date} onChange={(e) => change('date', e.target.value)} className={inputCls} />
+          <input type="date" value={form.date} onChange={(e) => change('date', e.target.value)} className={inputCls} />
         </Field>
 
-        <Field label="ระยะเวลา" icon={<Clock className="w-4 h-4" />}>
-          <input value={form.duration} onChange={(e) => change('duration', e.target.value)} className={inputCls} placeholder="เช่น 2 วัน" />
+        <Field label="ระยะเวลา (วัน)" icon={<Clock className="w-4 h-4" />}>
+          <input type="number" min={1} value={form.duration} onChange={(e) => change('duration', Number(e.target.value))} className={inputCls} placeholder="เช่น 2" />
         </Field>
 
         <Field label="จำนวนที่รับ" icon={<Users className="w-4 h-4" />}>

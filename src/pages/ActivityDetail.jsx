@@ -19,21 +19,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { activitiesApi, registrationsApi, assessmentsApi, ApiError } from '../api';
+import { formatThaiDate as fmtThaiDate, durationText as durationInDays } from '../utils/thaiDate';
 
-const fmtThaiDate = (iso) => {
-  if (!iso) return '-';
-  try {
-    return new Date(iso).toLocaleDateString('th-TH', {
-      year: 'numeric', month: 'short', day: 'numeric',
-    });
-  } catch { return '-'; }
-};
-
-const durationInDays = (start, end) => {
-  if (!start || !end) return '';
-  const days = Math.max(1, Math.ceil((new Date(end) - new Date(start)) / 86400000));
-  return `${days} วัน`;
-};
 
 const STATUS_LABEL = {
   published: 'เปิดรับสมัคร',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, User, ArrowRight, ArrowLeft, CheckCircle2, XCircle, MapPin, Calendar, Loader2 } from 'lucide-react';
 import { activitiesApi, registrationsApi, ApiError } from '../api';
+import { formatThaiDate } from '../utils/thaiDate';
 
 const normalizePhone = (raw) => String(raw || '').replace(/\D/g, '').replace(/^66/, '0');
 
@@ -135,9 +136,7 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
           <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-slate-900/90 dark:text-white/90">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              {new Date(activity.start_date).toLocaleDateString('th-TH', {
-                year: 'numeric', month: 'long', day: 'numeric',
-              })}
+              {formatThaiDate(activity.start_date)}
             </span>
             {activity.location && (
               <span className="flex items-center gap-1.5">
