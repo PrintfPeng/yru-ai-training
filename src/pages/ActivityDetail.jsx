@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
-  BookOpen,
   Calendar,
   Clock,
   Users,
@@ -17,6 +16,11 @@ import {
   Award,
   Loader2,
   XCircle,
+  Info,
+  CalendarRange,
+  ClipboardCheck,
+  Wallet,
+  ExternalLink,
 } from 'lucide-react';
 import { activitiesApi, registrationsApi, assessmentsApi, ApiError } from '../api';
 import { formatThaiDate as fmtThaiDate, durationText as durationInDays } from '../utils/thaiDate';
@@ -216,13 +220,35 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
               alt={activity.title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
+            {activity?.batch_no != null && activity?.batch_no !== '' && (
+              <span className="absolute top-4 right-4 px-3 py-1 text-sm font-bold rounded-full bg-yrupink-600 text-white shadow-lg">
+                รุ่นที่ {activity.batch_no}
+              </span>
+            )}
+            {activity?.start_date && activity?.end_date && (
+              <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1.5">
+                <span className="self-start px-3 py-1 text-xs md:text-sm font-semibold rounded-full bg-white/90 text-gray-800 backdrop-blur">
+                  รอบวันที่ : {fmtThaiDate(activity.start_date)} – {fmtThaiDate(activity.end_date)}
+                </span>
+                {activity?.location && (
+                  <span className="text-xs md:text-sm text-white/90 drop-shadow flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" /> {activity.location}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {/* Hero */}
         <section className="mb-8">
-          <div className="flex items-center gap-2 mb-4 text-sm">
+          <div className="flex flex-wrap items-center gap-2 mb-3 text-sm">
+            {activity?.batch_no != null && activity?.batch_no !== '' && (
+              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-yrupink-500/10 text-yrupink-600 dark:text-yrupink-400 border border-yrupink-500/30">
+                รุ่นที่ {activity.batch_no}
+              </span>
+            )}
             <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
               isOpen
                 ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30'
@@ -233,38 +259,42 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
             {reloading && <Loader2 className="w-3.5 h-3.5 text-yrupink-400 animate-spin" />}
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-gray-900 dark:text-white">
+          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-1.5 text-gray-900 dark:text-white">
             <span className="text-gradient">{activity?.title || 'รายละเอียดหลักสูตร'}</span>
           </h1>
+          {activity?.title_en && (
+            <p className="text-base md:text-lg text-gray-500 dark:text-yrugray-400">{activity.title_en}</p>
+          )}
 
-          {/* Quick stats — from real API fields */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+          {/* 3 stat cards — จำนวนรับ / สมัครแล้ว / ระยะเวลา */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
             <QuickStat
-              icon={<Calendar className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />}
-              label="วันที่จัด"
-              value={activity?.start_date ? fmtThaiDate(activity.start_date) : activity?.date || '-'}
+              icon={<Users className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />}
+              label="จำนวนรับ"
+              value={capacity > 0 ? `${capacity} คน` : 'ไม่จำกัด'}
+            />
+            <QuickStat
+              icon={<CheckCircle2 className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />}
+              label="สมัครแล้ว"
+              value={`${registered} คน`}
             />
             <QuickStat
               icon={<Clock className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />}
               label="ระยะเวลา"
               value={activity?.start_date && activity?.end_date
                 ? durationInDays(activity.start_date, activity.end_date)
-                : activity?.duration || '-'}
-            />
-            <QuickStat
-              icon={<Users className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />}
-              label="ที่นั่ง"
-              value={capacity > 0
-                ? `เหลือ ${seatsLeft} / ${capacity} คน`
-                : 'ไม่จำกัด'}
-            />
-            <QuickStat
-              icon={<BookOpen className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />}
-              label="ค่าลงทะเบียน"
-              value="ฟรี"
+                : '-'}
             />
           </div>
         </section>
+
+        {/* Note box */}
+        {activity?.note_text && (
+          <div className="mb-6 flex items-start gap-2 p-4 rounded-xl bg-yrupink-500/5 border border-yrupink-500/20 text-sm text-gray-700 dark:text-yrugray-200">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 text-yrupink-500 dark:text-yrupink-400" />
+            <span className="whitespace-pre-line"><b>หมายเหตุ:</b> {activity.note_text}</span>
+          </div>
+        )}
 
         {/* Content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -282,15 +312,54 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
             )}
 
             <section className="glass-card rounded-2xl p-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">สถานที่จัดอบรม</h2>
-              <div className="flex items-start gap-3 text-gray-700 dark:text-yrugray-100">
-                <MapPin className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">{activity?.location || 'ยังไม่ระบุ'}</p>
-                  <p className="text-sm opacity-80 mt-1">
-                    มหาวิทยาลัยราชภัฏยะลา 133 ถนนเทศบาล 3 ตำบลสะเตง อำเภอเมือง จังหวัดยะลา 95000
-                  </p>
-                </div>
+              <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">รายละเอียด</h2>
+              <div className="divide-y divide-gray-200 dark:divide-yrugray-800">
+                {activity?.register_close_date && (
+                  <DetailRow
+                    icon={<Calendar className="w-4 h-4" />}
+                    label="ปิดรับสมัคร"
+                    value={fmtThaiDate(activity.register_close_date)}
+                    valueClass="text-red-600 dark:text-red-400 font-semibold"
+                  />
+                )}
+                {activity?.start_date && activity?.end_date && (
+                  <DetailRow
+                    icon={<CalendarRange className="w-4 h-4" />}
+                    label="ช่วงอบรม"
+                    value={`${fmtThaiDate(activity.start_date)} – ${fmtThaiDate(activity.end_date)}`}
+                  />
+                )}
+                <DetailRow
+                  icon={<ClipboardCheck className="w-4 h-4" />}
+                  label="การพิจารณา"
+                  value={activity?.has_selection ? 'มีการพิจารณา' : 'ไม่มีการพิจารณา'}
+                />
+                {activity?.fee_text && (
+                  <DetailRow icon={<Wallet className="w-4 h-4" />} label="ค่าลงทะเบียน" value={activity.fee_text} />
+                )}
+                {activity?.travel_text && (
+                  <DetailRow icon={<Wallet className="w-4 h-4" />} label="ค่าเดินทาง" value={activity.travel_text} />
+                )}
+                <DetailRow
+                  icon={<MapPin className="w-4 h-4" />}
+                  label="สถานที่"
+                  value={
+                    <div>
+                      <p>{activity?.location || 'ยังไม่ระบุ'}</p>
+                      {Array.isArray(activity?.venue_links) && activity.venue_links.map((v, i) => (
+                        <a
+                          key={i}
+                          href={v.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-yrupink-600 dark:text-yrupink-400 hover:underline text-sm mt-1 mr-4"
+                        >
+                          {v.label} <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ))}
+                    </div>
+                  }
+                />
               </div>
             </section>
 
@@ -539,13 +608,23 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
 
 const QuickStat = ({ icon, label, value }) => (
   <div className="glass-card rounded-xl p-4 flex items-center gap-3">
-    <div className="p-2 rounded-lg bg-yrupink-500/10 dark:bg-yrupink-600/20">
+    <div className="p-2.5 rounded-lg bg-yrupink-500/10 dark:bg-yrupink-600/20 shrink-0">
       {icon}
     </div>
     <div className="min-w-0">
       <p className="text-xs text-gray-500 dark:text-yrugray-400">{label}</p>
-      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{value}</p>
+      <p className="text-lg font-bold text-gray-900 dark:text-white truncate">{value}</p>
     </div>
+  </div>
+);
+
+const DetailRow = ({ icon, label, value, valueClass = '' }) => (
+  <div className="flex items-start gap-3 py-3">
+    <div className="flex items-center gap-2 w-32 md:w-40 shrink-0 text-gray-600 dark:text-yrugray-300">
+      <span className="text-yrupink-500 dark:text-yrupink-400">{icon}</span>
+      <span className="text-sm font-medium">{label}</span>
+    </div>
+    <div className={`flex-1 text-[15px] text-gray-900 dark:text-white ${valueClass}`}>{value}</div>
   </div>
 );
 
