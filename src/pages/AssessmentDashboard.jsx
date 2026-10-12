@@ -204,7 +204,7 @@ const AssessmentDashboard = ({ activity, title }) => {
                 const color = PALETTE[i % PALETTE.length];
                 return (
                   <Panel
-                    key={t.field_id}
+                    key={t.field_id} 
                     accent={color}
                     icon={<Icon className="w-5 h-5" style={{ color }} />}
                     title={t.label}

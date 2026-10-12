@@ -76,7 +76,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
   ];
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false; 
     setLoading(true);
     setError(null);
     activitiesApi.list({ limit: 200 })

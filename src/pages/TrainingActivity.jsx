@@ -309,7 +309,7 @@ const TrainingActivity = ({ onBack }) => {
                 );
               })}
             </div>
-          )}
+          )} 
         </section>
       </main>
 

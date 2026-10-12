@@ -188,7 +188,7 @@ const ManageActivities = ({ onGoCreate }) => {
           <Plus className="w-4 h-4" />
           สร้างกิจกรรมใหม่
         </button>
-      </div>
+      </div> 
 
       {/* Search + Filter */}
       <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-4 flex flex-col md:flex-row gap-3 shadow-xs">
