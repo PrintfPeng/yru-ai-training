@@ -9,7 +9,7 @@ import axios from 'axios';
  *     `code` field so callers can `if (err.code === 'OVER_CAPACITY')` etc.
  */
 export const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://aicenter.yru.ac.th/api',
   withCredentials: true,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },

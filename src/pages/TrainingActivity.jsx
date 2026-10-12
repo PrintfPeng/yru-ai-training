@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight, Loader2, ClipboardList } from 'lucide-react';
 import ActivityDetail from './ActivityDetail';
 import { activitiesApi } from '../api';
 import { formatThaiDate, durationText } from '../utils/thaiDate';
@@ -12,9 +12,13 @@ const normalizeRow = (r) => ({
   description: r.description,
   location: r.location,
   date: r.start_date ? formatThaiDate(r.start_date) : '',
+  endDate: r.end_date ? formatThaiDate(r.end_date) : '',
   duration: r.end_date && r.start_date ? durationText(r.start_date, r.end_date) : '',
   seats: r.capacity,
   seats_left: r.seats_left,
+  registrants_count: r.total_registered ?? 0, 
+  registerCloseDateDisplay: r.register_close_date ? formatThaiDate(r.register_close_date) : '',
+  batchNo: r.batch_no ?? '',
   image: r.cover_image_url,
   level: 'เริ่มต้น',
   category: '',
@@ -61,20 +65,14 @@ const TrainingActivity = ({ onBack }) => {
 
   useEffect(() => {
     let cancelled = false;
-    // Public list shows courses open for registration ('published') and those
-    // in the assessment phase ('assessment') so trainees can still reach the
-    // "ทำแบบประเมิน" button from the browse list.
     Promise.all([
       activitiesApi.list({ status: 'published' }),
-      // Best-effort: on older backends that don't know the 'assessment' status
-      // this 422s — fall back to [] so the published list still loads.
       activitiesApi.list({ status: 'assessment' }).catch(() => []),
     ])
       .then(([pub, assess]) => {
         if (cancelled) return;
         const mapped = [...(pub || []), ...(assess || [])].map(normalizeRow);
         setActivities(mapped);
-        // If URL had ?a=<slug> on mount, restore the detail view immediately.
         const slug = readSlugFromUrl();
         if (slug) {
           const found = mapped.find((a) => a.slug === slug);
@@ -86,9 +84,6 @@ const TrainingActivity = ({ onBack }) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Categories are derived from the loaded rows (extendable when API adds a `category` field)
-  const categories = ['ทั้งหมด'];
-
   const filteredActivities = activities.filter((a) => {
     const q = searchQuery.toLowerCase();
     return !q ||
@@ -99,13 +94,13 @@ const TrainingActivity = ({ onBack }) => {
   const levelColor = (level) => {
     switch (level) {
       case 'เริ่มต้น':
-        return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30';
+        return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
       case 'ปานกลาง':
-        return 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30';
+        return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30';
       case 'ขั้นสูง':
-        return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30';
+        return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30';
       default:
-        return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/30';
+        return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30';
     }
   };
 
@@ -119,25 +114,25 @@ const TrainingActivity = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300">
-      {/* Abstract Background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yrupink-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300 bg-slate-50/50 dark:bg-yrugray-950">
+      {/* Abstract Background Glow */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yrupink-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* Header */}
-      <header className="w-full glass sticky top-0 z-50 transition-colors duration-300">
+      <header className="w-full glass sticky top-0 z-50 transition-colors duration-300 border-b border-slate-200/80 dark:border-yrugray-800 bg-white/80 dark:bg-yrugray-900/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
-            <div className="w-8 h-8 bg-gradient-to-br from-yrupink-400 to-yrupink-700 rounded-lg flex items-center justify-center font-bold text-white shadow-lg">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={onBack}>
+            <div className="w-9 h-9 bg-gradient-to-br from-yrupink-500 to-yrupink-700 rounded-xl flex items-center justify-center font-bold text-white shadow-md">
               AI
             </div>
-            <span className="font-bold text-xl tracking-wide text-gray-900 dark:text-white transition-colors duration-300">
-              CENTER <span className="text-yrupink-400">YRU</span>
+            <span className="font-bold text-lg tracking-wide text-slate-900 dark:text-white">
+              CENTER <span className="text-yrupink-500">YRU</span>
             </span>
           </div>
           <button
             onClick={onBack}
-            className="px-4 py-2 rounded-lg bg-white/60 dark:bg-yrugray-800/60 hover:bg-gray-100 dark:hover:bg-yrugray-700 backdrop-blur border border-gray-200 dark:border-yrugray-700 text-sm text-gray-700 dark:text-yrugray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 shadow-md"
+            className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-200 dark:border-yrugray-700 text-sm font-semibold text-slate-700 dark:text-yrugray-300 transition-colors flex items-center gap-2 shadow-2xs"
           >
             <ArrowLeft className="w-4 h-4" />
             กลับสู่หน้าแรก
@@ -146,141 +141,181 @@ const TrainingActivity = ({ onBack }) => {
       </header>
 
       <main className="flex-grow w-full max-w-7xl mx-auto px-6 py-12 z-10">
-        {/* Hero */}
+        {/* Hero Section */}
         <section className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yrupink-500/10 dark:bg-yrupink-600/20 border border-yrupink-500/30 text-yrupink-600 dark:text-yrupink-400 text-sm font-medium mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yrupink-500/10 border border-yrupink-500/30 text-yrupink-600 dark:text-yrupink-400 text-xs font-semibold mb-4">
             <BookOpen className="w-4 h-4" />
-            หลักสูตรอบรม AI
+            หลักสูตรอบรม AI ทั้งหมด
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 text-gray-900 dark:text-white transition-colors duration-300">
-            <span className="text-gradient">หลักสูตรทั้งหมด</span>
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-4 text-slate-900 dark:text-white">
+            หลักสูตรและกิจกรรมอบรม
           </h1>
-          <p className="text-lg text-gray-600 dark:text-yrugray-100 max-w-2xl mx-auto opacity-90 transition-colors duration-300">
+          <p className="text-sm md:text-base text-slate-600 dark:text-yrugray-400 max-w-2xl mx-auto">
             ค้นหาหลักสูตรและกิจกรรมอบรมที่ตรงกับความสนใจของคุณ จากศูนย์ AI มหาวิทยาลัยราชภัฏยะลา
           </p>
         </section>
 
-        {/* Search & Filter */}
+        {/* Search & Filter Bar */}
         <section className="mb-10">
-          <div className="glass-card rounded-2xl p-4 md:p-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div className="bg-white dark:bg-yrugray-900 border border-slate-200/80 dark:border-yrugray-800 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row gap-4 items-stretch md:items-center shadow-xs">
             <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-yrugray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="ค้นหาหลักสูตร..."
+                placeholder="ค้นหาชื่อหลักสูตร หรือรายละเอียด..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/70 dark:bg-yrugray-900/40 border border-gray-200 dark:border-yrugray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-yrugray-400 focus:outline-none focus:border-yrupink-500 dark:focus:border-yrupink-400 transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-yrugray-800 border border-slate-200 dark:border-yrugray-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 focus:outline-none focus:border-yrupink-500 transition-all"
               />
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-yrugray-300">
-              <Filter className="w-4 h-4" />
-              <span>{filteredActivities.length} หลักสูตร</span>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-yrugray-300 px-2">
+              <Filter className="w-4 h-4 text-yrupink-500" />
+              <span>พบทั้งหมด {filteredActivities.length} หลักสูตร</span>
             </div>
           </div>
-
         </section>
 
         {/* Activities Grid */}
         <section>
           {loading ? (
-            <div className="glass-card rounded-2xl p-12 text-center flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-yrupink-500 animate-spin" />
+            <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-16 text-center flex items-center justify-center shadow-xs">
+              <Loader2 className="w-7 h-7 text-yrupink-500 animate-spin" />
             </div>
           ) : loadError ? (
-            <div className="glass-card rounded-2xl p-12 text-center">
-              <p className="text-red-500 dark:text-red-400">โหลดหลักสูตรไม่สำเร็จ: {loadError.message}</p>
+            <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-12 text-center shadow-xs">
+              <p className="text-rose-600 dark:text-rose-400 text-sm font-medium">โหลดหลักสูตรไม่สำเร็จ: {loadError.message}</p>
             </div>
           ) : filteredActivities.length === 0 ? (
-            <div className="glass-card rounded-2xl p-12 text-center">
-              <p className="text-gray-500 dark:text-yrugray-400">ไม่พบหลักสูตรที่ตรงกับการค้นหา</p>
+            <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-16 text-center shadow-xs">
+              <p className="text-slate-500 dark:text-yrugray-400 text-sm">ไม่พบหลักสูตรที่ตรงกับการค้นหาของคุณ</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredActivities.map((a) => (
-                <article
-                  key={a.id}
-                  className="group glass-card rounded-2xl flex flex-col relative overflow-hidden h-full"
-                >
-                  {/* Glow */}
-                  <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-yrupink-500/10 rounded-full blur-2xl group-hover:bg-yrupink-500/20 transition-all duration-500 pointer-events-none z-0"></div>
+              {filteredActivities.map((a) => {
+                const percent = a.seats > 0 ? Math.min(100, Math.round((a.registrants_count / a.seats) * 100)) : 0;
+                const isAssessment = a.raw?.status === 'assessment';
 
-                  {/* Banner image */}
-                  <div className="relative w-full aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-yrugray-800">
-                    {a.image ? (
-                      <img
-                        src={a.image}
-                        alt={a.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-yrupink-500/20 to-yrupink-600/10">
-                        <BookOpen className="w-12 h-12 text-yrupink-400" />
-                      </div>
-                    )}
-                    {/* Gradient overlay for readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-                    {/* Level badge overlay */}
-                    <span className={`absolute top-3 right-3 px-2.5 py-1 text-xs font-medium rounded-full border backdrop-blur ${levelColor(a.level)}`}>
-                      {a.level}
-                    </span>
-                    {/* Assessment-phase badge */}
-                    {a.raw?.status === 'assessment' && (
-                      <span className="absolute top-3 left-3 px-2.5 py-1 text-xs font-semibold rounded-full border backdrop-blur bg-blue-100/90 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/40">
-                        เปิดทำแบบประเมิน
-                      </span>
-                    )}
-                  </div>
+                return (
+                  <article
+                    key={a.id}
+                    className="group bg-white dark:bg-yrugray-900 border border-slate-200/90 dark:border-yrugray-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-xl hover:border-yrupink-500/50 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Banner รูปภาพด้านบน */}
+                      <div className="relative aspect-[16/9] bg-slate-100 dark:bg-yrugray-800 overflow-hidden">
+                        {a.image ? (
+                          <img
+                            src={a.image}
+                            alt={a.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-yrupink-500/15 to-yrupink-600/5">
+                            <BookOpen className="w-10 h-10 text-yrupink-500" />
+                          </div>
+                        )}
+                        
+                        {/* ป้ายรุ่นที่ (ถ้ามี) */}
+                        {a.batchNo && (
+                          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-lg">
+                            รุ่นที่ {a.batchNo}
+                          </div>
+                        )}
 
-                  {/* Content */}
-                  <div className="p-6 flex flex-col flex-grow relative z-10">
-                    <span className="text-xs text-yrupink-600 dark:text-yrupink-400 font-medium mb-2">
-                      {a.category}
-                    </span>
-                    <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-yrupink-600 dark:group-hover:text-yrupink-300 transition-colors duration-300">
-                      {a.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-yrugray-100 mb-5 leading-relaxed opacity-80 flex-grow">
-                      {a.description}
-                    </p>
+                        {/* สถานะหลักสูตร / เปิดทำแบบประเมิน */}
+                        <div className="absolute top-3 right-3 shadow-md">
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-full border backdrop-blur-xs ${
+                            isAssessment 
+                              ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/80 dark:text-sky-300' 
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300'
+                          }`}>
+                            {isAssessment ? 'เปิดทำแบบประเมิน' : 'เปิดรับสมัคร'}
+                          </span>
+                        </div>
+                      </div>
 
-                    <div className="space-y-2 mb-5 text-sm text-gray-700 dark:text-yrugray-100/80">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400 shrink-0" />
-                        <span>{a.date}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400 shrink-0" />
-                        <span>{a.duration}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400 shrink-0" />
-                        <span>รับ {a.seats} คน</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400 shrink-0 mt-0.5" />
-                        <span className="line-clamp-2">{a.location}</span>
+                      {/* เนื้อหาการ์ด */}
+                      <div className="p-5 space-y-4">
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-yrupink-600 dark:group-hover:text-yrupink-400 transition-colors leading-snug">
+                            {a.title}
+                          </h3>
+                           
+
+                          {/* สถิติย่อยแบบ 2 กล่อง (จำนวนรับ / สมัครแล้ว) */}
+                          <div className="grid grid-cols-2 gap-2 my-4">
+                            <div className="bg-slate-50 dark:bg-yrugray-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-yrugray-800">
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-yrugray-400 mb-0.5">
+                                <Users className="w-3.5 h-3.5 text-yrupink-500" />
+                                <span>จำนวนรับ</span>
+                              </div>
+                              <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                                {a.seats ? `${a.seats} คน` : 'ไม่จำกัด'}
+                              </p>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-yrugray-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-yrugray-800">
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-yrugray-400 mb-0.5">
+                                <ClipboardList className="w-3.5 h-3.5 text-blue-500" />
+                                <span>สมัครแล้ว</span>
+                              </div>
+                              <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                                {a.registrants_count} คน
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* ข้อมูลรายละเอียด (วันที่, สถานที่) */}
+                          <div className="space-y-2 text-xs text-slate-600 dark:text-yrugray-300 pt-2 border-t border-slate-100 dark:border-yrugray-800">
+                            {a.registerCloseDateDisplay && (
+                                <div className="flex items-center justify-between text-slate-500 dark:text-yrugray-400">
+                                  <span>ปิดรับสมัคร:</span>
+                                  <span className="font-semibold text-slate-700 dark:text-slate-200">{a.registerCloseDateDisplay}</span>
+                                </div>
+                              )}
+                            <div className="flex items-start gap-2">
+                              <Calendar className="w-4 h-4 text-yrupink-500 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-slate-400 block text-[11px]">ช่วงอบรม</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {a.date}{a.endDate && a.date !== a.endDate ? ` - ${a.endDate}` : ''}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-2">
+                              <MapPin className="w-4 h-4 text-yrupink-500 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-slate-400 block text-[11px]">สถานที่</span>
+                                <span className="line-clamp-1 font-semibold text-slate-800 dark:text-slate-200">{a.location || 'ยังไม่ระบุสถานที่'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => setSelectedAndSync(a)}
-                      className="mt-auto w-full py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-gray-800 bg-gray-100 hover:text-slate-900 dark:hover:text-white hover:bg-yrupink-600 border border-gray-200 dark:text-white dark:bg-yrugray-800 dark:hover:bg-yrupink-600 dark:border-yrugray-700 dark:hover:border-yrupink-500 transition-all duration-300"
-                    >
-                      ดูรายละเอียด
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </article>
-              ))}
+                    {/* แถบสัดส่วนผู้สมัคร (Progress Bar) & ปุ่มกด */}
+                    <div className="p-5 pt-0 space-y-3"> 
+                      <button
+                        onClick={() => setSelectedAndSync(a)}
+                        className="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-white bg-yrupink-600 hover:bg-yrupink-500 shadow-md shadow-yrupink-500/20 transition-all"
+                      >
+                        ดูรายละเอียดหลักสูตร
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
       </main>
 
-      {/* Footer (แบบเรียบง่ายให้เข้ากับ layout) */}
-      <footer className="w-full glass border-t border-gray-200 dark:border-yrugray-800/50 mt-auto transition-colors duration-300 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-xs text-gray-500 dark:text-yrugray-100/50">
+      {/* Footer */}
+      <footer className="w-full border-t border-slate-200 dark:border-yrugray-800 bg-white dark:bg-yrugray-900 mt-auto py-6 text-center text-xs text-slate-500 dark:text-yrugray-400">
+        <div className="max-w-7xl mx-auto px-6">
           &copy; {new Date().getFullYear()} AI Center YRU, มหาวิทยาลัยราชภัฏยะลา. สงวนลิขสิทธิ์
         </div>
       </footer>

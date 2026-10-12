@@ -9,6 +9,7 @@ import {
   Users,
   Award,
   Menu,
+  X,
   AlertCircle,
   RefreshCw,
   CalendarRange,
@@ -24,16 +25,14 @@ const ROLE_LABEL = {
 };
 
 const STATUS_META = {
-  draft:      { label: 'ร่าง',       cls: 'bg-slate-200 text-slate-700 dark:bg-yrugray-500/10 dark:text-yrugray-300' },
-  published:  { label: 'เผยแพร่แล้ว', cls: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' },
-  completed:  { label: 'สิ้นสุดแล้ว',  cls: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' },
-  cancelled:  { label: 'ยกเลิก',     cls: 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400' },
+  draft:      { label: 'ร่าง',       cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700' },
+  published:  { label: 'เผยแพร่แล้ว', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60' },
+  completed:  { label: 'สิ้นสุดแล้ว',  cls: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/60' },
+  cancelled:  { label: 'ยกเลิก',     cls: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60' },
 };
 
-const STATUS_FALLBACK_CLS = 'bg-slate-200 text-slate-700 dark:bg-yrugray-500/10 dark:text-yrugray-400';
+const STATUS_FALLBACK_CLS = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
 
-
-// Dashboard section ⇄ URL ?tab= slug, so F5 keeps the current section.
 const TAB_SLUG = {
   'ภาพรวมระบบ': 'overview',
   'จัดการหลักสูตร': 'courses',
@@ -52,7 +51,6 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(() => readTab());
 
-  // Keep ?tab= in sync with the active section (replaceState: no history spam).
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -71,14 +69,10 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  // Sidebar menu — "สร้างกิจกรรม" และ "สร้างแบบฟอร์มประเมิน..." ถูกซ่อนออก
-  // เพราะย้ายไปเป็น sub-feature ภายในหน้า "จัดการหลักสูตร" แล้ว
-  // (ปุ่ม + สร้างกิจกรรมใหม่ + แท็บใน detail panel).
-  // render branch ของ 'สร้างกิจกรรม' ยังเหลือไว้ให้ปุ่มนั้นเปิด CreateActivity ได้อยู่
   const menuItems = [
-    { name: 'ภาพรวมระบบ', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { name: 'จัดการหลักสูตร', icon: <BookOpen className="w-5 h-5" /> },
-    { name: 'จัดการการจองห้อง', icon: <CalendarCheck className="w-5 h-5" /> },
+    { name: 'ภาพรวมระบบ', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { name: 'จัดการหลักสูตร', icon: <BookOpen className="w-4 h-4" /> },
+    { name: 'จัดการการจองห้อง', icon: <CalendarCheck className="w-4 h-4" /> },
   ];
 
   useEffect(() => {
@@ -92,15 +86,12 @@ const AdminDashboard = ({ admin, onLogout }) => {
     return () => { cancelled = true; };
   }, [refreshTick]);
 
-  // Enlarge admin UI ~20% via a rem base bump — see html.admin-scale in index.css.
-  // Scoped to the dashboard mount so public pages keep their default size.
   useEffect(() => {
     const root = document.documentElement;
     root.classList.add('admin-scale');
     return () => root.classList.remove('admin-scale');
   }, []);
 
-  // Derived stats — all computed from the same activities list (uses v_activity_summary).
   const stats = useMemo(() => {
     const now = Date.now();
     const total = activities.length;
@@ -117,25 +108,29 @@ const AdminDashboard = ({ admin, onLogout }) => {
         title: 'หลักสูตรทั้งหมด',
         value: total,
         sub: `เผยแพร่แล้ว ${published}`,
-        icon: <BookOpen className="w-6 h-6 text-yrupink-400" />,
+        icon: <BookOpen className="w-4 h-4 text-yrupink-500" />,
+        badgeColor: 'bg-yrupink-500/10 dark:bg-yrupink-500/20 text-yrupink-600 dark:text-yrupink-400',
       },
       {
         title: 'ผู้ลงทะเบียนสะสม',
         value: totalRegistered,
         sub: `ยืนยันแล้ว ${totalConfirmed}`,
-        icon: <Users className="w-6 h-6 text-yrupink-400" />,
+        icon: <Users className="w-4 h-4 text-blue-500" />,
+        badgeColor: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',
       },
       {
         title: 'ผู้อบรมสำเร็จ',
         value: totalAttended,
         sub: 'นับตามใบรับรองที่ออก',
-        icon: <Award className="w-6 h-6 text-yrupink-400" />,
+        icon: <Award className="w-4 h-4 text-emerald-500" />,
+        badgeColor: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
       },
       {
-        title: 'หลักสูตรที่กำลังจะมาถึง',
+        title: 'กำลังจะมาถึง',
         value: upcoming,
         sub: 'สถานะเผยแพร่ + ยังไม่ถึงวันจัด',
-        icon: <CalendarRange className="w-6 h-6 text-yrupink-400" />,
+        icon: <CalendarRange className="w-4 h-4 text-amber-500" />,
+        badgeColor: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',
       },
     ];
   }, [activities]);
@@ -149,61 +144,72 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const avatarSeed = admin?.username || 'Admin';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-yrugray-950 flex font-sans text-slate-900 dark:text-white">
+    <div className="min-h-screen bg-slate-100/70 dark:bg-yrugray-950 flex font-sans text-slate-900 dark:text-white antialiased text-sm">
 
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white dark:bg-yrugray-900 border-r border-slate-200 dark:border-yrugray-800 transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      {/* Sidebar - ปรับขนาดความกว้างให้พอดี w-64 */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-yrugray-900 border-r border-slate-200/80 dark:border-yrugray-800 shadow-xl lg:shadow-none transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
         {/* Branding */}
-        <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-yrugray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-yrupink-400 to-yrupink-700 rounded-lg flex items-center justify-center font-bold text-white shadow-lg text-sm">
+        <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200/80 dark:border-yrugray-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-gradient-to-tr from-yrupink-600 to-yrupink-400 rounded-lg flex items-center justify-center font-bold text-white shadow-sm shadow-yrupink-500/20 text-xs">
               AI
             </div>
             <div>
-              <span className="font-bold text-xl tracking-wide text-slate-900 dark:text-white block leading-tight">CENTER <span className="text-yrupink-500 dark:text-yrupink-400">YRU</span></span>
-              <span className="text-xs text-yrupink-600 dark:text-yrupink-400 font-semibold bg-yrupink-500/10 px-2 py-0.5 rounded-full inline-block mt-1">ADMIN</span>
+              <span className="font-bold text-base tracking-wide text-slate-900 dark:text-white block leading-tight">CENTER <span className="text-yrupink-500 dark:text-yrupink-400">YRU</span></span>
+              <span className="text-[10px] text-yrupink-600 dark:text-yrupink-400 font-bold tracking-wider bg-yrupink-500/10 px-1.5 py-0.5 rounded inline-block mt-0.5">ADMIN</span>
             </div>
           </div>
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-grow py-6 px-4 space-y-1.5 overflow-y-auto">
-          {menuItems.map((item) => (
-            <button
-              key={item.name}
-              onClick={() => {
-                setActiveMenu(item.name);
-                setIsSidebarOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                activeMenu === item.name
-                ? 'bg-yrupink-600/10 text-yrupink-600 dark:text-yrupink-400 border border-yrupink-500/30 shadow-inner font-semibold'
-                : 'text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800/50 font-medium'
-              }`}
-            >
-              {item.icon}
-              <span className="text-[15px] leading-snug text-left">{item.name}</span>
-            </button>
-          ))}
+        <nav className="flex-grow py-4 px-3 space-y-1 overflow-y-auto">
+          {menuItems.map((item) => {
+            const isActive = activeMenu === item.name;
+            return (
+              <button
+                key={item.name}
+                onClick={() => {
+                  setActiveMenu(item.name);
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-150 group ${
+                  isActive
+                  ? 'bg-yrupink-600 text-white shadow-sm shadow-yrupink-600/20 font-medium'
+                  : 'text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800/60 font-normal'
+                }`}
+              >
+                <span className={`transition-transform duration-150 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-yrupink-500'}`}>
+                  {item.icon}
+                </span>
+                <span className="text-xs sm:text-sm leading-snug text-left">{item.name}</span>
+              </button>
+            );
+          })}
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t border-slate-200 dark:border-yrugray-800">
+        <div className="p-3 border-t border-slate-200/80 dark:border-yrugray-800 bg-slate-50/50 dark:bg-yrugray-900/50">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-700 dark:text-yrugray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-slate-600 dark:text-yrugray-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all duration-150 font-normal"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="font-semibold text-[15px]">ออกจากระบบ</span>
+            <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
+            <span className="text-xs sm:text-sm">ออกจากระบบ</span>
           </button>
         </div>
       </aside>
@@ -212,48 +218,58 @@ const AdminDashboard = ({ admin, onLogout }) => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top Header */}
-        <header className="h-20 bg-white/80 dark:bg-yrugray-900/80 backdrop-blur-md border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between px-6 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
+        <header className="h-16 bg-white/80 dark:bg-yrugray-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-yrugray-800 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shadow-2xs">
+          <div className="flex items-center gap-3">
             <button
-              className="lg:hidden text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white"
+              className="lg:hidden p-1.5 rounded-lg text-slate-600 dark:text-yrugray-300 hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors"
               onClick={() => setIsSidebarOpen(true)}
+              aria-label="เปิดเมนู"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white hidden sm:block leading-tight">ภาพรวม / {activeMenu}</h2>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <span className="text-slate-400 font-normal hidden md:inline">ภาพรวม</span> 
+                <span className="text-slate-300 dark:text-slate-700 hidden md:inline">/</span> 
+                <span>{activeMenu}</span>
+              </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-4">
             {/* Theme toggle */}
             <ThemeToggle />
 
             {/* Notifications */}
-            <button className="relative text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white transition-colors">
-              <Bell className="w-6 h-6" />
-              <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-yrupink-500 rounded-full border-2 border-slate-200 dark:border-yrugray-900"></span>
+            <button 
+              className="relative p-1.5 rounded-lg text-slate-600 dark:text-yrugray-300 hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors"
+              aria-label="การแจ้งเตือน"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-yrupink-500 rounded-full ring-2 ring-white dark:ring-yrugray-900"></span>
             </button>
 
             {/* Profile */}
-            <div className="flex items-center gap-3 pl-6 border-l border-slate-200 dark:border-yrugray-800 cursor-pointer group">
+            <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200 dark:border-yrugray-800">
               <div className="text-right hidden sm:block">
-                <p className="text-[15px] font-semibold text-slate-900 dark:text-white group-hover:text-yrupink-500 dark:group-hover:text-yrupink-400 transition-colors">{adminDisplayName}</p>
-                <p className="text-sm text-slate-600 dark:text-yrugray-400">{adminRoleLabel}</p>
+                <p className="text-xs font-semibold text-slate-900 dark:text-white leading-tight">{adminDisplayName}</p>
+                <p className="text-[11px] text-yrupink-600 dark:text-yrupink-400 font-medium">{adminRoleLabel}</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-yrugray-700 border-2 border-yrupink-500/50 flex items-center justify-center overflow-hidden">
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`} alt={adminDisplayName} className="w-full h-full object-cover" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yrupink-500 to-yrupink-300 p-0.5 shadow-xs">
+                <div className="w-full h-full rounded-full bg-white dark:bg-yrugray-800 overflow-hidden flex items-center justify-center">
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}`} alt={adminDisplayName} className="w-full h-full object-cover" />
+                </div>
               </div>
             </div>
           </div>
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-slate-50 dark:bg-yrugray-950 relative">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/70 dark:bg-yrugray-950 relative">
           {/* Subtle background glow */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-[300px] bg-yrupink-600/5 rounded-full blur-[120px] pointer-events-none"></div>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-[200px] bg-yrupink-500/5 dark:bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-          <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+          <div className="max-w-7xl mx-auto space-y-6 relative z-10">
             {activeMenu === 'สร้างกิจกรรม' ? (
               <CreateActivity />
             ) : activeMenu === 'จัดการหลักสูตร' ? (
@@ -261,46 +277,52 @@ const AdminDashboard = ({ admin, onLogout }) => {
             ) : (
               <>
                 {/* Quick Stats Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {stats.map((stat, index) => (
-                    <div key={index} className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-6 shadow-sm hover:border-yrupink-500/30 transition-colors group">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-slate-100 dark:bg-yrugray-800 rounded-xl group-hover:bg-yrupink-500/10 transition-colors">
+                    <div 
+                      key={index} 
+                      className="bg-white dark:bg-yrugray-900 border border-slate-200/80 dark:border-yrugray-800/80 rounded-xl p-4 sm:p-5 shadow-2xs hover:shadow-md hover:border-yrupink-500/40 transition-all duration-200 group"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-slate-500 dark:text-yrugray-400 text-xs font-semibold tracking-wide">{stat.title}</span>
+                        <div className={`p-2 rounded-lg ${stat.badgeColor} transition-transform group-hover:scale-105 duration-200`}>
                           {stat.icon}
                         </div>
                       </div>
                       <div>
-                        <h3 className="text-slate-700 dark:text-yrugray-300 text-[15px] font-semibold mb-1">{stat.title}</h3>
-                        <p className="text-4xl font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight">
-                          {loading ? <span className="inline-block w-16 h-10 bg-slate-100 dark:bg-yrugray-800 rounded animate-pulse" /> : stat.value.toLocaleString('th-TH')}
+                        <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                          {loading ? <span className="inline-block w-16 h-8 bg-slate-200 dark:bg-yrugray-800 rounded animate-pulse" /> : stat.value.toLocaleString('th-TH')}
                         </p>
-                        <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-2 font-medium">{stat.sub}</p>
+                        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-yrugray-400 mt-1 font-medium">
+                          {stat.sub}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Main Data Container */}
-                <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-                  <div className="p-6 border-b border-slate-200 dark:border-yrugray-800 flex justify-between items-center bg-white/50 dark:bg-yrugray-900/50">
+                <div className="bg-white dark:bg-yrugray-900 border border-slate-200/80 dark:border-yrugray-800/80 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+                  {/* Table Header Action Bar */}
+                  <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-yrugray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50/50 dark:bg-yrugray-900/50">
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">หลักสูตรล่าสุด</h3>
-                      <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
-                        เรียงตามวันที่จัดล่าสุด — แสดง {recent.length} จาก {activities.length} รายการ
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">หลักสูตรล่าสุด</h3>
+                      <p className="text-xs text-slate-500 dark:text-yrugray-400 mt-0.5">
+                        แสดงข้อมูล {recent.length} จากทั้งหมด {activities.length} รายการ
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                       <button
                         onClick={() => setRefreshTick((n) => n + 1)}
                         disabled={loading}
-                        className="p-2 text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 rounded-lg transition-colors disabled:opacity-50"
-                        title="รีเฟรช"
+                        className="p-2 text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-yrugray-800 border border-slate-200 dark:border-yrugray-700 hover:bg-slate-50 dark:hover:bg-yrugray-700 rounded-lg transition-all disabled:opacity-50 shadow-2xs"
+                        title="รีเฟรชข้อมูล"
                       >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                       </button>
                       <button
                         onClick={() => setActiveMenu('จัดการหลักสูตร')}
-                        className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors"
+                        className="px-3.5 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm shadow-yrupink-600/20 transition-all"
                       >
                         ดูทั้งหมด
                       </button>
@@ -308,75 +330,79 @@ const AdminDashboard = ({ admin, onLogout }) => {
                   </div>
 
                   {error ? (
-                    <div className="p-8 flex flex-col items-center justify-center text-center">
-                      <AlertCircle className="w-12 h-12 text-red-500 mb-3" />
-                      <p className="text-slate-800 dark:text-yrugray-200 text-base font-semibold mb-1">โหลดข้อมูลไม่สำเร็จ</p>
-                      <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-4">{error}</p>
+                    <div className="p-10 flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/40 text-rose-500 rounded-xl flex items-center justify-center mb-2.5">
+                        <AlertCircle className="w-6 h-6" />
+                      </div>
+                      <p className="text-slate-900 dark:text-slate-100 font-bold text-sm mb-1">ไม่สามารถโหลดข้อมูลได้</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-xs">{error}</p>
                       <button
                         onClick={() => setRefreshTick((n) => n + 1)}
-                        className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-[15px] font-medium rounded-lg text-slate-800 dark:text-yrugray-200"
+                        className="px-3.5 py-1.5 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-xs font-semibold rounded-lg text-slate-700 dark:text-slate-200 transition-colors"
                       >
-                        ลองใหม่
+                        ลองใหม่อีกครั้ง
                       </button>
                     </div>
                   ) : loading ? (
-                    <div className="p-8 space-y-3">
+                    <div className="p-5 space-y-3">
                       {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="h-14 bg-slate-100/50 dark:bg-yrugray-800/50 rounded-lg animate-pulse" />
+                        <div key={i} className="h-12 bg-slate-100 dark:bg-yrugray-800/60 rounded-lg animate-pulse" />
                       ))}
                     </div>
                   ) : recent.length === 0 ? (
                     <div className="p-12 flex flex-col items-center justify-center text-center">
-                      <div className="w-16 h-16 bg-slate-100 dark:bg-yrugray-800 rounded-full flex items-center justify-center mb-4">
-                        <BookOpen className="w-8 h-8 text-slate-500 dark:text-yrugray-500" />
+                      <div className="w-16 h-16 bg-slate-100 dark:bg-yrugray-800 rounded-xl flex items-center justify-center mb-3 text-slate-400">
+                        <BookOpen className="w-8 h-8" />
                       </div>
-                      <h4 className="text-xl font-bold text-slate-800 dark:text-yrugray-200 mb-2">ยังไม่มีหลักสูตร</h4>
-                      <p className="text-base text-slate-600 dark:text-yrugray-400 mb-6 max-w-md">
-                        เริ่มต้นด้วยการสร้างหลักสูตรแรก แล้วเปิดให้ผู้เรียนลงทะเบียนได้ทันที
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1">ยังไม่มีหลักสูตรในระบบ</h4>
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-yrugray-400 mb-5 max-w-sm">
+                        เริ่มต้นสร้างหลักสูตรแรกของคุณเพื่อให้ผู้เข้าร่วมสามารถลงทะเบียนได้ทันที
                       </p>
                       <button
                         onClick={() => setActiveMenu('สร้างกิจกรรม')}
-                        className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg"
+                        className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm shadow-yrupink-600/20 transition-all"
                       >
-                        + สร้างกิจกรรม
+                        + สร้างกิจกรรมใหม่
                       </button>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-yrugray-900/50 text-slate-700 dark:text-yrugray-300 text-[13px] uppercase tracking-wider">
-                          <tr>
-                            <th className="px-6 py-4 text-left font-semibold">หลักสูตร</th>
-                            <th className="px-6 py-4 text-left font-semibold hidden md:table-cell">วันที่จัด</th>
-                            <th className="px-6 py-4 text-left font-semibold hidden lg:table-cell">สถานที่</th>
-                            <th className="px-6 py-4 text-center font-semibold">ผู้ลงทะเบียน</th>
-                            <th className="px-6 py-4 text-center font-semibold">สถานะ</th>
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/70 dark:bg-yrugray-900/70 border-b border-slate-200/80 dark:border-yrugray-800 text-slate-500 dark:text-yrugray-400 text-[11px] uppercase tracking-wider">
+                            <th className="px-5 py-3 font-semibold">หลักสูตร / กิจกรรม</th>
+                            <th className="px-5 py-3 font-semibold hidden md:table-cell">วันที่จัดกิจกรรม</th>
+                            <th className="px-5 py-3 font-semibold hidden lg:table-cell">สถานที่</th>
+                            <th className="px-5 py-3 font-semibold text-center">ผู้ลงทะเบียน</th>
+                            <th className="px-5 py-3 font-semibold text-center">สถานะ</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-yrugray-800">
+                        <tbody className="divide-y divide-slate-200/60 dark:divide-yrugray-800 text-xs sm:text-sm">
                           {recent.map((a) => {
                             const status = STATUS_META[a.status] || { label: a.status, cls: STATUS_FALLBACK_CLS };
                             const registered = Number(a.total_registered) || 0;
                             const capacity   = Number(a.capacity) || 0;
                             return (
-                              <tr key={a.id} className="hover:bg-slate-100/60 dark:hover:bg-yrugray-800/40 transition-colors">
-                                <td className="px-6 py-4">
-                                  <p className="font-semibold text-[15px] text-slate-900 dark:text-white line-clamp-1">{a.title}</p>
-                                  <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-0.5 md:hidden">
+                              <tr key={a.id} className="hover:bg-slate-50/80 dark:hover:bg-yrugray-800/40 transition-colors">
+                                <td className="px-5 py-3">
+                                  <p className="font-semibold text-slate-900 dark:text-white line-clamp-1">{a.title}</p>
+                                  <p className="text-[11px] text-slate-500 dark:text-yrugray-400 mt-0.5 md:hidden">
                                     {fmtThaiDate(a.start_date)}
                                   </p>
                                 </td>
-                                <td className="px-6 py-4 text-[15px] text-slate-800 dark:text-yrugray-200 font-medium hidden md:table-cell">
+                                <td className="px-5 py-3 text-slate-700 dark:text-yrugray-300 font-medium hidden md:table-cell whitespace-nowrap">
                                   {fmtThaiDate(a.start_date)}
                                 </td>
-                                <td className="px-6 py-4 text-[15px] text-slate-700 dark:text-yrugray-300 hidden lg:table-cell">
+                                <td className="px-5 py-3 text-slate-600 dark:text-yrugray-400 hidden lg:table-cell max-w-xs truncate">
                                   {a.location || '-'}
                                 </td>
-                                <td className="px-6 py-4 text-center text-[15px] text-slate-800 dark:text-yrugray-200 font-semibold tabular-nums">
-                                  {registered}{capacity > 0 ? ` / ${capacity}` : ''}
+                                <td className="px-5 py-3 text-center text-slate-700 dark:text-yrugray-200 font-semibold tabular-nums">
+                                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-yrugray-800 text-xs">
+                                    {registered}{capacity > 0 ? ` / ${capacity}` : ''}
+                                  </span>
                                 </td>
-                                <td className="px-6 py-4 text-center">
-                                  <span className={`text-[13px] font-semibold px-3 py-1 rounded-full ${status.cls}`}>
+                                <td className="px-5 py-3 text-center">
+                                  <span className={`inline-flex items-center justify-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${status.cls}`}>
                                     {status.label}
                                   </span>
                                 </td>
