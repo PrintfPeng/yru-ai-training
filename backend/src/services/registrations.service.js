@@ -1,6 +1,7 @@
 import { pool, withTransaction } from '../config/db.js';
 import { AppError } from '../utils/AppError.js';
 import { upsertParticipantOnConn } from './participants.service.js';
+import { normalizePhone } from '../utils/slugify.js';
 
 /**
  * List registrations for a given activity (admin dashboard).
@@ -48,62 +49,136 @@ export async function listPublicRegistrants(activitySlug) {
   }));
 }
 
-/**
- * Register a participant for an activity. Enforces capacity check with
- * `SELECT ... FOR UPDATE` inside a transaction to prevent race conditions.
- *
- * `participantInput` = full participant fields (name, email, phone, org, position)
- * The participant is upsert'd by email.
- */
-export async function registerForActivity(activityId, participantInput, note) {
-  return withTransaction(async (conn) => {
-    // Row-lock the activity + count current non-cancelled registrations.
-    const [[activity]] = await conn.query(
-      `SELECT id, capacity, status,
-              (SELECT COUNT(*) FROM registrations
-                WHERE activity_id = ?
-                  AND registration_status <> 'cancelled') AS current_count
-         FROM activities
-        WHERE id = ?
-        FOR UPDATE`,
-      [activityId, activityId]
+/* ---------- register helpers (shared by individual + team) ---------- */
+
+// Row-lock the activity and check it's open + has room for `seatsNeeded` more.
+async function lockActivityForRegister(conn, activityId, seatsNeeded) {
+  const [[activity]] = await conn.query(
+    `SELECT id, capacity, status, registration_type, team_max_members,
+            (SELECT COUNT(*) FROM registrations
+              WHERE activity_id = ? AND registration_status <> 'cancelled') AS current_count
+       FROM activities WHERE id = ? FOR UPDATE`,
+    [activityId, activityId]
+  );
+  if (!activity) throw new AppError('NOT_FOUND', 'Activity not found', 404);
+  if (activity.status !== 'published') {
+    throw new AppError('ACTIVITY_NOT_OPEN',
+      `Cannot register: activity status is "${activity.status}"`, 400);
+  }
+  if (activity.capacity > 0 && activity.current_count + seatsNeeded > activity.capacity) {
+    throw new AppError('OVER_CAPACITY', 'This activity is fully booked', 409,
+      { capacity: activity.capacity, current: activity.current_count });
+  }
+  return activity;
+}
+
+// Normalize + require a 10-digit phone.
+function require10DigitPhone(raw) {
+  const p = normalizePhone(raw);
+  if (p.length !== 10) {
+    throw new AppError('INVALID_PHONE', `เบอร์โทรต้องมี 10 หลัก: "${raw}"`, 422, { phone: raw });
+  }
+  return p;
+}
+
+// Reject if any phone already registered (non-cancelled) in this activity.
+async function assertPhonesAvailable(conn, activityId, phones) {
+  for (const phone of phones) {
+    const [[hit]] = await conn.query(
+      `SELECT 1 AS x FROM registrations r
+         JOIN participants p ON p.id = r.participant_id
+        WHERE r.activity_id = ? AND p.phone = ?
+          AND r.registration_status <> 'cancelled' LIMIT 1`,
+      [activityId, phone]
     );
+    if (hit) {
+      throw new AppError('DUPLICATE_PHONE',
+        `เบอร์ ${phone} ถูกใช้ลงทะเบียนกิจกรรมนี้แล้ว`, 409, { phone });
+    }
+  }
+}
 
-    if (!activity) throw new AppError('NOT_FOUND', 'Activity not found', 404);
+// Insert one registration row (auto-confirmed) + optional team + form data.
+async function insertRegistration(conn, activityId, participantId, { note, teamId, formData }) {
+  try {
+    const [r] = await conn.query(
+      `INSERT INTO registrations
+         (activity_id, participant_id, registration_status, note, team_id, form_data)
+       VALUES (?, ?, 'confirmed', ?, ?, CAST(? AS JSON))`,
+      [activityId, participantId, note ?? null, teamId ?? null, JSON.stringify(formData ?? null)]
+    );
+    return r.insertId;
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      throw new AppError('DUPLICATE_REGISTRATION',
+        'This participant is already registered for this activity', 409);
+    }
+    throw err;
+  }
+}
 
-    if (activity.status !== 'published') {
-      throw new AppError('ACTIVITY_NOT_OPEN',
-        `Cannot register: activity status is "${activity.status}"`, 400);
+/**
+ * Individual registration. `participantInput` = { prefix, first_name, last_name,
+ * email, phone, organization?, position? }. `formData` = full submitted answers.
+ */
+export async function registerForActivity(activityId, participantInput, note, formData = null) {
+  return withTransaction(async (conn) => {
+    await lockActivityForRegister(conn, activityId, 1);
+    const phone = require10DigitPhone(participantInput.phone);
+    await assertPhonesAvailable(conn, activityId, [phone]);
+    const participantId = await upsertParticipantOnConn(conn, { ...participantInput, phone });
+    const registration_id = await insertRegistration(conn, activityId, participantId,
+      { note, teamId: null, formData: formData ?? participantInput });
+    return { registration_id, participant_id: participantId };
+  });
+}
+
+/**
+ * Team registration. Body: { team_name, members: [{prefix, first_name,
+ * last_name, email, phone, ...}], note? }. Each member becomes its own
+ * participant + registration linked to the new team (so each verifies by
+ * their own phone and gets their own certificate).
+ */
+export async function registerTeamForActivity(activityId, { team_name, members, note }) {
+  return withTransaction(async (conn) => {
+    if (!team_name || !team_name.trim()) {
+      throw new AppError('TEAM_NAME_REQUIRED', 'กรุณาระบุชื่อทีม', 422);
+    }
+    if (!Array.isArray(members) || members.length < 1) {
+      throw new AppError('NO_MEMBERS', 'ต้องมีสมาชิกอย่างน้อย 1 คน', 422);
     }
 
-    if (activity.capacity > 0 && activity.current_count >= activity.capacity) {
-      throw new AppError('OVER_CAPACITY',
-        'This activity is fully booked', 409,
-        { capacity: activity.capacity, current: activity.current_count });
+    const activity = await lockActivityForRegister(conn, activityId, members.length);
+    if (activity.registration_type !== 'team') {
+      throw new AppError('NOT_TEAM_ACTIVITY', 'กิจกรรมนี้ไม่ได้เปิดรับแบบทีม', 400);
+    }
+    if (members.length > activity.team_max_members) {
+      throw new AppError('TOO_MANY_MEMBERS',
+        `เกินจำนวนสมาชิกสูงสุด (${activity.team_max_members} คน)`, 422);
     }
 
-    // Upsert participant on the same connection so a rollback also rolls back
-    // participant edits. Shared helper guarantees phone is normalized.
-    const participantId = await upsertParticipantOnConn(conn, participantInput);
-
-    // Attempt the registration insert
-    try {
-      // Auto-approve: every applicant is confirmed immediately (no admin
-      // approval step) so they can proceed to the assessment right away.
-      const [rRes] = await conn.query(
-        `INSERT INTO registrations
-           (activity_id, participant_id, registration_status, note)
-         VALUES (?, ?, 'confirmed', ?)`,
-        [activityId, participantId, note ?? null]
-      );
-      return { registration_id: rRes.insertId, participant_id: participantId };
-    } catch (err) {
-      if (err.code === 'ER_DUP_ENTRY') {
-        throw new AppError('DUPLICATE_REGISTRATION',
-          'This participant is already registered for this activity', 409);
-      }
-      throw err;
+    // phones: 10 digits, no dup within the team, not already in the activity
+    const phones = members.map((m) => require10DigitPhone(m.phone));
+    const dup = phones.find((p, i) => phones.indexOf(p) !== i);
+    if (dup) {
+      throw new AppError('DUPLICATE_PHONE_IN_TEAM', `เบอร์ซ้ำกันในทีม: ${dup}`, 422, { phone: dup });
     }
+    await assertPhonesAvailable(conn, activityId, phones);
+
+    const [tRes] = await conn.query(
+      'INSERT INTO teams (activity_id, team_name) VALUES (?, ?)',
+      [activityId, team_name.trim()]
+    );
+    const team_id = tRes.insertId;
+
+    const out = [];
+    for (let i = 0; i < members.length; i++) {
+      const participantId = await upsertParticipantOnConn(conn, { ...members[i], phone: phones[i] });
+      const registration_id = await insertRegistration(conn, activityId, participantId,
+        { note, teamId: team_id, formData: members[i] });
+      out.push({ registration_id, participant_id: participantId });
+    }
+    return { team_id, team_name: team_name.trim(), members: out };
   });
 }
 

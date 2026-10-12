@@ -12,18 +12,28 @@ const listQuery  = z.object({
   status: z.enum(['pending', 'confirmed', 'attended', 'cancelled']).optional(),
 });
 
+// .passthrough(): keep any extra (custom) question answers so they can be
+// stored in registrations.form_data.
 const participantSchema = z.object({
+  prefix:       z.string().max(20).nullable().optional(),
   first_name:   z.string().min(1).max(100),
   last_name:    z.string().min(1).max(100),
   email:        z.string().email().max(150),
   phone:        z.string().min(9).max(20),
   organization: z.string().max(255).nullable().optional(),
   position:     z.string().max(150).nullable().optional(),
-});
+}).passthrough();
 
 const publicRegisterBody = z.object({
   participant: participantSchema,
   note:        z.string().max(2000).nullable().optional(),
+  form_data:   z.record(z.any()).nullable().optional(),
+});
+
+const teamRegisterBody = z.object({
+  team_name: z.string().min(1).max(255),
+  members:   z.array(participantSchema).min(1).max(20),
+  note:      z.string().max(2000).nullable().optional(),
 });
 
 const verifyPhoneBody = z.object({
@@ -43,6 +53,10 @@ router.get('/public/activity/:slug/registrants',
 router.post('/public/activity/:slug/register',
   validate({ params: slugParam, body: publicRegisterBody }),
   ctrl.publicRegister);
+
+router.post('/public/activity/:slug/register-team',
+  validate({ params: slugParam, body: teamRegisterBody }),
+  ctrl.publicRegisterTeam);
 
 router.post('/public/activity/:slug/verify-phone',
   validate({ params: slugParam, body: verifyPhoneBody }),

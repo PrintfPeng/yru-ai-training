@@ -20,7 +20,18 @@ export const listForActivity = asyncHandler(async (req, res) => {
  */
 export const publicRegister = asyncHandler(async (req, res) => {
   const activity = await getActivityBySlug(req.params.slug);
-  const data = await svc.registerForActivity(activity.id, req.body.participant, req.body.note);
+  const data = await svc.registerForActivity(
+    activity.id, req.body.participant, req.body.note, req.body.form_data);
+  res.status(201).json({ ok: true, data });
+});
+
+/**
+ * PUBLIC — team registration (team leader submits all members).
+ * Body: { team_name, members: [...], note? }
+ */
+export const publicRegisterTeam = asyncHandler(async (req, res) => {
+  const activity = await getActivityBySlug(req.params.slug);
+  const data = await svc.registerTeamForActivity(activity.id, req.body);
   res.status(201).json({ ok: true, data });
 });
 

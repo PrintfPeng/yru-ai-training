@@ -28,9 +28,10 @@ CREATE TABLE IF NOT EXISTS `teams` (
     REFERENCES `activities`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- registrations: ผูกสมาชิกเข้ากับทีม (NULL = ลงเดี่ยว)
+-- registrations: ผูกสมาชิกเข้ากับทีม (NULL = ลงเดี่ยว) + เก็บคำตอบฟอร์มทั้งหมด
 ALTER TABLE `registrations`
-  ADD COLUMN `team_id` BIGINT UNSIGNED NULL COMMENT 'ทีมที่สังกัด (NULL = เดี่ยว)',
+  ADD COLUMN `team_id`   BIGINT UNSIGNED NULL COMMENT 'ทีมที่สังกัด (NULL = เดี่ยว)',
+  ADD COLUMN `form_data` JSON            NULL COMMENT 'คำตอบฟอร์มสมัครทั้งหมด (รวมคำถาม custom)',
   ADD KEY `idx_registrations_team` (`team_id`),
   ADD CONSTRAINT `fk_registrations_team` FOREIGN KEY (`team_id`)
     REFERENCES `teams`(`id`) ON DELETE SET NULL;

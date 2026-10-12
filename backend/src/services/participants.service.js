@@ -74,11 +74,11 @@ export async function upsertParticipantOnConn(conn, input) {
   if (existing[0]) {
     await conn.query(
       `UPDATE participants
-          SET first_name = ?, last_name = ?, phone = ?,
+          SET prefix = ?, first_name = ?, last_name = ?, phone = ?,
               organization = ?, position = ?
         WHERE id = ?`,
       [
-        input.first_name, input.last_name, phone,
+        input.prefix ?? null, input.first_name, input.last_name, phone,
         input.organization ?? null, input.position ?? null,
         existing[0].id,
       ]
@@ -87,10 +87,10 @@ export async function upsertParticipantOnConn(conn, input) {
   }
   const [result] = await conn.query(
     `INSERT INTO participants
-       (first_name, last_name, email, phone, organization, position)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+       (prefix, first_name, last_name, email, phone, organization, position)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
-      input.first_name, input.last_name, input.email, phone,
+      input.prefix ?? null, input.first_name, input.last_name, input.email, phone,
       input.organization ?? null, input.position ?? null,
     ]
   );

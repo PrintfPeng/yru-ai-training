@@ -1,10 +1,14 @@
 import { client } from './client';
 
 export const registrationsApi = {
-  // Public — from ActivityDetail form
-  publicRegister: (slug, participant, note) =>
+  // Public — individual registration (from ActivityDetail form)
+  publicRegister: (slug, participant, note, form_data) =>
     client.post(`/registrations/public/activity/${encodeURIComponent(slug)}/register`,
-      { participant, note }),
+      { participant, note, form_data }),
+
+  // Public — team registration (team leader submits all members)
+  publicRegisterTeam: (slug, body) =>
+    client.post(`/registrations/public/activity/${encodeURIComponent(slug)}/register-team`, body),
 
   // Public — masked registrant list shown on the registration page
   publicList: (slug) =>
