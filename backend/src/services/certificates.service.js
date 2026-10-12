@@ -118,10 +118,10 @@ export async function issueCertificateForRegistration(registrationId, conn = poo
 export async function getCertificateByCode(code) {
   const [rows] = await pool.query(
     `SELECT c.id, c.certificate_code, c.template_data, c.file_url, c.issued_at,
-            r.id AS registration_id,
+            r.id AS registration_id, r.team_id,
             p.first_name, p.last_name, p.email,
             a.title AS course_title, a.slug AS course_slug,
-            a.start_date, a.end_date
+            a.start_date, a.end_date, a.team_cert_mode
        FROM certificates  c
        JOIN registrations r ON r.id = c.registration_id
        JOIN participants  p ON p.id = r.participant_id
@@ -131,6 +131,26 @@ export async function getCertificateByCode(code) {
   );
   const row = rows[0];
   if (!row) throw new AppError('NOT_FOUND', 'Certificate not found', 404);
+
+  // Team context: the certificate can show the team name, and in "team" mode
+  // the name line lists every member instead of just this person.
+  let teamName = '';
+  let participantName = `${row.first_name} ${row.last_name}`;
+  if (row.team_id) {
+    const [[team]] = await pool.query('SELECT team_name FROM teams WHERE id = ? LIMIT 1', [row.team_id]);
+    teamName = team?.team_name || '';
+    if (row.team_cert_mode === 'team') {
+      const [members] = await pool.query(
+        `SELECT p.first_name, p.last_name
+           FROM registrations r JOIN participants p ON p.id = r.participant_id
+          WHERE r.team_id = ? ORDER BY r.id`,
+        [row.team_id]
+      );
+      if (members.length) {
+        participantName = members.map((m) => `${m.first_name} ${m.last_name}`).join('\n');
+      }
+    }
+  }
 
   return {
     certificate: {
@@ -143,6 +163,7 @@ export async function getCertificateByCode(code) {
       name: `${row.first_name} ${row.last_name}`,
       email: row.email,
     },
+    team: row.team_id ? { name: teamName } : null,
     activity: {
       title: row.course_title,
       slug: row.course_slug,
@@ -151,7 +172,8 @@ export async function getCertificateByCode(code) {
     },
     // Precomputed substitutions the frontend can drop into placeholder elements
     substitutions: {
-      participantName: `${row.first_name} ${row.last_name}`,
+      participantName,          // individual, or all member names in "team" mode
+      teamName,                 // '' when not a team
       courseTitle: row.course_title,
       issueDate: new Date(row.issued_at).toLocaleDateString('th-TH', {
         year: 'numeric', month: 'long', day: 'numeric',

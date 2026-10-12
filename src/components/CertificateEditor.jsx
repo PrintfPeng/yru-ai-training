@@ -40,6 +40,7 @@ const inputCls =
 // หมายเหตุ: ไม่มี placeholder "คะแนน" เพราะเป็นแบบสอบถามความพึงพอใจ ไม่ใช่ทดสอบความรู้
 const PLACEHOLDER_FIELDS = [
   { field: 'participantName', label: 'ชื่อผู้เข้าอบรม', sample: '[ ชื่อผู้เข้าอบรม ]' },
+  { field: 'teamName', label: 'ชื่อทีม', sample: '[ ชื่อทีม ]' },
   { field: 'courseTitle', label: 'ชื่อหลักสูตร', sample: '[ ชื่อหลักสูตร ]' },
   { field: 'issueDate', label: 'วันที่ออกใบรับรอง', sample: '[ วันที่ ]' },
   { field: 'trainingHours', label: 'จำนวนชั่วโมงอบรม', sample: '[ ชั่วโมงอบรม ]' },

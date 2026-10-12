@@ -260,7 +260,7 @@ const CertPreview = ({ cert, substitutions }) => {
       return (
         <div
           key={el.id}
-          className="absolute whitespace-nowrap overflow-hidden text-ellipsis"
+          className="absolute whitespace-pre-line"
           style={{
             ...style,
             fontFamily: el.fontFamily || '"Noto Sans Thai", sans-serif',
