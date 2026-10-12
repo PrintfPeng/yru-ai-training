@@ -85,7 +85,17 @@ const AssessmentDashboard = ({ activity, title }) => {
 
   const texts = useMemo(() => (data?.texts || []), [data]);
 
-  const overall = data?.overall_avg ?? null;
+  // Older backends return only { response_count, matrices } with no
+  // overall_avg — fall back to a count-weighted mean of the matrix rows,
+  // normalised to /5, so the stat cards still fill in.
+  const overall = useMemo(() => {
+    if (data?.overall_avg != null) return data.overall_avg;
+    let sum = 0, n = 0;
+    (data?.matrices || []).forEach((m) => m.rows.forEach((r) => {
+      if (r.avg != null && r.count) { sum += (r.avg / (m.scaleMax || 5)) * 5 * r.count; n += r.count; }
+    }));
+    return n ? +(sum / n).toFixed(2) : null;
+  }, [data]);
   const sat = satisfactionLabel(overall);
 
   if (loading) {

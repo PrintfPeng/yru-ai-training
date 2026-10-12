@@ -178,7 +178,7 @@ const ManageActivities = ({ onGoCreate }) => {
         <div>
           <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">จัดการหลักสูตร</h2>
           <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
-            หลักสูตรทั้งหมด {activities.length} รายการ — คลิกการ์ดเพื่อดูรายชื่อผู้ลงทะเบียน / แก้ไข[cite: 2]
+            หลักสูตรทั้งหมด {activities.length} รายการ — คลิกการ์ดเพื่อดูรายชื่อผู้ลงทะเบียน / แก้ไข
           </p>
         </div>
         <button
@@ -359,22 +359,7 @@ const ActivityCard = ({ activity, onOpen }) => {
         </div>
 
         {/* แถบสัดส่วนผู้สมัคร (Progress Bar) & ปุ่มจัดการ */}
-        <div className="space-y-3 pt-2">
-          {activity.seats > 0 && (
-            <div>
-              <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 dark:text-yrugray-400 mb-1">
-                <span>ยอดผู้สมัคร</span>
-                <span className="text-yrupink-600 dark:text-yrupink-400">{percent}%</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100 dark:bg-yrugray-800 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-yrupink-500 to-yrupink-600 rounded-full transition-all duration-500" 
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            </div>
-          )}
-
+        <div className="space-y-3 pt-2">  
           <div className="pt-2 border-t border-slate-100 dark:border-yrugray-800 flex items-center justify-between text-xs font-bold text-yrupink-600 dark:text-yrupink-400">
             <span>จัดการหลักสูตรและผู้ลงทะเบียน</span>
             <span className="group-hover:translate-x-1 transition-transform">→</span>
