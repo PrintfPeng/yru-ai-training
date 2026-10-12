@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Download, Share2, CheckCircle2, Home, AlertCircle, Loader2 } from 'lucide-react';
 import { certificatesApi } from '../api';
+import { useToast } from '../contexts/ToastContext';
+
+// A4-landscape reference size at ~96dpi. The cert is designed/rendered at this
+// fixed width so stored px font sizes stay proportional and never clip.
+const CERT_REF_W = 1123;
+const CERT_REF_H = Math.round((CERT_REF_W * 210) / 297); // ≈ 794
 
 /**
  * Props:
@@ -10,6 +16,7 @@ import { certificatesApi } from '../api';
  *   onBackHome
  */
 const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome, verify = false }) => {
+  const toast = useToast();
   const [certData, setCertData] = useState(null);
   const [loading, setLoading] = useState(!!certificateCode);
   const [loadError, setLoadError] = useState(null);
@@ -37,10 +44,18 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
         import('jspdf'),
         import('html2canvas'),
       ]);
+      // Wait for the embedded Google Fonts to finish loading, otherwise
+      // html2canvas can snapshot a fallback font (or none) and clip glyphs.
+      if (document.fonts?.ready) {
+        try { await document.fonts.ready; } catch { /* ignore */ }
+      }
       const canvas = await html2canvas(certRef.current, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
+        width: CERT_REF_W,
+        height: CERT_REF_H,
+        windowWidth: CERT_REF_W,
       });
       const img = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -50,7 +65,7 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
       const code = certData?.certificate?.code || 'certificate';
       pdf.save(`${String(code).replace(/[\\/]/g, '-')}.pdf`);
     } catch (e) {
-      alert('ดาวน์โหลด PDF ไม่สำเร็จ กรุณาลองใหม่');
+      toast.error('ดาวน์โหลด PDF ไม่สำเร็จ กรุณาลองใหม่', { title: 'ดาวน์โหลดไม่สำเร็จ' });
     } finally {
       setDownloading(false);
     }
@@ -60,8 +75,8 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
     if (!certData) return;
     const url = `${window.location.origin}/?verify=${encodeURIComponent(certData.certificate.code)}`;
     navigator.clipboard?.writeText(url).then(
-      () => alert('คัดลอกลิงก์ยืนยันแล้ว:\n' + url),
-      () => alert('ลิงก์ยืนยัน: ' + url)
+      () => toast.success('คัดลอกลิงก์ยืนยันแล้ว', { title: 'คัดลอกแล้ว' }),
+      () => toast.info('ลิงก์ยืนยัน: ' + url)
     );
   };
 
@@ -141,8 +156,17 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
           </span>
         </div>
 
-        <div ref={certRef} className="cert-print-area rounded-2xl overflow-hidden shadow-2xl">
-          <CertPreview cert={cert} substitutions={substitutions} />
+        {/* Visible preview — the reference-size layout scaled to fit. */}
+        <div className="cert-print-area rounded-2xl overflow-hidden shadow-2xl">
+          <ScaledCert cert={cert} substitutions={substitutions} />
+        </div>
+
+        {/* Hidden reference-size copy used as the PDF capture source so the
+            output is identical on every device and never clipped. */}
+        <div aria-hidden style={{ position: 'absolute', left: -99999, top: 0, pointerEvents: 'none' }}>
+          <div ref={certRef} style={{ width: CERT_REF_W, height: CERT_REF_H }}>
+            <CertPreview cert={cert} substitutions={substitutions} fixedWidth={CERT_REF_W} />
+          </div>
         </div>
 
         {/* Actions */}
@@ -207,22 +231,59 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
   );
 };
 
+// Renders the reference-size cert scaled down to fit its container width, so
+// the on-screen preview matches the PDF exactly.
+const ScaledCert = ({ cert, substitutions }) => {
+  const boxRef = useRef(null);
+  const [scale, setScale] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      if (boxRef.current) setScale(boxRef.current.clientWidth / CERT_REF_W);
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (ro && boxRef.current) ro.observe(boxRef.current);
+    window.addEventListener('resize', measure);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
+  return (
+    <div ref={boxRef} style={{ width: '100%', height: scale ? CERT_REF_H * scale : undefined, overflow: 'hidden' }}>
+      {scale > 0 && (
+        <div style={{ width: CERT_REF_W, height: CERT_REF_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          <CertPreview cert={cert} substitutions={substitutions} fixedWidth={CERT_REF_W} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Read-only cert renderer (mirrors CertificateEditor but no interactivity).
 // Handles both the API shape (backgroundImageUrl) and the older mock shape (backgroundImage).
-const CertPreview = ({ cert, substitutions }) => {
+//
+// `fixedWidth` (px) renders at an exact A4-landscape size instead of the
+// responsive `w-full` box. The download flow renders one hidden copy at the
+// reference width (CERT_REF_W) to capture a crisp, non-clipped PDF, and the
+// on-screen preview scales that same layout down — so preview == PDF on any
+// device. Without a fixed width, the stored px font sizes overflow a narrow
+// cert and get clipped by the container ("ตัวอักษรขาด").
+const CertPreview = ({ cert, substitutions, fixedWidth }) => {
   const bgUrl = cert.backgroundImageUrl || cert.backgroundImage;
+  const sizeStyle = fixedWidth
+    ? { width: fixedWidth, height: Math.round((fixedWidth * 210) / 297) }
+    : undefined;
   return (
   <div
-    className="relative aspect-[297/210] w-full bg-gradient-to-br from-yellow-500/20 to-yellow-800/10 bg-slate-50 dark:bg-yrugray-950"
-    style={
-      bgUrl
+    className={`relative bg-gradient-to-br from-yellow-500/20 to-yellow-800/10 bg-slate-50 dark:bg-yrugray-950 ${fixedWidth ? '' : 'aspect-[297/210] w-full'}`}
+    style={{
+      ...sizeStyle,
+      ...(bgUrl
         ? {
             backgroundImage: `url(${bgUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }
-        : undefined
-    }
+        : {}),
+    }}
   >
     {/* Decorative frame */}
     {!bgUrl && (
@@ -269,7 +330,10 @@ const CertPreview = ({ cert, substitutions }) => {
             color: el.color || '#ffffff',
             textAlign: el.textAlign || 'center',
             letterSpacing: el.letterSpacing ? `${el.letterSpacing}px` : undefined,
-            lineHeight: 1.2,
+            // A little extra line height so Thai upper/lower vowels and tone
+            // marks aren't clipped at the glyph box edges.
+            lineHeight: 1.35,
+            paddingTop: '0.08em',
           }}
         >
           {displayText}

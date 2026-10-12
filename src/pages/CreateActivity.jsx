@@ -1,26 +1,29 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen,
   Calendar,
   Clock,
   Users,
   MapPin,
-  Trash2,
-  Upload,
   Save,
   X,
-  Plus,
-  ImagePlus,
-  Image as ImageIcon,
   Loader2,
 } from 'lucide-react';
-import DynamicFormBuilder, { makeRegistrationDefaults } from '../components/DynamicFormBuilder';
-import { activitiesApi, ApiError } from '../api';
+import { makeRegistrationDefaults } from '../components/DynamicFormBuilder';
+import RegistrationFormEditor, { editorStateToPayload } from '../components/RegistrationFormEditor';
+import BannerUploader from '../components/BannerUploader';
+import { activitiesApi } from '../api';
+import { useToast } from '../contexts/ToastContext';
+import { errorMessage } from '../utils/errorMessage';
 
 const adminInputCls =
   'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
-const CreateActivity = () => {
+// Appended to an input's class when its field has a validation error.
+const errBorder = '!border-red-500 focus:!border-red-500 focus:!ring-red-500';
+
+const CreateActivity = ({ onCreated } = {}) => {
+  const toast = useToast();
   // Activity metadata
   const [activity, setActivity] = useState({
     title: '',
@@ -31,7 +34,8 @@ const CreateActivity = () => {
     description: '',
     startDate: '',
     endDate: '',
-    registerCloseDate: '',
+    registerOpenAt: '',       // datetime-local 'YYYY-MM-DDTHH:mm'
+    registerCloseDate: '',    // datetime-local 'YYYY-MM-DDTHH:mm'
     hasSelection: false,
     feeText: '',
     travelText: '',
@@ -41,36 +45,46 @@ const CreateActivity = () => {
   });
   const [venueLinks, setVenueLinks] = useState([]); // [{label, url}]
 
-  // Banner image
-  const [bannerFile, setBannerFile] = useState(null);
-  const [bannerPreview, setBannerPreview] = useState('');
-  const [bannerError, setBannerError] = useState('');
+  // Banner image — cropped 16:9 JPEG data URL (from BannerUploader)
+  const [banner, setBanner] = useState('');
 
-  // Registration form (ฟอร์มลงทะเบียน) — stored as activity.register_form_schema
-  const [questions, setQuestions] = useState(makeRegistrationDefaults()); // default: เดี่ยว 5 ข้อ
-  const [regType, setRegType] = useState('individual');     // 'individual' | 'team'
-  const [teamCertMode, setTeamCertMode] = useState('per_person'); // 'per_person' | 'team'
-
-  // number of member blocks already added (team)
-  const memberCount = new Set(questions.filter((q) => q.member).map((q) => q.member)).size;
-
-  const changeRegType = (type) => {
-    setRegType(type);
-    // เดี่ยว → 5 default ข้อ / ทีม → เริ่มว่าง (กดปุ่มเพิ่มสมาชิก)
-    setQuestions(type === 'individual' ? makeRegistrationDefaults() : []);
-  };
-
-  const addMemberDefaults = () => {
-    if (memberCount >= 5) return;
-    setQuestions((prev) => [...prev, ...makeRegistrationDefaults(memberCount + 1)]);
-  };
+  // Registration form (ฟอร์มลงทะเบียน) — managed by RegistrationFormEditor.
+  const [regForm, setRegForm] = useState({
+    regType: 'individual',
+    teamCertMode: 'per_person',
+    questions: makeRegistrationDefaults(), // default: เดี่ยว 5 ข้อ
+  });
 
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({}); // { fieldName: 'ข้อความ' }
 
   const handleActivityChange = (e) => {
     const { name, value, type, checked } = e.target;
     setActivity((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    // Clear a field's error as soon as the user edits it.
+    setFieldErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
+  };
+
+  // Client-side validation → { field: 'ข้อความ' }. Empty object = valid.
+  const validate = () => {
+    const errs = {};
+    if (!activity.title.trim()) errs.title = 'กรุณากรอกชื่อหลักสูตร';
+    if (!activity.startDate) errs.startDate = 'กรุณาเลือกวันเริ่มอบรม';
+    if (!activity.endDate) errs.endDate = 'กรุณาเลือกวันสิ้นสุดอบรม';
+    if (!activity.registerCloseDate) errs.registerCloseDate = 'กรุณาเลือกวันเวลาปิดรับสมัคร';
+    if (activity.startDate && activity.endDate && activity.endDate < activity.startDate) {
+      errs.endDate = 'วันสิ้นสุดต้องไม่ก่อนวันเริ่มอบรม';
+    }
+    // datetime-local 'YYYY-MMM-DDTHH:mm' strings compare lexicographically.
+    if (activity.registerOpenAt && activity.registerCloseDate &&
+        activity.registerOpenAt >= activity.registerCloseDate) {
+      errs.registerCloseDate = 'เวลาปิดรับสมัครต้องหลังเวลาเปิดรับสมัคร';
+    }
+    if (activity.registerCloseDate && activity.startDate &&
+        activity.registerCloseDate.slice(0, 10) > activity.startDate) {
+      errs.registerCloseDate = 'วันปิดรับสมัครต้องไม่เกินวันเริ่มอบรม';
+    }
+    return errs;
   };
 
   // venue_links repeater helpers
@@ -79,57 +93,28 @@ const CreateActivity = () => {
     setVenueLinks((p) => p.map((v, idx) => (idx === i ? { ...v, [key]: val } : v)));
   const removeVenueLink = (i) => setVenueLinks((p) => p.filter((_, idx) => idx !== i));
 
-  const handleBannerSelect = (file) => {
-    setBannerError('');
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setBannerError('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WebP, GIF)');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setBannerError('ขนาดไฟล์ต้องไม่เกิน 5MB');
-      return;
-    }
-    setBannerFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setBannerPreview(ev.target.result);
-    reader.readAsDataURL(file);
-  };
-
-  const handleBannerRemove = () => {
-    setBannerFile(null);
-    setBannerPreview('');
-    setBannerError('');
-  };
-
   const handleSave = async () => {
-    setSaveError('');
-    if (!activity.title.trim() || !activity.startDate || !activity.endDate) {
-      setSaveError('กรุณากรอกชื่อหลักสูตร วันเริ่ม และวันสิ้นสุดอบรม');
-      return;
-    }
-    if (activity.endDate < activity.startDate) {
-      setSaveError('วันสิ้นสุดต้องไม่ก่อนวันเริ่มอบรม');
+    const errs = validate();
+    setFieldErrors(errs);
+    if (Object.keys(errs).length) {
+      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน', { title: 'บันทึกไม่สำเร็จ' });
+      // Scroll to the first field with an error.
+      const firstKey = Object.keys(errs)[0];
+      const el = document.querySelector(`[name="${firstKey}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.focus?.({ preventScroll: true });
       return;
     }
     setSaving(true);
     try {
       const start = `${activity.startDate} 09:00:00`;
       const end = `${activity.endDate} 16:30:00`;
+      // datetime-local 'YYYY-MM-DDTHH:mm' → SQL 'YYYY-MM-DD HH:mm:00'
+      const dtLocalToSql = (v) => (v ? `${v.replace('T', ' ')}:00` : undefined);
       const links = venueLinks.filter((v) => v.label.trim() && v.url.trim());
 
-      // Registration form → register_form_schema on the activity.
-      const register_form_schema = questions.length ? {
-        fields: questions.map((q) => ({
-          key:      q.key || `custom_${q.id}`,
-          type:     q.type,
-          label:    q.question,
-          required: !!q.required,
-          options:  q.options?.length ? q.options : undefined,
-          ...(q.member ? { member: q.member } : {}),
-          ...(q.key ? { core: true } : {}),
-        })),
-      } : undefined;
+      // Registration model (type + cert mode + form schema).
+      const regPayload = editorStateToPayload(regForm);
 
       const created = await activitiesApi.create({
         title:       activity.title.trim(),
@@ -139,7 +124,8 @@ const CreateActivity = () => {
         location:    activity.location || undefined,
         start_date:  start,
         end_date:    end,
-        register_close_date: activity.registerCloseDate || undefined,
+        register_open_at: dtLocalToSql(activity.registerOpenAt),
+        register_close_date: dtLocalToSql(activity.registerCloseDate),
         has_selection: activity.hasSelection,
         fee_text:    activity.feeText.trim() || undefined,
         travel_text: activity.travelText.trim() || undefined,
@@ -147,32 +133,19 @@ const CreateActivity = () => {
         venue_links: links.length ? links : undefined,
         capacity:    Number(activity.seats) || 0,
         status:      'draft',
-        cover_image_url: bannerPreview || undefined,
-        // registration model
-        registration_type: regType,
-        register_form_schema,
-        team_cert_mode: regType === 'team' ? teamCertMode : undefined,
-        team_max_members: regType === 'team' ? Math.max(1, memberCount) : undefined,
+        cover_image_url: banner || undefined,
+        // registration model (registration_type, register_form_schema, team_*)
+        ...regPayload,
       });
 
-      alert(`บันทึกกิจกรรมเรียบร้อย (id: ${created.id})`);
-      // Reset form
-      setActivity({ title: '', titleEn: '', batchNo: '', category: '', level: 'เริ่มต้น',
-                    description: '', startDate: '', endDate: '', registerCloseDate: '',
-                    hasSelection: false, feeText: '', travelText: '', noteText: '',
-                    seats: '', location: '' });
-      setVenueLinks([]);
-      setRegType('individual');
-      setTeamCertMode('per_person');
-      setQuestions(makeRegistrationDefaults());
-      setBannerFile(null);
-      setBannerPreview('');
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'DUPLICATE_SLUG') {
-        setSaveError('มีหลักสูตรชื่อ (slug) นี้อยู่แล้ว กรุณาเปลี่ยนชื่อ');
-      } else {
-        setSaveError(err?.message || 'บันทึกไม่สำเร็จ');
+      toast.success('บันทึกกิจกรรมเรียบร้อยแล้ว', { title: 'สำเร็จ' });
+      // Hand control back to the dashboard (→ จัดการหลักสูตร). The component
+      // unmounts, so there is no need to reset the local form state here.
+      if (typeof onCreated === 'function') {
+        onCreated(created);
       }
+    } catch (err) {
+      toast.error(errorMessage(err, 'บันทึกไม่สำเร็จ'), { title: 'บันทึกไม่สำเร็จ' });
     } finally {
       setSaving(false);
     }
@@ -190,12 +163,6 @@ const CreateActivity = () => {
         </p>
       </div>
 
-      {saveError && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-300">
-          {saveError}
-        </div>
-      )}
-
       {/* Section: รายละเอียดกิจกรรม */}
       <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center gap-2">
@@ -204,24 +171,17 @@ const CreateActivity = () => {
         </div>
 
         <div className="p-6 pb-0">
-          <BannerUploader
-            preview={bannerPreview}
-            fileName={bannerFile?.name}
-            fileSize={bannerFile?.size}
-            error={bannerError}
-            onSelect={handleBannerSelect}
-            onRemove={handleBannerRemove}
-          />
+          <BannerUploader value={banner} onChange={setBanner} />
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <AdminField label="ชื่อกิจกรรม / หลักสูตร" required>
+          <AdminField label="ชื่อกิจกรรม / หลักสูตร" required error={fieldErrors.title}>
             <input
               name="title"
               value={activity.title}
               onChange={handleActivityChange}
               placeholder="เช่น Prompt Engineering ขั้นสูง"
-              className={adminInputCls}
+              className={`${adminInputCls} ${fieldErrors.title ? errBorder : ''}`}
             />
           </AdminField>
 
@@ -270,23 +230,23 @@ const CreateActivity = () => {
             </select>
           </AdminField>
 
-          <AdminField label="วันเริ่มอบรม" required icon={<Calendar className="w-4 h-4" />}>
+          <AdminField label="วันเริ่มอบรม" required icon={<Calendar className="w-4 h-4" />} error={fieldErrors.startDate}>
             <input
               type="date"
               name="startDate"
               value={activity.startDate}
               onChange={handleActivityChange}
-              className={adminInputCls}
+              className={`${adminInputCls} ${fieldErrors.startDate ? errBorder : ''}`}
             />
           </AdminField>
 
-          <AdminField label="วันสิ้นสุดอบรม" required icon={<Calendar className="w-4 h-4" />}>
+          <AdminField label="วันสิ้นสุดอบรม" required icon={<Calendar className="w-4 h-4" />} error={fieldErrors.endDate}>
             <input
               type="date"
               name="endDate"
               value={activity.endDate}
               onChange={handleActivityChange}
-              className={adminInputCls}
+              className={`${adminInputCls} ${fieldErrors.endDate ? errBorder : ''}`}
             />
           </AdminField>
 
@@ -322,13 +282,24 @@ const CreateActivity = () => {
             />
           </AdminField>
 
-          <AdminField label="วันปิดรับสมัคร" icon={<Calendar className="w-4 h-4" />}>
+          <AdminField label="วันเวลาเปิดรับสมัคร" icon={<Clock className="w-4 h-4" />} error={fieldErrors.registerOpenAt}>
             <input
-              type="date"
+              type="datetime-local"
+              name="registerOpenAt"
+              value={activity.registerOpenAt}
+              onChange={handleActivityChange}
+              className={`${adminInputCls} ${fieldErrors.registerOpenAt ? errBorder : ''}`}
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-yrugray-500">เว้นว่าง = เปิดรับทันทีเมื่อเผยแพร่</p>
+          </AdminField>
+
+          <AdminField label="วันเวลาปิดรับสมัคร" required icon={<Clock className="w-4 h-4" />} error={fieldErrors.registerCloseDate}>
+            <input
+              type="datetime-local"
               name="registerCloseDate"
               value={activity.registerCloseDate}
               onChange={handleActivityChange}
-              className={adminInputCls}
+              className={`${adminInputCls} ${fieldErrors.registerCloseDate ? errBorder : ''}`}
             />
           </AdminField>
 
@@ -414,66 +385,8 @@ const CreateActivity = () => {
         </div>
       </section>
 
-      {/* Section: ประเภทการลงทะเบียน + ควบคุมทีม */}
-      <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-6 space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">ฟอร์มลงทะเบียน</h3>
-          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">เลือกประเภทการลงทะเบียน แล้วปรับคำถามได้ตามต้องการ</p>
-        </div>
-
-        <div className="flex gap-3">
-          {[['individual', 'เดี่ยว'], ['team', 'ทีม']].map(([val, label]) => (
-            <button
-              key={val}
-              type="button"
-              onClick={() => changeRegType(val)}
-              className={`px-6 py-2.5 rounded-lg border text-[15px] font-medium transition-colors ${
-                regType === val
-                  ? 'bg-yrupink-600 text-white border-yrupink-500'
-                  : 'bg-white dark:bg-yrugray-800 text-slate-700 dark:text-yrugray-300 border-slate-300 dark:border-yrugray-700 hover:border-yrupink-500/50'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {regType === 'team' && (
-          <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800">
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={addMemberDefaults}
-                disabled={memberCount >= 5}
-                className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[15px] font-semibold rounded-lg flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" /> เพิ่มคำถาม Default สมาชิก
-              </button>
-              <span className="text-sm text-slate-600 dark:text-yrugray-400">สมาชิก {memberCount}/5 คน (ผู้สมัครกรอกชื่อทีมในหน้าสมัคร)</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-yrugray-300 mb-1.5">รูปแบบใบรับรอง (ทีม)</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {[['per_person', 'แยก — ชื่อผู้ทำ + ชื่อทีม'], ['team', 'ทีม — ชื่อทุกคน + ชื่อทีม']].map(([val, label]) => (
-                  <label key={val} className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer">
-                    <input type="radio" name="teamCertMode" checked={teamCertMode === val} onChange={() => setTeamCertMode(val)} className="w-4 h-4 accent-yrupink-500" />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Section: ตัวสร้างคำถามฟอร์มลงทะเบียน */}
-      <DynamicFormBuilder
-        questions={questions}
-        onChange={setQuestions}
-        title={regType === 'team' ? 'คำถามของสมาชิก (ทีม)' : 'คำถามฟอร์มลงทะเบียน (เดี่ยว)'}
-        description="แก้ไข/เพิ่มคำถามได้ — คำถาม default (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล) จะจับคู่กับข้อมูลผู้สมัครอัตโนมัติ"
-        emptyText={regType === 'team' ? 'กดปุ่ม "เพิ่มคำถาม Default สมาชิก" เพื่อเริ่ม' : 'ยังไม่มีคำถาม'}
-      />
+      {/* Section: ฟอร์มลงทะเบียน (ประเภท + คำถาม) */}
+      <RegistrationFormEditor value={regForm} onChange={setRegForm} />
 
       {/* Floating save button — bottom-right, visible while scrolling. */}
       <button
@@ -491,7 +404,7 @@ const CreateActivity = () => {
 
 // ---- Sub components ----
 
-const AdminField = ({ label, icon, required, className = '', children }) => (
+const AdminField = ({ label, icon, required, error, className = '', children }) => (
   <div className={className}>
     <label className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 mb-1.5 flex items-center gap-1.5">
       {icon}
@@ -499,109 +412,12 @@ const AdminField = ({ label, icon, required, className = '', children }) => (
       {required && <span className="text-yrupink-500 dark:text-yrupink-400">*</span>}
     </label>
     {children}
+    {error && (
+      <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+        <X className="w-3.5 h-3.5 flex-shrink-0" />
+        {error}
+      </p>
+    )}
   </div>
 );
-
-const BannerUploader = ({ preview, fileName, fileSize, error, onSelect, onRemove }) => {
-  const [dragActive, setDragActive] = useState(false);
-  const inputRef = useRef(null);
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragActive(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) onSelect(file);
-  };
-
-  const formatSize = (bytes) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-  };
-
-  return (
-    <div>
-      <label className="text-sm text-slate-600 dark:text-yrugray-300 mb-1.5 flex items-center gap-1.5">
-        <ImageIcon className="w-4 h-4" />
-        รูปแบนเนอร์กิจกรรม
-        <span className="text-slate-400 dark:text-yrugray-500 font-normal text-xs">(แนะนำอัตราส่วน 16:9, สูงสุด 5MB)</span>
-      </label>
-
-      {preview ? (
-        <div className="relative group rounded-xl overflow-hidden border border-slate-300 dark:border-yrugray-700">
-          <img
-            src={preview}
-            alt="banner preview"
-            className="w-full h-56 md:h-64 object-cover bg-slate-100 dark:bg-yrugray-800"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="text-sm text-slate-900 dark:text-white">
-              <p className="font-medium truncate max-w-[240px]">{fileName}</p>
-              <p className="text-xs text-slate-600 dark:text-yrugray-300">{formatSize(fileSize)}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-slate-900 dark:text-white text-xs font-medium flex items-center gap-1.5"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                เปลี่ยนรูป
-              </button>
-              <button
-                type="button"
-                onClick={onRemove}
-                className="px-3 py-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white text-xs font-medium flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                ลบ
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragActive(true);
-          }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          className={`relative rounded-xl border-2 border-dashed cursor-pointer transition-all h-48 md:h-56 flex flex-col items-center justify-center text-center px-6 ${
-            dragActive
-              ? 'border-yrupink-500 bg-yrupink-500/10'
-              : 'border-yrugray-700 hover:border-yrupink-500/50 hover:bg-yrugray-800/30 bg-yrugray-800/20'
-          }`}
-        >
-          <div className="w-12 h-12 rounded-full bg-yrupink-500/10 border border-yrupink-500/30 flex items-center justify-center mb-3">
-            <ImagePlus className="w-6 h-6 text-yrupink-400" />
-          </div>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
-            คลิกเพื่อเลือกรูป หรือ ลากไฟล์มาวางที่นี่
-          </p>
-          <p className="text-xs text-slate-500 dark:text-yrugray-400">รองรับ JPG, PNG, WebP, GIF ขนาดไม่เกิน 5MB</p>
-        </div>
-      )}
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => onSelect(e.target.files?.[0])}
-      />
-
-      {error && (
-        <p className="mt-2 text-xs text-red-400 flex items-center gap-1.5">
-          <X className="w-3.5 h-3.5" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
-};
-
 export default CreateActivity;

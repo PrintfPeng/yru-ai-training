@@ -23,6 +23,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { registrationsApi } from '../api';
+import { useToast } from '../contexts/ToastContext';
+import { errorMessage } from '../utils/errorMessage';
 
 const inputCls =
   'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
@@ -56,6 +58,7 @@ function exportCsv(activity, rows) {
 }
 
 const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
+  const toast = useToast();
   const [registrants, setRegistrants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -117,7 +120,7 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
       await registrationsApi.updateStatus(id, STATUS_UI_TO_API[uiStatus] || uiStatus);
       reload();
     } catch (e) {
-      alert(`เปลี่ยนสถานะไม่สำเร็จ: ${e.message}`);
+      toast.error(errorMessage(e, 'เปลี่ยนสถานะไม่สำเร็จ'), { title: 'ไม่สำเร็จ' });
     }
   };
 
@@ -133,7 +136,7 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
       setEditing(null);
       reload();
     } catch (e) {
-      alert(`บันทึกไม่สำเร็จ: ${e.message}`);
+      toast.error(errorMessage(e, 'บันทึกไม่สำเร็จ'), { title: 'บันทึกไม่สำเร็จ' });
     }
   };
 
@@ -143,7 +146,7 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
       setDeleting(null);
       reload();
     } catch (e) {
-      alert(`ลบไม่สำเร็จ: ${e.message}`);
+      toast.error(errorMessage(e, 'ลบไม่สำเร็จ'), { title: 'ลบไม่สำเร็จ' });
     }
   };
 

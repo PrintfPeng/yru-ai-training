@@ -25,6 +25,44 @@ export const toDateInputValue = (iso) => {
   return m ? m[1] : '';
 };
 
+/** "2569-11-01T09:00:00" → "2569-11-01T09:00" for <input type="datetime-local">. */
+export const toDateTimeInputValue = (iso) => {
+  const m = String(iso || '').match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+  return m ? `${m[1]}T${m[2]}` : '';
+};
+
+/** "2569-11-01T09:00…" → "1 พ.ย. 2569 09:00 น." (date shown as-is, no +543). */
+export const formatThaiDateTime = (iso) => {
+  const p = pickYMD(iso);
+  if (!p) return '-';
+  const t = String(iso || '').match(/[T ](\d{2}:\d{2})/);
+  const time = t ? ` ${t[1]} น.` : '';
+  return `${p.d} ${TH_MONTHS[p.mo - 1]} ${p.y}${time}`;
+};
+
+/**
+ * Registration-window state vs "now".
+ *
+ * Stored datetimes use a Buddhist-era year as an opaque literal (e.g.
+ * 2569-11-01T09:00:00), so we build a BE-era "now" string and compare
+ * lexicographically (both are zero-padded 'YYYY-MM-DDTHH:mm:ss').
+ *
+ * Returns 'before' (not open yet), 'open', 'closed', or 'none' (no window set).
+ */
+export const registrationWindowState = (openIso, closeIso) => {
+  const open = toDateTimeInputValue(openIso);   // '' when null/absent
+  const close = toDateTimeInputValue(closeIso);
+  if (!open && !close) return 'none';
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const beNow =
+    `${d.getFullYear() + 543}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (open && beNow < open) return 'before';
+  if (close && beNow > close) return 'closed';
+  return 'open';
+};
+
 /** Inclusive day count between two activity dates (min 1). */
 export const durationDays = (start, end) => {
   const a = pickYMD(start), b = pickYMD(end);

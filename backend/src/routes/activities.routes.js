@@ -36,7 +36,8 @@ const createBody = z.object({
   // ----- richer detail fields (course detail page) -----
   batch_no:            z.number().int().min(1).nullable().optional(),
   title_en:            z.string().max(255).nullable().optional(),
-  register_close_date: z.string().min(1).nullable().optional(),   // 'YYYY-MM-DD' or ISO
+  register_open_at:    z.string().min(1).nullable().optional(),   // 'YYYY-MM-DD HH:MM:SS' or ISO
+  register_close_date: z.string().min(1).nullable().optional(),   // 'YYYY-MM-DD HH:MM:SS' or ISO
   has_selection:       z.boolean().optional(),
   fee_text:            z.string().max(255).nullable().optional(),
   travel_text:         z.string().max(500).nullable().optional(),
@@ -47,7 +48,7 @@ const createBody = z.object({
   note_text:           z.string().max(2000).nullable().optional(),
   // ----- registration model (เดี่ยว/ทีม) -----
   registration_type:   z.enum(['individual', 'team']).optional(),
-  team_max_members:    z.number().int().min(1).max(20).optional(),
+  team_max_members:    z.number().int().min(1).max(20).nullable().optional(),
   team_cert_mode:      z.enum(['per_person', 'team']).nullable().optional(),
   register_form_schema: z.object({
     fields: z.array(z.object({
@@ -57,6 +58,7 @@ const createBody = z.object({
       options:  z.array(z.string()).optional(),
       required: z.boolean().optional(),
       core:     z.boolean().optional(),
+      member:   z.number().int().min(1).max(20).optional(), // team: which member block (1-based)
     })),
   }).nullable().optional(),
 });

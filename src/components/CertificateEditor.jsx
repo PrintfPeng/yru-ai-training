@@ -15,6 +15,7 @@ import {
   X,
   Baseline,
 } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 // Font family options — เพิ่ม/ลด ที่นี่ได้ (Google Fonts ถูก preload ไว้ใน index.html)
 export const FONT_OPTIONS = [
@@ -91,6 +92,7 @@ export const DEFAULT_ELEMENTS = () => [
 ];
 
 const CertificateEditor = ({ cert, onChange, template }) => {
+  const toast = useToast();
   const elements = cert.elements || [];
   const [selectedId, setSelectedId] = useState(null);
   const [guides, setGuides] = useState({ v: [], h: [] }); // smart-guide lines during drag
@@ -199,7 +201,7 @@ const CertificateEditor = ({ cert, onChange, template }) => {
   const onBackgroundSelect = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert('ขนาดไฟล์พื้นหลังต้องไม่เกิน 5MB');
+      toast.warning('ขนาดไฟล์พื้นหลังต้องไม่เกิน 5MB');
       return;
     }
     const dataUrl = await readFileAsDataUrl(file);
@@ -209,7 +211,7 @@ const CertificateEditor = ({ cert, onChange, template }) => {
   const onSignatureSelect = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
     if (file.size > 2 * 1024 * 1024) {
-      alert('ขนาดไฟล์ลายเซ็นต้องไม่เกิน 2MB');
+      toast.warning('ขนาดไฟล์ลายเซ็นต้องไม่เกิน 2MB');
       return;
     }
     const dataUrl = await readFileAsDataUrl(file);

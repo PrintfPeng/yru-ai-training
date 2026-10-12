@@ -13,7 +13,6 @@ import {
   MapPin,
   AlertTriangle,
   Save,
-  Image as ImageIcon,
   Filter,
   ClipboardList,
   Loader2,
@@ -26,8 +25,12 @@ import {
 import ActivityRegistrants from './ActivityRegistrants';
 import CreateAssessment from './CreateAssessment';
 import AssessmentDashboard from './AssessmentDashboard';
+import BannerUploader from '../components/BannerUploader';
+import RegistrationFormEditor, { schemaToEditorState, editorStateToPayload } from '../components/RegistrationFormEditor';
 import { activitiesApi } from '../api';
-import { formatThaiDate, toDateInputValue } from '../utils/thaiDate';
+import { formatThaiDate, toDateInputValue, toDateTimeInputValue } from '../utils/thaiDate';
+import { useToast } from '../contexts/ToastContext';
+import { errorMessage } from '../utils/errorMessage';
 
 // Map API status enum ⇄ Thai label used in the UI chip filter
 const STATUS_LABEL = {
@@ -48,6 +51,9 @@ const STATUS_ENUM = {
 const inputCls =
   'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
 
+// Appended to an input's class when its field has a validation error.
+const errBorder = '!border-red-500 focus:!border-red-500 focus:!ring-red-500';
+
 // Map API row → the shape the card + edit form expect
 const normalize = (r) => ({
   id:          r.id,
@@ -61,7 +67,8 @@ const normalize = (r) => ({
   endDateDisplay: r.end_date ? formatThaiDate(r.end_date) : '',
   batchNo:     r.batch_no ?? '',
   titleEn:     r.title_en ?? '',
-  registerCloseDate: toDateInputValue(r.register_close_date),
+  registerOpenAt:    toDateTimeInputValue(r.register_open_at),
+  registerCloseDate: toDateTimeInputValue(r.register_close_date),
   registerCloseDateDisplay: r.register_close_date ? formatThaiDate(r.register_close_date) : '',
   hasSelection: !!r.has_selection,
   feeText:     r.fee_text ?? '',
@@ -79,7 +86,8 @@ const normalize = (r) => ({
   raw:         r,
 });
 
-const ManageActivities = ({ onGoCreate }) => {
+const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSelect }) => {
+  const toast = useToast();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -98,7 +106,19 @@ const ManageActivities = ({ onGoCreate }) => {
       .then((rows) => {
         const list = (rows || []).map(normalize);
         setActivities(list);
-        setSelected((prev) => prev ? list.find((a) => a.id === prev.id) || null : null);
+        // If a card is currently open, sync its fresh row too. Otherwise, if we
+        // were asked to open a freshly-created activity, open its panel now.
+        setSelected((prev) => {
+          if (prev) return list.find((a) => a.id === prev.id) || null;
+          if (initialSelectedId != null) {
+            const match = list.find((a) => a.id === initialSelectedId);
+            if (match) {
+              onConsumedInitialSelect?.();
+              return match;
+            }
+          }
+          return null;
+        });
       })
       .catch((e) => setLoadError(e))
       .finally(() => setLoading(false));
@@ -123,7 +143,8 @@ const ManageActivities = ({ onGoCreate }) => {
         cover_image_url: updated.image || undefined,
         title_en:        updated.titleEn || null,
         batch_no:        updated.batchNo ? Number(updated.batchNo) : null,
-        register_close_date: updated.registerCloseDate || null,
+        register_open_at:    updated.registerOpenAt ? `${updated.registerOpenAt.replace('T', ' ')}:00` : null,
+        register_close_date: updated.registerCloseDate ? `${updated.registerCloseDate.replace('T', ' ')}:00` : null,
         has_selection:   !!updated.hasSelection,
         fee_text:        updated.feeText || null,
         travel_text:     updated.travelText || null,
@@ -133,9 +154,11 @@ const ManageActivities = ({ onGoCreate }) => {
       if (updated.startDate) patch.start_date = `${updated.startDate} 09:00:00`;
       if (updated.endDate)   patch.end_date = `${updated.endDate} 16:30:00`;
       await activitiesApi.update(updated.id, patch);
+      toast.success('บันทึกการแก้ไขเรียบร้อยแล้ว', { title: 'สำเร็จ' });
       reload();
     } catch (e) {
-      alert(`บันทึกไม่สำเร็จ: ${e.message}`);
+      toast.error(errorMessage(e, 'บันทึกไม่สำเร็จ'), { title: 'บันทึกไม่สำเร็จ' });
+      throw e; // let InlineEditForm know the save failed (keeps "saved" state off)
     }
   };
 
@@ -144,9 +167,10 @@ const ManageActivities = ({ onGoCreate }) => {
       await activitiesApi.remove(deleting.id);
       setDeleting(null);
       if (selected?.id === deleting.id) setSelected(null);
+      toast.success('ลบกิจกรรมเรียบร้อยแล้ว', { title: 'สำเร็จ' });
       reload();
     } catch (e) {
-      alert(`ลบไม่สำเร็จ: ${e.message}`);
+      toast.error(errorMessage(e, 'ลบไม่สำเร็จ'), { title: 'ลบไม่สำเร็จ' });
     }
   };
 
@@ -428,6 +452,12 @@ const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onReload }) =
           badge={activity.registrants_count > 0 ? activity.registrants_count : null}
         />
         <TabButton
+          active={tab === 'regform'}
+          onClick={() => setTab('regform')}
+          icon={<ClipboardList className="w-4 h-4" />}
+          label="ฟอร์มลงทะเบียน"
+        />
+        <TabButton
           active={tab === 'assessment'}
           onClick={() => setTab('assessment')}
           icon={<ClipboardCheck className="w-4 h-4" />}
@@ -443,8 +473,53 @@ const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onReload }) =
 
       {tab === 'edit' && <InlineEditForm activity={activity} onSave={onEdit} />}
       {tab === 'registrants' && <ActivityRegistrants activity={activity} onBack={onBack} embedded />}
+      {tab === 'regform' && <RegistrationFormTab activity={activity} onReload={onReload} />}
       {tab === 'assessment' && <CreateAssessment activity={activity} embedded />}
       {tab === 'dashboard' && <AssessmentDashboard activity={activity} />}
+    </div>
+  );
+};
+
+// ─────────────── "ฟอร์มลงทะเบียน" tab (edit registration model) ───────────────
+
+const RegistrationFormTab = ({ activity, onReload }) => {
+  const toast = useToast();
+  // Build editor state from the activity row (activity.raw holds the API row).
+  const [state, setState] = useState(() => schemaToEditorState(activity.raw || activity));
+  const [saving, setSaving] = useState(false);
+  const locked = (activity.registrants_count || 0) > 0;
+
+  // Resync when switching to a different activity.
+  useEffect(() => {
+    setState(schemaToEditorState(activity.raw || activity));
+  }, [activity.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await activitiesApi.update(activity.id, editorStateToPayload(state));
+      toast.success('บันทึกฟอร์มลงทะเบียนเรียบร้อยแล้ว', { title: 'สำเร็จ' });
+      onReload?.();
+    } catch (e) {
+      toast.error(errorMessage(e, 'บันทึกไม่สำเร็จ'), { title: 'บันทึกไม่สำเร็จ' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-28">
+      <RegistrationFormEditor value={state} onChange={setState} locked={locked} />
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="fixed bottom-6 right-6 z-40 px-6 py-3.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-xl shadow-2xl shadow-yrupink-500/30 hover:shadow-yrupink-500/50 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+      >
+        {saving
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>
+          : <><Save className="w-4 h-4" /> บันทึกฟอร์มลงทะเบียน</>}
+      </button>
     </div>
   );
 };
@@ -472,19 +547,46 @@ const InlineEditForm = ({ activity, onSave }) => {
   const [form, setForm] = useState(activity);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => { setForm(activity); }, [activity.id]);
+  const [errors, setErrors] = useState({});
+  // Reset form when activity changes (after reload)
+  useEffect(() => { setForm(activity); setErrors({}); }, [activity.id]);
 
   const change = (name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev));
     setSaved(false);
   };
+
+  // Mirror the create-form rules: name + the three dates are required and ordered.
+  const validate = () => {
+    const errs = {};
+    if (!form.title?.trim()) errs.title = 'กรุณากรอกชื่อหลักสูตร';
+    if (!form.startDate) errs.startDate = 'กรุณาเลือกวันเริ่มอบรม';
+    if (!form.endDate) errs.endDate = 'กรุณาเลือกวันสิ้นสุดอบรม';
+    if (!form.registerCloseDate) errs.registerCloseDate = 'กรุณาเลือกวันเวลาปิดรับสมัคร';
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      errs.endDate = 'วันสิ้นสุดต้องไม่ก่อนวันเริ่มอบรม';
+    }
+    if (form.registerOpenAt && form.registerCloseDate && form.registerOpenAt >= form.registerCloseDate) {
+      errs.registerCloseDate = 'เวลาปิดรับสมัครต้องหลังเวลาเปิดรับสมัคร';
+    }
+    if (form.registerCloseDate && form.startDate && form.registerCloseDate.slice(0, 10) > form.startDate) {
+      errs.registerCloseDate = 'วันปิดรับสมัครต้องไม่เกินวันเริ่มอบรม';
+    }
+    return errs;
+  };
+
   const submit = async (e) => {
     e.preventDefault();
+    const errs = validate();
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
     setSaving(true);
     try {
       await onSave(form);
       setSaved(true);
+    } catch {
+      // onSave already surfaced the error via a toast; keep the form editable.
     } finally {
       setSaving(false);
     }
@@ -493,8 +595,8 @@ const InlineEditForm = ({ activity, onSave }) => {
   return (
     <form onSubmit={submit} className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden shadow-xs">
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Field label="ชื่อหลักสูตร" required className="md:col-span-2">
-          <input value={form.title} onChange={(e) => change('title', e.target.value)} required className={inputCls} />
+        <Field label="ชื่อหลักสูตร" required error={errors.title} className="md:col-span-2">
+          <input value={form.title} onChange={(e) => change('title', e.target.value)} className={`${inputCls} ${errors.title ? errBorder : ''}`} />
         </Field>
 
         <Field label="ชื่อภาษาอังกฤษ (subtitle)" className="md:col-span-2">
@@ -509,16 +611,20 @@ const InlineEditForm = ({ activity, onSave }) => {
           <input type="number" value={form.seats} onChange={(e) => change('seats', Number(e.target.value))} className={inputCls} />
         </Field>
 
-        <Field label="วันเริ่มอบรม" icon={<Calendar className="w-4 h-4" />}>
-          <input type="date" value={form.startDate || ''} onChange={(e) => change('startDate', e.target.value)} className={inputCls} />
+        <Field label="วันเริ่มอบรม" required icon={<Calendar className="w-4 h-4" />} error={errors.startDate}>
+          <input type="date" value={form.startDate || ''} onChange={(e) => change('startDate', e.target.value)} className={`${inputCls} ${errors.startDate ? errBorder : ''}`} />
         </Field>
 
-        <Field label="วันสิ้นสุดอบรม" icon={<Calendar className="w-4 h-4" />}>
-          <input type="date" value={form.endDate || ''} onChange={(e) => change('endDate', e.target.value)} className={inputCls} />
+        <Field label="วันสิ้นสุดอบรม" required icon={<Calendar className="w-4 h-4" />} error={errors.endDate}>
+          <input type="date" value={form.endDate || ''} onChange={(e) => change('endDate', e.target.value)} className={`${inputCls} ${errors.endDate ? errBorder : ''}`} />
         </Field>
 
-        <Field label="วันปิดรับสมัคร" icon={<Calendar className="w-4 h-4" />}>
-          <input type="date" value={form.registerCloseDate || ''} onChange={(e) => change('registerCloseDate', e.target.value)} className={inputCls} />
+        <Field label="วันเวลาเปิดรับสมัคร" icon={<Clock className="w-4 h-4" />} error={errors.registerOpenAt}>
+          <input type="datetime-local" value={form.registerOpenAt || ''} onChange={(e) => change('registerOpenAt', e.target.value)} className={`${inputCls} ${errors.registerOpenAt ? errBorder : ''}`} />
+        </Field>
+
+        <Field label="วันเวลาปิดรับสมัคร" required icon={<Clock className="w-4 h-4" />} error={errors.registerCloseDate}>
+          <input type="datetime-local" value={form.registerCloseDate || ''} onChange={(e) => change('registerCloseDate', e.target.value)} className={`${inputCls} ${errors.registerCloseDate ? errBorder : ''}`} />
         </Field>
 
         <Field label="การพิจารณาคัดเลือก">
@@ -550,13 +656,9 @@ const InlineEditForm = ({ activity, onSave }) => {
           <input value={form.location || ''} onChange={(e) => change('location', e.target.value)} className={inputCls} />
         </Field>
 
-        <Field label="URL รูปแบนเนอร์" icon={<ImageIcon className="w-4 h-4" />} className="md:col-span-2">
-          <input value={form.image || ''} onChange={(e) => change('image', e.target.value)} className={inputCls} placeholder="https://..." />
-          {form.image && (
-            <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 dark:border-yrugray-700 aspect-[16/9] bg-slate-100 max-w-sm">
-              <img src={form.image} alt="preview" className="w-full h-full object-cover" />
-            </div>
-          )}
+        <Field label="รูปแบนเนอร์" className="md:col-span-2">
+          <BannerUploader value={form.image || ''} onChange={(v) => change('image', v)} />
+
         </Field>
 
         <Field label="รายละเอียดหลักสูตร" className="md:col-span-2">
@@ -621,7 +723,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const Field = ({ label, icon, required, className = '', children }) => (
+const Field = ({ label, icon, required, error, className = '', children }) => (
   <div className={className}>
     <label className="text-sm font-semibold text-slate-800 dark:text-yrugray-200 mb-1.5 flex items-center gap-1.5">
       {icon}
@@ -629,6 +731,12 @@ const Field = ({ label, icon, required, className = '', children }) => (
       {required && <span className="text-yrupink-500">*</span>}
     </label>
     {children}
+    {error && (
+      <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+        <X className="w-3.5 h-3.5 flex-shrink-0" />
+        {error}
+      </p>
+    )}
   </div>
 );
 

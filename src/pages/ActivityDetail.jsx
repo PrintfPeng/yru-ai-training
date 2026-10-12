@@ -23,7 +23,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { activitiesApi, registrationsApi, assessmentsApi, ApiError } from '../api';
-import { formatThaiDate as fmtThaiDate, durationText as durationInDays } from '../utils/thaiDate';
+import { formatThaiDate as fmtThaiDate, formatThaiDateTime as fmtThaiDateTime, durationText as durationInDays, registrationWindowState } from '../utils/thaiDate';
 import RegistrationForm from '../components/RegistrationForm';
 
 
@@ -171,12 +171,18 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
   const capacity  = Number(activity?.capacity ?? activity?.seats ?? 0);
   const registered = Math.max(0, capacity - seatsLeft);
   const assessmentMode = activity?.status === 'assessment';
-  const isOpen = activity?.status === 'published' && seatsLeft > 0;
+  // Registration window (date+time). 'none' = no window set → gated by status only.
+  const windowState = registrationWindowState(activity?.register_open_at, activity?.register_close_date);
+  const isOpen = activity?.status === 'published' && seatsLeft > 0 && windowState !== 'before' && windowState !== 'closed';
   const cannotRegister = activity && activity.status !== 'published'
     ? 'หลักสูตรยังไม่เปิดรับสมัคร'
-    : seatsLeft === 0
-      ? 'หลักสูตรเต็มแล้ว'
-      : null;
+    : windowState === 'before'
+      ? `ยังไม่ถึงเวลาเปิดรับสมัคร (เปิด ${fmtThaiDateTime(activity.register_open_at)})`
+      : windowState === 'closed'
+        ? 'ปิดรับสมัครแล้ว'
+        : seatsLeft === 0
+          ? 'หลักสูตรเต็มแล้ว'
+          : null;
 
   // Split description into paragraphs on double newline for nicer prose
   const descriptionParas = useMemo(() => {
@@ -315,11 +321,19 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
             <section className="glass-card rounded-2xl p-6">
               <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">รายละเอียด</h2>
               <div className="divide-y divide-gray-200 dark:divide-yrugray-800">
+                {activity?.register_open_at && (
+                  <DetailRow
+                    icon={<Calendar className="w-4 h-4" />}
+                    label="เปิดรับสมัคร"
+                    value={fmtThaiDateTime(activity.register_open_at)}
+                    valueClass="text-green-600 dark:text-green-400 font-semibold"
+                  />
+                )}
                 {activity?.register_close_date && (
                   <DetailRow
                     icon={<Calendar className="w-4 h-4" />}
                     label="ปิดรับสมัคร"
-                    value={fmtThaiDate(activity.register_close_date)}
+                    value={fmtThaiDateTime(activity.register_close_date)}
                     valueClass="text-red-600 dark:text-red-400 font-semibold"
                   />
                 )}

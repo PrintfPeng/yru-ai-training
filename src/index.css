@@ -41,3 +41,8 @@ body {
 html.admin-scale {
   font-size: 120%;
 }
+/* Toast notifications (ToastContext) — slide/fade in from the right. */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

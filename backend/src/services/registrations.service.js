@@ -55,6 +55,10 @@ export async function listPublicRegistrants(activitySlug) {
 async function lockActivityForRegister(conn, activityId, seatsNeeded) {
   const [[activity]] = await conn.query(
     `SELECT id, capacity, status, registration_type, team_max_members,
+            -- Stored datetimes use a Buddhist-era year (literal, see
+            -- src/utils/thaiDate.js), so shift NOW() by +543 years before comparing.
+            (register_open_at    IS NOT NULL AND DATE_ADD(NOW(), INTERVAL 543 YEAR) < register_open_at)    AS not_open_yet,
+            (register_close_date IS NOT NULL AND DATE_ADD(NOW(), INTERVAL 543 YEAR) > register_close_date) AS closed,
             (SELECT COUNT(*) FROM registrations
               WHERE activity_id = ? AND registration_status <> 'cancelled') AS current_count
        FROM activities WHERE id = ? FOR UPDATE`,
@@ -64,6 +68,14 @@ async function lockActivityForRegister(conn, activityId, seatsNeeded) {
   if (activity.status !== 'published') {
     throw new AppError('ACTIVITY_NOT_OPEN',
       `Cannot register: activity status is "${activity.status}"`, 400);
+  }
+  // Registration window (compared in the DB session timezone against stored
+  // wall-clock values, so no JS timezone drift).
+  if (activity.not_open_yet) {
+    throw new AppError('REGISTRATION_NOT_OPEN', 'ยังไม่ถึงเวลาเปิดรับสมัคร', 400);
+  }
+  if (activity.closed) {
+    throw new AppError('REGISTRATION_CLOSED', 'ปิดรับสมัครแล้ว', 400);
   }
   if (activity.capacity > 0 && activity.current_count + seatsNeeded > activity.capacity) {
     throw new AppError('OVER_CAPACITY', 'This activity is fully booked', 409,

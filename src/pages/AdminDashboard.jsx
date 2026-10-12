@@ -50,6 +50,9 @@ const readTab = () => {
 const AdminDashboard = ({ admin, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(() => readTab());
+  // When a new activity is created we jump to "จัดการหลักสูตร" and ask it to
+  // open that activity's detail panel straight away.
+  const [openActivityId, setOpenActivityId] = useState(null);
 
   useEffect(() => {
     try {
@@ -271,9 +274,18 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
           <div className="max-w-7xl mx-auto space-y-6 relative z-10">
             {activeMenu === 'สร้างกิจกรรม' ? (
-              <CreateActivity />
+              <CreateActivity
+                onCreated={(created) => {
+                  setOpenActivityId(created?.id ?? null);
+                  setActiveMenu('จัดการหลักสูตร');
+                }}
+              />
             ) : activeMenu === 'จัดการหลักสูตร' ? (
-              <ManageActivities onGoCreate={() => setActiveMenu('สร้างกิจกรรม')} />
+              <ManageActivities
+                onGoCreate={() => setActiveMenu('สร้างกิจกรรม')}
+                initialSelectedId={openActivityId}
+                onConsumedInitialSelect={() => setOpenActivityId(null)}
+              />
             ) : (
               <>
                 {/* Quick Stats Row */}

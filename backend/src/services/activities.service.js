@@ -15,7 +15,10 @@ export async function listActivities({ status, limit = 50, offset = 0 }) {
     `SELECT a.id, a.title, a.slug, a.description, a.location,
             a.start_date, a.end_date, a.capacity, a.status,
             a.cover_image_url, a.created_by,
-            a.batch_no, a.title_en, a.register_close_date, a.has_selection,
+            a.batch_no, a.title_en,
+            DATE_FORMAT(a.register_open_at,    '%Y-%m-%dT%H:%i:%s') AS register_open_at,
+            DATE_FORMAT(a.register_close_date, '%Y-%m-%dT%H:%i:%s') AS register_close_date,
+            a.has_selection,
             a.fee_text, a.travel_text, a.venue_links, a.note_text,
             a.registration_type, a.team_max_members, a.team_cert_mode, a.register_form_schema,
             s.total_registered, s.total_attended, s.total_confirmed,
@@ -31,9 +34,17 @@ export async function listActivities({ status, limit = 50, offset = 0 }) {
   return rows;
 }
 
+// The DATE_FORMAT aliases come AFTER a.* so they override the raw DATETIME
+// columns of the same name — returning the stored wall-clock value as a literal
+// string (no UTC conversion), consistent with how the rest of the app treats
+// activity dates (see src/utils/thaiDate.js).
+const REGISTER_WINDOW_SELECT =
+  `DATE_FORMAT(a.register_open_at,    '%Y-%m-%dT%H:%i:%s') AS register_open_at,
+   DATE_FORMAT(a.register_close_date, '%Y-%m-%dT%H:%i:%s') AS register_close_date`;
+
 export async function getActivityBySlug(slug) {
   const [rows] = await pool.query(
-    `SELECT a.*, s.total_registered, s.total_attended, s.seats_left
+    `SELECT a.*, ${REGISTER_WINDOW_SELECT}, s.total_registered, s.total_attended, s.seats_left
        FROM activities a
        LEFT JOIN v_activity_summary s ON s.activity_id = a.id
       WHERE a.slug = ? LIMIT 1`,
@@ -46,7 +57,7 @@ export async function getActivityBySlug(slug) {
 
 export async function getActivityById(id) {
   const [rows] = await pool.query(
-    `SELECT a.*, s.total_registered, s.total_attended, s.seats_left
+    `SELECT a.*, ${REGISTER_WINDOW_SELECT}, s.total_registered, s.total_attended, s.seats_left
        FROM activities a
        LEFT JOIN v_activity_summary s ON s.activity_id = a.id
       WHERE a.id = ? LIMIT 1`,
@@ -66,11 +77,11 @@ export async function createActivity(input, adminId) {
       `INSERT INTO activities
          (title, slug, description, location, start_date, end_date,
           capacity, status, cover_image_url, created_by,
-          batch_no, title_en, register_close_date, has_selection,
+          batch_no, title_en, register_open_at, register_close_date, has_selection,
           fee_text, travel_text, venue_links, note_text,
           registration_type, team_max_members, team_cert_mode, register_form_schema)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?,
+               ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?,
                ?, ?, ?, CAST(? AS JSON))`,
       [
         input.title,
@@ -85,6 +96,7 @@ export async function createActivity(input, adminId) {
         adminId,
         input.batch_no ?? null,
         input.title_en ?? null,
+        input.register_open_at ?? null,
         input.register_close_date ?? null,
         input.has_selection ? 1 : 0,
         input.fee_text ?? null,
@@ -109,7 +121,7 @@ export async function createActivity(input, adminId) {
 export async function updateActivity(id, patch) {
   const allowed = ['title', 'description', 'location', 'start_date', 'end_date',
                    'capacity', 'status', 'cover_image_url',
-                   'batch_no', 'title_en', 'register_close_date', 'has_selection',
+                   'batch_no', 'title_en', 'register_open_at', 'register_close_date', 'has_selection',
                    'fee_text', 'travel_text', 'venue_links', 'note_text',
                    'registration_type', 'team_max_members', 'team_cert_mode',
                    'register_form_schema'];
