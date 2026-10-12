@@ -12,6 +12,8 @@ import {
   Calendar as CalendarIcon,
   Clock as ClockIcon,
   Table2,
+  Phone as PhoneIcon,
+  AtSign,
   X,
 } from 'lucide-react';
 
@@ -25,12 +27,39 @@ export const QUESTION_TYPES = [
   { value: 'file_upload', label: 'อัปโหลดไฟล์ (File upload)', icon: Upload, hasOptions: false },
   { value: 'date', label: 'วันที่ (Date)', icon: CalendarIcon, hasOptions: false },
   { value: 'time', label: 'เวลา (Time)', icon: ClockIcon, hasOptions: false },
+  { value: 'phone', label: 'เบอร์โทรศัพท์ (10 หลัก)', icon: PhoneIcon, hasOptions: false },
+  { value: 'email', label: 'อีเมล (Email)', icon: AtSign, hasOptions: false },
   // Matrix of sub-questions sharing one numeric score scale (1..scaleMax).
   // `options[]` is reused as the row labels (ข้อย่อย/ด้าน…).
   { value: 'rating_matrix', label: 'ตารางให้คะแนน (Rating matrix)', icon: Table2, hasOptions: true },
 ];
 
 export const DEFAULT_SCALE_MAX = 5;
+
+// ----- Registration-form defaults (เดี่ยว/ทีม) -----
+export const PREFIX_OPTIONS = ['นาย', 'นาง', 'นางสาว', 'เด็กชาย', 'เด็กหญิง'];
+
+/**
+ * The 5 default registration questions. Pass a member number for team blocks
+ * (labels get a "สมาชิกคนที่ N" prefix and a `member` tag).
+ */
+export const makeRegistrationDefaults = (memberNo = null) => {
+  const tag = memberNo ? `สมาชิกคนที่ ${memberNo} · ` : '';
+  const base = (key, type, label, extra = {}) => ({
+    id: Date.now() + Math.random(),
+    key, type, question: tag + label, required: true,
+    options: extra.options || ['ตัวเลือก 1'],
+    ...(memberNo ? { member: memberNo } : {}),
+    ...extra,
+  });
+  return [
+    base('prefix',     'dropdown',     'คำนำหน้าชื่อ', { options: [...PREFIX_OPTIONS] }),
+    base('first_name', 'short_answer', 'ชื่อ (ไม่ต้องใส่คำนำหน้า)'),
+    base('last_name',  'short_answer', 'นามสกุล'),
+    base('phone',      'phone',        'เบอร์โทรศัพท์'),
+    base('email',      'email',        'email'),
+  ];
+};
 
 export const makeEmptyQuestion = () => ({
   id: Date.now() + Math.random(),
@@ -285,6 +314,10 @@ const TypePreview = ({ type }) => {
   switch (type) {
     case 'short_answer':
       return <div className={previewCls}>ผู้ตอบจะเห็นช่องพิมพ์คำตอบสั้นๆ</div>;
+    case 'phone':
+      return <div className={`${previewCls} flex items-center gap-2`}><PhoneIcon className="w-4 h-4" /> เบอร์โทร 10 หลัก (ตัวเลขเท่านั้น, ห้ามซ้ำในกิจกรรม)</div>;
+    case 'email':
+      return <div className={`${previewCls} flex items-center gap-2`}><AtSign className="w-4 h-4" /> อีเมล (ตรวจรูปแบบ)</div>;
     case 'paragraph':
       return <div className={`${previewCls} h-20`}>ผู้ตอบจะเห็นช่องพิมพ์ข้อความยาว</div>;
     case 'file_upload':

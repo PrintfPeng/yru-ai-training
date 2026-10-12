@@ -9,12 +9,13 @@ import {
   Upload,
   Save,
   X,
+  Plus,
   ImagePlus,
   Image as ImageIcon,
   Loader2,
 } from 'lucide-react';
-import DynamicFormBuilder from '../components/DynamicFormBuilder';
-import { activitiesApi, assessmentsApi, ApiError } from '../api';
+import DynamicFormBuilder, { makeRegistrationDefaults } from '../components/DynamicFormBuilder';
+import { activitiesApi, ApiError } from '../api';
 
 const adminInputCls =
   'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
@@ -45,8 +46,24 @@ const CreateActivity = () => {
   const [bannerPreview, setBannerPreview] = useState('');
   const [bannerError, setBannerError] = useState('');
 
-  // Dynamic form questions
-  const [questions, setQuestions] = useState([]);
+  // Registration form (ฟอร์มลงทะเบียน) — stored as activity.register_form_schema
+  const [questions, setQuestions] = useState(makeRegistrationDefaults()); // default: เดี่ยว 5 ข้อ
+  const [regType, setRegType] = useState('individual');     // 'individual' | 'team'
+  const [teamCertMode, setTeamCertMode] = useState('per_person'); // 'per_person' | 'team'
+
+  // number of member blocks already added (team)
+  const memberCount = new Set(questions.filter((q) => q.member).map((q) => q.member)).size;
+
+  const changeRegType = (type) => {
+    setRegType(type);
+    // เดี่ยว → 5 default ข้อ / ทีม → เริ่มว่าง (กดปุ่มเพิ่มสมาชิก)
+    setQuestions(type === 'individual' ? makeRegistrationDefaults() : []);
+  };
+
+  const addMemberDefaults = () => {
+    if (memberCount >= 5) return;
+    setQuestions((prev) => [...prev, ...makeRegistrationDefaults(memberCount + 1)]);
+  };
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -101,6 +118,19 @@ const CreateActivity = () => {
       const end = `${activity.endDate} 16:30:00`;
       const links = venueLinks.filter((v) => v.label.trim() && v.url.trim());
 
+      // Registration form → register_form_schema on the activity.
+      const register_form_schema = questions.length ? {
+        fields: questions.map((q) => ({
+          key:      q.key || `custom_${q.id}`,
+          type:     q.type,
+          label:    q.question,
+          required: !!q.required,
+          options:  q.options?.length ? q.options : undefined,
+          ...(q.member ? { member: q.member } : {}),
+          ...(q.key ? { core: true } : {}),
+        })),
+      } : undefined;
+
       const created = await activitiesApi.create({
         title:       activity.title.trim(),
         title_en:    activity.titleEn.trim() || undefined,
@@ -118,22 +148,13 @@ const CreateActivity = () => {
         capacity:    Number(activity.seats) || 0,
         status:      'draft',
         cover_image_url: bannerPreview || undefined,
+        // registration model
+        registration_type: regType,
+        register_form_schema,
+        team_cert_mode: regType === 'team' ? teamCertMode : undefined,
+        team_max_members: regType === 'team' ? Math.max(1, memberCount) : undefined,
       });
 
-      // If admin added dynamic form questions, save them as a satisfaction assessment.
-      if (questions.length > 0) {
-        await assessmentsApi.create(created.id, {
-          title:        `แบบสอบถามความพึงพอใจ — ${activity.title.trim()}`,
-          description:  activity.description || undefined,
-          type:         'satisfaction',
-          form_schema:  { fields: questions.map((q) => ({
-            id: String(q.id), type: q.type, label: q.question,
-            required: !!q.required,
-            options: q.options?.length ? q.options : undefined,
-          })) },
-          is_published: false,
-        });
-      }
       alert(`บันทึกกิจกรรมเรียบร้อย (id: ${created.id})`);
       // Reset form
       setActivity({ title: '', titleEn: '', batchNo: '', category: '', level: 'เริ่มต้น',
@@ -141,7 +162,9 @@ const CreateActivity = () => {
                     hasSelection: false, feeText: '', travelText: '', noteText: '',
                     seats: '', location: '' });
       setVenueLinks([]);
-      setQuestions([]);
+      setRegType('individual');
+      setTeamCertMode('per_person');
+      setQuestions(makeRegistrationDefaults());
       setBannerFile(null);
       setBannerPreview('');
     } catch (err) {
@@ -391,12 +414,65 @@ const CreateActivity = () => {
         </div>
       </section>
 
-      {/* Section: Dynamic Form Builder (shared component) */}
+      {/* Section: ประเภทการลงทะเบียน + ควบคุมทีม */}
+      <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-6 space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">ฟอร์มลงทะเบียน</h3>
+          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">เลือกประเภทการลงทะเบียน แล้วปรับคำถามได้ตามต้องการ</p>
+        </div>
+
+        <div className="flex gap-3">
+          {[['individual', 'เดี่ยว'], ['team', 'ทีม']].map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => changeRegType(val)}
+              className={`px-6 py-2.5 rounded-lg border text-[15px] font-medium transition-colors ${
+                regType === val
+                  ? 'bg-yrupink-600 text-white border-yrupink-500'
+                  : 'bg-white dark:bg-yrugray-800 text-slate-700 dark:text-yrugray-300 border-slate-300 dark:border-yrugray-700 hover:border-yrupink-500/50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {regType === 'team' && (
+          <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800">
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={addMemberDefaults}
+                disabled={memberCount >= 5}
+                className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[15px] font-semibold rounded-lg flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> เพิ่มคำถาม Default สมาชิก
+              </button>
+              <span className="text-sm text-slate-600 dark:text-yrugray-400">สมาชิก {memberCount}/5 คน (ผู้สมัครกรอกชื่อทีมในหน้าสมัคร)</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-yrugray-300 mb-1.5">รูปแบบใบรับรอง (ทีม)</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                {[['per_person', 'แยก — ชื่อผู้ทำ + ชื่อทีม'], ['team', 'ทีม — ชื่อทุกคน + ชื่อทีม']].map(([val, label]) => (
+                  <label key={val} className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer">
+                    <input type="radio" name="teamCertMode" checked={teamCertMode === val} onChange={() => setTeamCertMode(val)} className="w-4 h-4 accent-yrupink-500" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Section: ตัวสร้างคำถามฟอร์มลงทะเบียน */}
       <DynamicFormBuilder
         questions={questions}
         onChange={setQuestions}
-        title="ฟอร์มลงทะเบียน (Dynamic Form)"
-        description="ออกแบบคำถามที่ต้องการให้ผู้ลงทะเบียนกรอก — ลากเพื่อจัดลำดับ (จะเปิดใช้ในเวอร์ชันถัดไป)"
+        title={regType === 'team' ? 'คำถามของสมาชิก (ทีม)' : 'คำถามฟอร์มลงทะเบียน (เดี่ยว)'}
+        description="แก้ไข/เพิ่มคำถามได้ — คำถาม default (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล) จะจับคู่กับข้อมูลผู้สมัครอัตโนมัติ"
+        emptyText={regType === 'team' ? 'กดปุ่ม "เพิ่มคำถาม Default สมาชิก" เพื่อเริ่ม' : 'ยังไม่มีคำถาม'}
       />
 
       {/* Floating save button — bottom-right, visible while scrolling. */}
