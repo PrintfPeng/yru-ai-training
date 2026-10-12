@@ -17,6 +17,7 @@ export async function listActivities({ status, limit = 50, offset = 0 }) {
             a.cover_image_url, a.created_by,
             a.batch_no, a.title_en, a.register_close_date, a.has_selection,
             a.fee_text, a.travel_text, a.venue_links, a.note_text,
+            a.registration_type, a.team_max_members, a.team_cert_mode, a.register_form_schema,
             s.total_registered, s.total_attended, s.total_confirmed,
             s.total_pending, s.seats_left,
             a.created_at, a.updated_at
@@ -66,9 +67,11 @@ export async function createActivity(input, adminId) {
          (title, slug, description, location, start_date, end_date,
           capacity, status, cover_image_url, created_by,
           batch_no, title_en, register_close_date, has_selection,
-          fee_text, travel_text, venue_links, note_text)
+          fee_text, travel_text, venue_links, note_text,
+          registration_type, team_max_members, team_cert_mode, register_form_schema)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?)`,
+               ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?,
+               ?, ?, ?, CAST(? AS JSON))`,
       [
         input.title,
         slug,
@@ -88,6 +91,10 @@ export async function createActivity(input, adminId) {
         input.travel_text ?? null,
         JSON.stringify(input.venue_links ?? []),
         input.note_text ?? null,
+        input.registration_type ?? 'individual',
+        input.team_max_members ?? 5,
+        input.team_cert_mode ?? null,
+        JSON.stringify(input.register_form_schema ?? null),
       ]
     );
     return getActivityById(result.insertId);
@@ -103,7 +110,9 @@ export async function updateActivity(id, patch) {
   const allowed = ['title', 'description', 'location', 'start_date', 'end_date',
                    'capacity', 'status', 'cover_image_url',
                    'batch_no', 'title_en', 'register_close_date', 'has_selection',
-                   'fee_text', 'travel_text', 'venue_links', 'note_text'];
+                   'fee_text', 'travel_text', 'venue_links', 'note_text',
+                   'registration_type', 'team_max_members', 'team_cert_mode',
+                   'register_form_schema'];
   const sets = [];
   const params = [];
   for (const key of allowed) {
@@ -111,6 +120,9 @@ export async function updateActivity(id, patch) {
       if (key === 'venue_links') {
         sets.push('venue_links = CAST(? AS JSON)');
         params.push(JSON.stringify(patch.venue_links ?? []));
+      } else if (key === 'register_form_schema') {
+        sets.push('register_form_schema = CAST(? AS JSON)');
+        params.push(JSON.stringify(patch.register_form_schema ?? null));
       } else if (key === 'has_selection') {
         sets.push('has_selection = ?');
         params.push(patch.has_selection ? 1 : 0);

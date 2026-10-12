@@ -45,6 +45,20 @@ const createBody = z.object({
                          url:   z.string().min(1).max(500),
                        })).nullable().optional(),
   note_text:           z.string().max(2000).nullable().optional(),
+  // ----- registration model (เดี่ยว/ทีม) -----
+  registration_type:   z.enum(['individual', 'team']).optional(),
+  team_max_members:    z.number().int().min(1).max(20).optional(),
+  team_cert_mode:      z.enum(['per_person', 'team']).nullable().optional(),
+  register_form_schema: z.object({
+    fields: z.array(z.object({
+      key:      z.string().min(1).max(40),
+      type:     z.string().min(1).max(30),
+      label:    z.string().min(1).max(200),
+      options:  z.array(z.string()).optional(),
+      required: z.boolean().optional(),
+      core:     z.boolean().optional(),
+    })),
+  }).nullable().optional(),
 });
 
 const updateBody = createBody.partial();
