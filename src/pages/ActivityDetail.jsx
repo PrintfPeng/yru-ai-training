@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { activitiesApi, registrationsApi, assessmentsApi, ApiError } from '../api';
 import { formatThaiDate as fmtThaiDate, durationText as durationInDays } from '../utils/thaiDate';
+import RegistrationForm from '../components/RegistrationForm';
 
 
 const STATUS_LABEL = {
@@ -457,25 +458,6 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
                     ทำแบบประเมิน
                   </a>
                 </div>
-              ) : submitted ? (
-                <div className="text-center py-8">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-500/10 border border-green-500/30 mb-3">
-                    <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-400" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">ลงทะเบียนสำเร็จ</h3>
-                  <p className="text-sm text-gray-600 dark:text-yrugray-300">
-                    ระบบบันทึกข้อมูลของคุณแล้ว รายละเอียดเพิ่มเติมจะติดต่อกลับทางอีเมล
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSubmitted(false);
-                      setFormData({ fullName: '', email: '', phone: '', organization: '', position: '', note: '' });
-                    }}
-                    className="mt-4 text-sm text-yrupink-600 dark:text-yrupink-400 hover:underline"
-                  >
-                    ลงทะเบียนอีกคน
-                  </button>
-                </div>
               ) : cannotRegister ? (
                 <div className="text-center py-8">
                   <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-slate-100 dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 mb-3">
@@ -487,92 +469,15 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <Field
-                    icon={<User className="w-4 h-4" />}
-                    label="ชื่อ - นามสกุล"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    required
-                  />
-                  <Field
-                    icon={<Mail className="w-4 h-4" />}
-                    label="อีเมล"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                  <Field
-                    icon={<Phone className="w-4 h-4" />}
-                    label="เบอร์โทรศัพท์"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    required
-                  />
-                  <Field
-                    icon={<Building2 className="w-4 h-4" />}
-                    label="หน่วยงาน / สถานศึกษา"
-                    name="organization"
-                    value={formData.organization}
-                    onChange={handleChange}
-                  />
-                  <Field
-                    icon={<Briefcase className="w-4 h-4" />}
-                    label="ตำแหน่ง"
-                    name="position"
-                    value={formData.position}
-                    onChange={handleChange}
-                  />
-                  <div>
-                    <label className="block text-sm text-gray-700 dark:text-yrugray-200 mb-1">
-                      <span className="inline-flex items-center gap-1.5">
-                        <MessageSquare className="w-4 h-4" /> หมายเหตุ / ความคาดหวัง
-                      </span>
-                    </label>
-                    <textarea
-                      name="note"
-                      value={formData.note}
-                      onChange={handleChange}
-                      rows={3}
-                      className="w-full px-3 py-2 rounded-lg bg-white/70 dark:bg-yrugray-900/40 border border-gray-200 dark:border-yrugray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-yrugray-400 focus:outline-none focus:border-yrupink-500 dark:focus:border-yrupink-400 transition-colors resize-none"
-                      placeholder="สิ่งที่คุณอยากได้จากการอบรม..."
-                    />
-                  </div>
-
-                  {submitError && (
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
-                      <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{submitError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full mt-2 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold text-white bg-gradient-to-r from-yrupink-500 to-yrupink-600 hover:from-yrupink-600 hover:to-yrupink-700 disabled:opacity-60 shadow-lg shadow-yrupink-500/20 hover:shadow-yrupink-500/40 transition-all duration-300"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        กำลังส่ง...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        ลงทะเบียน
-                      </>
-                    )}
-                  </button>
-
-                  <p className="text-xs text-center text-gray-500 dark:text-yrugray-400 mt-2">
-                    เมื่อลงทะเบียน ถือว่ายอมรับเงื่อนไขของศูนย์ AI YRU
-                  </p>
-                </form>
+                <RegistrationForm
+                  activity={activity}
+                  onSuccess={() => {
+                    loadRegistrants(activity.slug);
+                    activitiesApi.getBySlug(activity.slug)
+                      .then((row) => setActivity((prev) => ({ ...prev, ...row, seats: row.capacity })))
+                      .catch(() => {});
+                  }}
+                />
               )}
 
               {/* Assessment CTA — shown only when the admin has published an
