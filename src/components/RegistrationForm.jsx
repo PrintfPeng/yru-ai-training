@@ -91,12 +91,14 @@ const RegistrationForm = ({ activity, onSuccess }) => {
     ? activity.register_form_schema.fields
     : CORE_FALLBACK;
 
-  // individual: fields without a member tag; team: the member-1 block as template
+  // individual: fields without a member tag.
   const indivFields = useMemo(() => schemaFields.filter((f) => !f.member), [schemaFields]);
+  // team: every question is the per-member template. New schemas have no member
+  // tag; legacy ones duplicated member:1..N, so keep untagged + the first block.
   const memberTemplate = useMemo(() => {
-    const m1 = schemaFields.filter((f) => f.member === 1);
-    return m1.length ? m1 : (indivFields.length ? indivFields : CORE_FALLBACK);
-  }, [schemaFields, indivFields]);
+    const t = schemaFields.filter((f) => !f.member || f.member === 1);
+    return t.length ? t : CORE_FALLBACK;
+  }, [schemaFields]);
   const teamMax = activity?.team_max_members || 5;
 
   const [answers, setAnswers] = useState({});                 // individual
@@ -128,8 +130,11 @@ const RegistrationForm = ({ activity, onSuccess }) => {
         }
         const payload = members.map((m) => normalizeAns(memberTemplate, m));
         const phones = payload.map((m) => m.phone);
-        const dup = phones.find((p, i) => phones.indexOf(p) !== i);
-        if (dup) { setError(`เบอร์ซ้ำกันในทีม: ${dup}`); return; }
+        const dupPhone = phones.find((p, i) => phones.indexOf(p) !== i);
+        if (dupPhone) { setError(`เบอร์ซ้ำกันในทีม: ${dupPhone}`); return; }
+        const emails = payload.map((m) => (m.email || '').trim().toLowerCase());
+        const dupEmail = emails.find((e, i) => e && emails.indexOf(e) !== i);
+        if (dupEmail) { setError(`อีเมลซ้ำกันในทีม: ${dupEmail}`); return; }
         await registrationsApi.publicRegisterTeam(activity.slug, { team_name: teamName.trim(), members: payload });
       } else {
         const err = validateSet(indivFieldsResolved, answers);
@@ -140,11 +145,17 @@ const RegistrationForm = ({ activity, onSuccess }) => {
       setSubmitted(true);
       onSuccess?.();
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'DUPLICATE_PHONE') setError(err.message);
-      else if (err instanceof ApiError && err.code === 'OVER_CAPACITY') setError('หลักสูตรนี้เต็มแล้ว');
-      else if (err instanceof ApiError && err.code === 'ACTIVITY_NOT_OPEN') setError('หลักสูตรยังไม่เปิดรับสมัคร');
-      else if (err instanceof ApiError && err.code === 'DUPLICATE_REGISTRATION') setError('ข้อมูลนี้ลงทะเบียนหลักสูตรนี้ไว้แล้ว');
-      else setError(err?.message || 'ส่งไม่สำเร็จ กรุณาลองใหม่');
+      if (err instanceof ApiError) {
+        // Backend sends field-specific Thai text for DUPLICATE_PHONE /
+        // DUPLICATE_EMAIL / *_IN_TEAM / TOO_MANY_MEMBERS / etc. — show it as-is
+        // so "อีเมลซ้ำ" and "เบอร์ซ้ำ" each report their own message.
+        if (err.code === 'OVER_CAPACITY') setError('หลักสูตรนี้เต็มแล้ว');
+        else if (err.code === 'ACTIVITY_NOT_OPEN' || err.code === 'REGISTRATION_NOT_OPEN') setError('หลักสูตรยังไม่เปิดรับสมัคร');
+        else if (err.code === 'REGISTRATION_CLOSED') setError('ปิดรับสมัครแล้ว');
+        else setError(err.message || 'ส่งไม่สำเร็จ กรุณาลองใหม่');
+      } else {
+        setError(err?.message || 'ส่งไม่สำเร็จ กรุณาลองใหม่');
+      }
     } finally {
       setSubmitting(false);
     }

@@ -2,12 +2,12 @@ import React from 'react';
 import {
   Plus,
   Trash2,
-  GripVertical,
   Type,
   AlignLeft,
   CircleDot,
   CheckSquare,
   ChevronDown,
+  ChevronUp,
   Upload,
   Calendar as CalendarIcon,
   Clock as ClockIcon,
@@ -85,15 +85,39 @@ const DynamicFormBuilder = ({
   questions,
   onChange,
   title = 'ฟอร์มลงทะเบียน (Dynamic Form)',
-  description = 'ออกแบบคำถามที่ต้องการให้ผู้ใช้กรอก — ลากเพื่อจัดลำดับ (จะเปิดใช้ในเวอร์ชันถัดไป)',
+  description = 'ออกแบบคำถามที่ต้องการให้ผู้ใช้กรอก — พับเก็บเพื่อความเรียบร้อย และสลับลำดับขึ้น/ลงได้',
   emptyText = 'ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่มต้น',
+  floatingAdd = false,
 }) => {
-  const addQuestion = () => onChange([...questions, makeEmptyQuestion()]);
+  // Collapsed-by-default ("แพ็ครวมกัน"): a question is expanded only while its
+  // id is in this set. New questions open automatically so they can be edited.
+  const [expanded, setExpanded] = React.useState(() => new Set());
+  const toggleExpand = (id) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const addQuestion = () => {
+    const q = makeEmptyQuestion();
+    setExpanded((prev) => new Set(prev).add(q.id));
+    onChange([...questions, q]);
+  };
 
   const updateQuestion = (id, updates) =>
     onChange(questions.map((q) => (q.id === id ? { ...q, ...updates } : q)));
 
   const removeQuestion = (id) => onChange(questions.filter((q) => q.id !== id));
+
+  // Reorder (Google-Forms-style up/down).
+  const moveQuestion = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= questions.length) return;
+    const next = questions.slice();
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
 
   const addOption = (qid) =>
     onChange(
@@ -118,22 +142,24 @@ const DynamicFormBuilder = ({
 
   return (
     <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
           {description && <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">{description}</p>}
         </div>
-        <button
-          onClick={addQuestion}
-          type="button"
-          className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          สร้างคำถาม
-        </button>
+        {!floatingAdd && (
+          <button
+            onClick={addQuestion}
+            type="button"
+            className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2 flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            สร้างคำถาม
+          </button>
+        )}
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-3">
         {questions.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-slate-300 dark:border-yrugray-800 rounded-xl bg-slate-50/50 dark:bg-transparent">
             <div className="w-14 h-14 bg-slate-100 dark:bg-yrugray-800 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -147,6 +173,12 @@ const DynamicFormBuilder = ({
               key={q.id}
               index={idx}
               question={q}
+              collapsed={!expanded.has(q.id)}
+              onToggle={() => toggleExpand(q.id)}
+              isFirst={idx === 0}
+              isLast={idx === questions.length - 1}
+              onMoveUp={() => moveQuestion(idx, -1)}
+              onMoveDown={() => moveQuestion(idx, +1)}
               onUpdate={(updates) => updateQuestion(q.id, updates)}
               onRemove={() => removeQuestion(q.id)}
               onAddOption={() => addOption(q.id)}
@@ -156,28 +188,79 @@ const DynamicFormBuilder = ({
           ))
         )}
       </div>
+
+      {/* Floating "สร้างคำถาม" — follows scroll (bottom-left so it never sits
+          under the bottom-right save FAB). */}
+      {floatingAdd && (
+        <button
+          onClick={addQuestion}
+          type="button"
+          className="fixed bottom-6 left-6 z-40 px-6 py-3.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-xl shadow-2xl shadow-yrupink-500/30 hover:shadow-yrupink-500/50 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          สร้างคำถาม
+        </button>
+      )}
     </section>
   );
 };
 
 // ---- Sub components (kept private to this module) ----
 
-const QuestionEditor = ({ index, question, onUpdate, onRemove, onAddOption, onUpdateOption, onRemoveOption }) => {
+const MoveControls = ({ isFirst, isLast, onMoveUp, onMoveDown }) => (
+  <div className="flex flex-col flex-shrink-0">
+    <button type="button" onClick={onMoveUp} disabled={isFirst} title="เลื่อนขึ้น"
+      className="text-slate-400 dark:text-yrugray-500 hover:text-yrupink-600 dark:hover:text-yrupink-400 disabled:opacity-30 disabled:cursor-not-allowed p-0.5">
+      <ChevronUp className="w-4 h-4" />
+    </button>
+    <button type="button" onClick={onMoveDown} disabled={isLast} title="เลื่อนลง"
+      className="text-slate-400 dark:text-yrugray-500 hover:text-yrupink-600 dark:hover:text-yrupink-400 disabled:opacity-30 disabled:cursor-not-allowed p-0.5">
+      <ChevronDown className="w-4 h-4" />
+    </button>
+  </div>
+);
+
+const QuestionEditor = ({
+  index, question, collapsed, onToggle, isFirst, isLast, onMoveUp, onMoveDown,
+  onUpdate, onRemove, onAddOption, onUpdateOption, onRemoveOption,
+}) => {
   const currentType = QUESTION_TYPES.find((t) => t.value === question.type);
   const TypeIcon = currentType?.icon || Type;
 
+  // Collapsed ("แพ็ครวมกัน"): compact one-line summary — click to expand.
+  if (collapsed) {
+    return (
+      <div className="bg-slate-50 dark:bg-yrugray-800/50 border border-slate-200 dark:border-yrugray-800 rounded-xl px-3 py-2.5 flex items-center gap-2 hover:border-yrupink-500/30 transition-colors">
+        <MoveControls isFirst={isFirst} isLast={isLast} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
+        <button type="button" onClick={onToggle} className="flex-1 min-w-0 flex items-center gap-2 text-left">
+          <span className="text-xs font-semibold text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10 px-2 py-0.5 rounded-full flex-shrink-0">{index + 1}</span>
+          <TypeIcon className="w-4 h-4 text-slate-400 dark:text-yrugray-500 flex-shrink-0" />
+          <span className="truncate text-[15px] text-slate-800 dark:text-yrugray-200 font-medium">
+            {question.question?.trim() || <span className="text-slate-400 italic">(ยังไม่มีข้อความคำถาม)</span>}
+          </span>
+          {question.required && <span className="text-yrupink-500 flex-shrink-0">*</span>}
+          <ChevronDown className="w-4 h-4 text-slate-400 dark:text-yrugray-500 ml-auto flex-shrink-0" />
+        </button>
+        <button type="button" onClick={onRemove} title="ลบคำถาม"
+          className="text-slate-400 dark:text-yrugray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded-lg flex-shrink-0">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-50 dark:bg-yrugray-800/50 border border-slate-200 dark:border-yrugray-800 rounded-xl p-5 hover:border-yrupink-500/30 transition-colors">
+    <div className="bg-slate-50 dark:bg-yrugray-800/50 border border-yrupink-500/30 rounded-xl p-5 transition-colors">
       <div className="flex items-start gap-3">
-        <div className="text-slate-400 dark:text-yrugray-600 pt-2 cursor-move" title="ลากเพื่อจัดลำดับ">
-          <GripVertical className="w-5 h-5" />
-        </div>
+        <MoveControls isFirst={isFirst} isLast={isLast} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
 
         <div className="flex-1 space-y-3">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10 px-2.5 py-1 rounded-full">
+            <button type="button" onClick={onToggle}
+              className="text-xs font-semibold text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10 px-2.5 py-1 rounded-full flex items-center gap-1 hover:bg-yrupink-500/20 transition-colors">
               คำถามที่ {index + 1}
-            </span>
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
             <div className="flex-1"></div>
             <div className="relative">
               <TypeIcon className="w-4 h-4 text-slate-500 dark:text-yrugray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />

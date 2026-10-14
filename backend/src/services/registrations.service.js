@@ -14,11 +14,13 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
 
   const [rows] = await pool.query(
     `SELECT r.id, r.registration_status, r.note, r.checked_in_at,
-            r.registered_at, r.updated_at,
+            r.registered_at, r.updated_at, r.team_id,
+            t.team_name,
             p.id AS participant_id, p.first_name, p.last_name, p.email,
             p.phone, p.organization, p.position
        FROM registrations r
        JOIN participants  p ON p.id = r.participant_id
+       LEFT JOIN teams     t ON t.id = r.team_id
       WHERE ${where.join(' AND ')}
       ORDER BY r.registered_at DESC`,
     params
@@ -110,6 +112,26 @@ async function assertPhonesAvailable(conn, activityId, phones) {
   }
 }
 
+// Reject if any email already registered (non-cancelled) in this activity, so
+// an email clash reports as DUPLICATE_EMAIL (field-specific) instead of being
+// swallowed into the generic DUPLICATE_REGISTRATION at insert time.
+async function assertEmailsAvailable(conn, activityId, emails) {
+  for (const email of emails) {
+    if (!email) continue;
+    const [[hit]] = await conn.query(
+      `SELECT 1 AS x FROM registrations r
+         JOIN participants p ON p.id = r.participant_id
+        WHERE r.activity_id = ? AND p.email = ?
+          AND r.registration_status <> 'cancelled' LIMIT 1`,
+      [activityId, email]
+    );
+    if (hit) {
+      throw new AppError('DUPLICATE_EMAIL',
+        `อีเมล ${email} ถูกใช้ลงทะเบียนกิจกรรมนี้แล้ว`, 409, { email });
+    }
+  }
+}
+
 // Insert one registration row (auto-confirmed) + optional team + form data.
 async function insertRegistration(conn, activityId, participantId, { note, teamId, formData }) {
   try {
@@ -138,6 +160,7 @@ export async function registerForActivity(activityId, participantInput, note, fo
     await lockActivityForRegister(conn, activityId, 1);
     const phone = require10DigitPhone(participantInput.phone);
     await assertPhonesAvailable(conn, activityId, [phone]);
+    await assertEmailsAvailable(conn, activityId, [participantInput.email]);
     const participantId = await upsertParticipantOnConn(conn, { ...participantInput, phone });
     const registration_id = await insertRegistration(conn, activityId, participantId,
       { note, teamId: null, formData: formData ?? participantInput });
@@ -171,11 +194,18 @@ export async function registerTeamForActivity(activityId, { team_name, members, 
 
     // phones: 10 digits, no dup within the team, not already in the activity
     const phones = members.map((m) => require10DigitPhone(m.phone));
-    const dup = phones.find((p, i) => phones.indexOf(p) !== i);
-    if (dup) {
-      throw new AppError('DUPLICATE_PHONE_IN_TEAM', `เบอร์ซ้ำกันในทีม: ${dup}`, 422, { phone: dup });
+    const dupPhone = phones.find((p, i) => phones.indexOf(p) !== i);
+    if (dupPhone) {
+      throw new AppError('DUPLICATE_PHONE_IN_TEAM', `เบอร์ซ้ำกันในทีม: ${dupPhone}`, 422, { phone: dupPhone });
+    }
+    // emails: no dup within the team, not already in the activity
+    const emails = members.map((m) => m.email);
+    const dupEmail = emails.find((e, i) => e && emails.indexOf(e) !== i);
+    if (dupEmail) {
+      throw new AppError('DUPLICATE_EMAIL_IN_TEAM', `อีเมลซ้ำกันในทีม: ${dupEmail}`, 422, { email: dupEmail });
     }
     await assertPhonesAvailable(conn, activityId, phones);
+    await assertEmailsAvailable(conn, activityId, emails);
 
     const [tRes] = await conn.query(
       'INSERT INTO teams (activity_id, team_name) VALUES (?, ?)',

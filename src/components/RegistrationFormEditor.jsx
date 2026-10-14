@@ -1,17 +1,21 @@
 import React from 'react';
-import { Plus, Lock } from 'lucide-react';
+import { Lock, Users } from 'lucide-react';
 import DynamicFormBuilder, { makeRegistrationDefaults } from './DynamicFormBuilder';
 
 // Shared editor for an activity's registration model (เดี่ยว/ทีม) + its form
 // questions. Used by both "สร้างกิจกรรม" and the "ฟอร์มลงทะเบียน" edit tab.
 //
 // Controlled component:
-//   value    : { regType, teamCertMode, questions }
+//   value    : { regType, teamCertMode, teamMax, questions }
 //   onChange : (nextValue) => void
 //   locked   : when true (activity already has registrants) the registration
-//              type is frozen and the team member count can only grow.
+//              type is frozen.
+//
+// Team model (ตั้งแต่ 2026-10): ออกแบบคำถามสมาชิก "ชุดเดียว" แล้วกำหนดจำนวนสมาชิก
+// สูงสุด (teamMax) เอง — ผู้สมัครเพิ่มสมาชิกได้ 1..teamMax คน โดยทุกคนตอบคำถามชุด
+// เดียวกัน (เลิกใช้การ tag member:1..N แบบเดิม).
 
-const MAX_MEMBERS = 5;
+const TEAM_MAX_LIMIT = 20;
 
 // ---- schema <-> editor-state conversion (single source of truth) ----
 
@@ -19,8 +23,15 @@ const MAX_MEMBERS = 5;
 export const schemaToEditorState = (activity) => {
   const regType = activity?.registration_type === 'team' ? 'team' : 'individual';
   const teamCertMode = activity?.team_cert_mode === 'team' ? 'team' : 'per_person';
+  const teamMax = Math.min(TEAM_MAX_LIMIT, Math.max(1, Number(activity?.team_max_members) || 5));
   const schema = activity?.register_form_schema;
-  const fields = Array.isArray(schema?.fields) ? schema.fields : null;
+  let fields = Array.isArray(schema?.fields) ? schema.fields : null;
+
+  // Legacy team schemas tagged each member block (member:1..N). The new model
+  // keeps ONE question set, so collapse to the first member block.
+  if (regType === 'team' && fields && fields.some((f) => f.member)) {
+    fields = fields.filter((f) => !f.member || f.member === 1);
+  }
 
   let questions;
   if (fields && fields.length) {
@@ -30,19 +41,18 @@ export const schemaToEditorState = (activity) => {
       question: f.label,
       required: !!f.required,
       options: f.options?.length ? f.options : ['ตัวเลือก 1'],
-      ...(f.member ? { member: f.member } : {}),
       ...(f.core && f.key ? { key: f.key } : {}),
     }));
   } else {
-    // No saved schema → sensible defaults for the type.
-    questions = regType === 'team' ? [] : makeRegistrationDefaults();
+    // No saved schema → the 5 core questions (one set, works for both types).
+    questions = makeRegistrationDefaults();
   }
-  return { regType, teamCertMode, questions };
+  return { regType, teamCertMode, teamMax, questions };
 };
 
 // editor state → payload fields for activitiesApi (create/update)
 export const editorStateToPayload = (state) => {
-  const { regType, teamCertMode, questions } = state;
+  const { regType, teamCertMode, teamMax, questions } = state;
   const register_form_schema = questions.length ? {
     fields: questions.map((q) => ({
       key:      q.key || `custom_${q.id}`,
@@ -50,38 +60,32 @@ export const editorStateToPayload = (state) => {
       label:    q.question,
       required: !!q.required,
       options:  q.options?.length ? q.options : undefined,
-      ...(q.member ? { member: q.member } : {}),
       ...(q.key ? { core: true } : {}),
     })),
   } : null;
-  const memberCount = new Set(questions.filter((q) => q.member).map((q) => q.member)).size;
   return {
     registration_type: regType,
     register_form_schema,
     team_cert_mode: regType === 'team' ? teamCertMode : null,
     // team_max_members is NOT NULL in the DB; omit it for individual (undefined
     // keys are dropped from the JSON body) rather than sending null.
-    team_max_members: regType === 'team' ? Math.max(1, memberCount) : undefined,
+    team_max_members: regType === 'team' ? Math.max(1, Number(teamMax) || 1) : undefined,
   };
 };
 
 const RegistrationFormEditor = ({ value, onChange, locked = false }) => {
-  const { regType, teamCertMode, questions } = value;
-  const memberCount = new Set(questions.filter((q) => q.member).map((q) => q.member)).size;
+  const { regType, teamCertMode, teamMax = 5, questions } = value;
 
   const patch = (next) => onChange({ ...value, ...next });
 
   const changeRegType = (type) => {
     if (locked || type === regType) return;
-    patch({
-      regType: type,
-      questions: type === 'individual' ? makeRegistrationDefaults() : [],
-    });
+    patch({ regType: type, questions: makeRegistrationDefaults(), teamMax: 5 });
   };
 
-  const addMemberDefaults = () => {
-    if (memberCount >= MAX_MEMBERS) return;
-    patch({ questions: [...questions, ...makeRegistrationDefaults(memberCount + 1)] });
+  const setTeamMax = (n) => {
+    const v = Math.min(TEAM_MAX_LIMIT, Math.max(1, Number(n) || 1));
+    patch({ teamMax: v });
   };
 
   return (
@@ -120,15 +124,18 @@ const RegistrationFormEditor = ({ value, onChange, locked = false }) => {
         {regType === 'team' && (
           <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800">
             <div className="flex items-center gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={addMemberDefaults}
-                disabled={memberCount >= MAX_MEMBERS}
-                className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[15px] font-semibold rounded-lg flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" /> เพิ่มคำถาม Default สมาชิก
-              </button>
-              <span className="text-sm text-slate-600 dark:text-yrugray-400">สมาชิก {memberCount}/{MAX_MEMBERS} คน (ผู้สมัครกรอกชื่อทีมในหน้าสมัคร)</span>
+              <label className="text-sm font-medium text-slate-700 dark:text-yrugray-300 flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-yrupink-500" /> จำนวนสมาชิกสูงสุดต่อทีม
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={TEAM_MAX_LIMIT}
+                value={teamMax}
+                onChange={(e) => setTeamMax(e.target.value)}
+                className="w-24 bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500"
+              />
+              <span className="text-sm text-slate-500 dark:text-yrugray-400">คน (ผู้สมัครเพิ่มสมาชิกได้ 1–{teamMax} คน แล้วกรอกคำถามชุดเดียวกันต่อคน)</span>
             </div>
             <div>
               <p className="text-sm font-medium text-slate-700 dark:text-yrugray-300 mb-1.5">รูปแบบใบรับรอง (ทีม)</p>
@@ -148,9 +155,10 @@ const RegistrationFormEditor = ({ value, onChange, locked = false }) => {
       <DynamicFormBuilder
         questions={questions}
         onChange={(q) => patch({ questions: q })}
-        title={regType === 'team' ? 'คำถามของสมาชิก (ทีม)' : 'คำถามฟอร์มลงทะเบียน (เดี่ยว)'}
+        floatingAdd
+        title={regType === 'team' ? 'คำถามสำหรับสมาชิกแต่ละคน (ทีม)' : 'คำถามฟอร์มลงทะเบียน (เดี่ยว)'}
         description="แก้ไข/เพิ่มคำถามได้ — คำถาม default (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล) จะจับคู่กับข้อมูลผู้สมัครอัตโนมัติ"
-        emptyText={regType === 'team' ? 'กดปุ่ม "เพิ่มคำถาม Default สมาชิก" เพื่อเริ่ม' : 'ยังไม่มีคำถาม'}
+        emptyText={'ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่ม'}
       />
     </div>
   );

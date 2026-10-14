@@ -40,11 +40,14 @@ const csvEscape = (v) => {
   return `"${s.replace(/"/g, '""')}"`;
 };
 function exportCsv(activity, rows) {
-  const headers = ['ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ'];
-  const body = rows.map((r) => [
-    r.fullName, r.email, r.phone, r.organization, r.position,
-    r.registeredAt, r.status, r.note,
-  ].map(csvEscape).join(','));
+  const isTeam = (activity?.raw?.registration_type || activity?.registration_type) === 'team';
+  const headers = isTeam
+    ? ['ชื่อทีม', 'ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ']
+    : ['ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ'];
+  const body = rows.map((r) => (isTeam
+    ? [r.teamName, r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.note]
+    : [r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.note]
+  ).map(csvEscape).join(','));
   const csv = '﻿' + [headers.map(csvEscape).join(','), ...body].join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
@@ -77,6 +80,7 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
     phone: r.phone,
     organization: r.organization,
     position: r.position,
+    teamName: r.team_name || '',
     registeredAt: r.registered_at ? new Date(r.registered_at).toLocaleDateString('th-TH') : '',
     status: STATUS_API_TO_UI[r.registration_status] || r.registration_status,
     note: r.note,

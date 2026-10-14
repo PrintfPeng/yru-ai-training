@@ -69,6 +69,8 @@ const normalize = (r) => ({
   registerOpenAt:    toDateTimeInputValue(r.register_open_at),
   registerCloseDate: toDateTimeInputValue(r.register_close_date),
   registerCloseDateDisplay: r.register_close_date ? formatThaiDate(r.register_close_date) : '',
+  registrationType: r.registration_type === 'team' ? 'team' : 'individual',
+  teamMaxMembers: r.team_max_members ?? null,
   feeText:     r.fee_text ?? '',
   travelText:  r.travel_text ?? '',
   noteText:    r.note_text ?? '',
@@ -318,7 +320,19 @@ const ActivityCard = ({ activity, onOpen }) => {
           <h3 className="text-base font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-yrupink-600 dark:group-hover:text-yrupink-400 transition-colors leading-snug">
             {activity.title}
           </h3>
-          
+
+          {/* ประเภทการลงทะเบียน */}
+          <span className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+            activity.registrationType === 'team'
+              ? 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800'
+              : 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800'
+          }`}>
+            <Users className="w-3 h-3" />
+            {activity.registrationType === 'team'
+              ? `ทีม${activity.teamMaxMembers ? ` (สูงสุด ${activity.teamMaxMembers} คน)` : ''}`
+              : 'เดี่ยว'}
+          </span>
+
 
           {/* สถิติย่อยแบบ 3 กล่อง (จำนวนรับ / สมัครแล้ว / สถานะผู้สมัคร) */}
           <div className="grid grid-cols-2 gap-2 my-4">

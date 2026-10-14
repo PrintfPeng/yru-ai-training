@@ -50,6 +50,7 @@ const CreateActivity = ({ onCreated } = {}) => {
   const [regForm, setRegForm] = useState({
     regType: 'individual',
     teamCertMode: 'per_person',
+    teamMax: 5,
     questions: makeRegistrationDefaults(), // default: เดี่ยว 5 ข้อ
   });
 
