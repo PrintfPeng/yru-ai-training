@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   BookOpen,
@@ -86,6 +86,18 @@ const normalize = (r) => ({
   raw:         r,
 });
 
+// URL state so F5 keeps the open activity + its detail sub-tab (instead of
+// bouncing back to the overview grid). `act` = activity id, `ctab` = sub-tab.
+const DETAIL_TABS = ['edit', 'registrants', 'regform', 'assessment', 'dashboard'];
+const readActIdFromUrl = () => {
+  try { const v = new URLSearchParams(window.location.search).get('act'); return v ? Number(v) : null; }
+  catch { return null; }
+};
+const readDetailTabFromUrl = () => {
+  try { const v = new URLSearchParams(window.location.search).get('ctab'); return DETAIL_TABS.includes(v) ? v : 'edit'; }
+  catch { return 'edit'; }
+};
+
 const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSelect }) => {
   const toast = useToast();
   const [activities, setActivities] = useState([]);
@@ -110,10 +122,14 @@ const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSele
         // were asked to open a freshly-created activity, open its panel now.
         setSelected((prev) => {
           if (prev) return list.find((a) => a.id === prev.id) || null;
-          if (initialSelectedId != null) {
-            const match = list.find((a) => a.id === initialSelectedId);
+          // Restore from an explicit request (freshly created) or from the URL
+          // (?act=) so a page refresh keeps the same activity open.
+          const urlId = readActIdFromUrl();
+          const targetId = initialSelectedId != null ? initialSelectedId : urlId;
+          if (targetId != null) {
+            const match = list.find((a) => a.id === targetId);
             if (match) {
-              onConsumedInitialSelect?.();
+              if (initialSelectedId != null) onConsumedInitialSelect?.();
               return match;
             }
           }
@@ -124,6 +140,28 @@ const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSele
       .finally(() => setLoading(false));
   };
   useEffect(() => { reload(); }, []);
+
+  // Mirror the open activity into the URL (?act=) so refresh stays put. Clearing
+  // the selection also drops ?ctab (owned by the detail panel).
+  const firstSelectedSync = useRef(true);
+  useEffect(() => {
+    // Skip the initial render: `selected` is still null while reload() is
+    // fetching, so clearing here would wipe ?act=/?ctab= before they restore.
+    if (firstSelectedSync.current) {
+      firstSelectedSync.current = false;
+      if (!selected) return;
+    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (selected) params.set('act', String(selected.id));
+      else { params.delete('act'); params.delete('ctab'); }
+      const qs = params.toString();
+      const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      if (next !== window.location.pathname + window.location.search + window.location.hash) {
+        window.history.replaceState(window.history.state, '', next);
+      }
+    } catch { /* ignore */ }
+  }, [selected]);
 
   const filtered = useMemo(() => activities.filter((a) => {
     const matchStatus = statusFilter === 'ทั้งหมด' || a.status === statusFilter;
@@ -399,7 +437,20 @@ const ActivityCard = ({ activity, onOpen }) => {
 // ────────────────────── Detail Panel & Components (คงเดิม) ──────────────────────
 
 const ActivityDetailPanel = ({ activity, onBack, onEdit, onDelete, onReload }) => {
-  const [tab, setTab] = useState('edit');
+  const [tab, setTab] = useState(() => readDetailTabFromUrl());
+
+  // Keep the active sub-tab in the URL (?ctab=) so refresh reopens it.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.set('ctab', tab);
+      const qs = params.toString();
+      const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      if (next !== window.location.pathname + window.location.search + window.location.hash) {
+        window.history.replaceState(window.history.state, '', next);
+      }
+    } catch { /* ignore */ }
+  }, [tab]);
 
   return (
     <div className="space-y-6">
