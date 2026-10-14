@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Plus,
   Trash2,
+  Copy,
   Type,
   AlignLeft,
   CircleDot,
@@ -110,6 +111,24 @@ const DynamicFormBuilder = ({
 
   const removeQuestion = (id) => onChange(questions.filter((q) => q.id !== id));
 
+  // Duplicate a question right below it. The copy is always a CUSTOM question
+  // (drop the core `key`) so it never collides with a core field mapping.
+  const copyQuestion = (id) => {
+    const idx = questions.findIndex((q) => q.id === id);
+    if (idx < 0) return;
+    const src = questions[idx];
+    const dup = {
+      ...src,
+      id: Date.now() + Math.random(),
+      key: undefined,
+      options: Array.isArray(src.options) ? [...src.options] : src.options,
+    };
+    setExpanded((prev) => new Set(prev).add(dup.id));
+    const next = questions.slice();
+    next.splice(idx + 1, 0, dup);
+    onChange(next);
+  };
+
   // Reorder (Google-Forms-style up/down).
   const moveQuestion = (idx, dir) => {
     const j = idx + dir;
@@ -147,16 +166,14 @@ const DynamicFormBuilder = ({
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
           {description && <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">{description}</p>}
         </div>
-        {!floatingAdd && (
-          <button
-            onClick={addQuestion}
-            type="button"
-            className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2 flex-shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            สร้างคำถาม
-          </button>
-        )}
+        <button
+          onClick={addQuestion}
+          type="button"
+          className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2 flex-shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          สร้างคำถาม
+        </button>
       </div>
 
       <div className="p-6 space-y-3">
@@ -179,6 +196,7 @@ const DynamicFormBuilder = ({
               isLast={idx === questions.length - 1}
               onMoveUp={() => moveQuestion(idx, -1)}
               onMoveDown={() => moveQuestion(idx, +1)}
+              onCopy={() => copyQuestion(q.id)}
               onUpdate={(updates) => updateQuestion(q.id, updates)}
               onRemove={() => removeQuestion(q.id)}
               onAddOption={() => addOption(q.id)}
@@ -220,14 +238,31 @@ const MoveControls = ({ isFirst, isLast, onMoveUp, onMoveDown }) => (
   </div>
 );
 
+// Icon action button shared by collapse/copy/delete controls.
+const IconBtn = ({ onClick, title, danger, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={title}
+    aria-label={title}
+    className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
+      danger
+        ? 'text-slate-400 dark:text-yrugray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10'
+        : 'text-slate-500 dark:text-yrugray-400 hover:text-yrupink-600 dark:hover:text-yrupink-400 hover:bg-yrupink-500/10'
+    }`}
+  >
+    {children}
+  </button>
+);
+
 const QuestionEditor = ({
   index, question, collapsed, onToggle, isFirst, isLast, onMoveUp, onMoveDown,
-  onUpdate, onRemove, onAddOption, onUpdateOption, onRemoveOption,
+  onCopy, onUpdate, onRemove, onAddOption, onUpdateOption, onRemoveOption,
 }) => {
   const currentType = QUESTION_TYPES.find((t) => t.value === question.type);
   const TypeIcon = currentType?.icon || Type;
 
-  // Collapsed ("แพ็ครวมกัน"): compact one-line summary — click to expand.
+  // Collapsed ("แพ็ครวมกัน"): compact one-line summary — click text to expand.
   if (collapsed) {
     return (
       <div className="bg-slate-50 dark:bg-yrugray-800/50 border border-slate-200 dark:border-yrugray-800 rounded-xl px-3 py-2.5 flex items-center gap-2 hover:border-yrupink-500/30 transition-colors">
@@ -239,12 +274,10 @@ const QuestionEditor = ({
             {question.question?.trim() || <span className="text-slate-400 italic">(ยังไม่มีข้อความคำถาม)</span>}
           </span>
           {question.required && <span className="text-yrupink-500 flex-shrink-0">*</span>}
-          <ChevronDown className="w-4 h-4 text-slate-400 dark:text-yrugray-500 ml-auto flex-shrink-0" />
         </button>
-        <button type="button" onClick={onRemove} title="ลบคำถาม"
-          className="text-slate-400 dark:text-yrugray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded-lg flex-shrink-0">
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <IconBtn onClick={onToggle} title="กางคำถาม"><ChevronDown className="w-4 h-4" /></IconBtn>
+        <IconBtn onClick={onCopy} title="คัดลอกคำถาม"><Copy className="w-4 h-4" /></IconBtn>
+        <IconBtn onClick={onRemove} title="ลบคำถาม" danger><Trash2 className="w-4 h-4" /></IconBtn>
       </div>
     );
   }
@@ -255,13 +288,13 @@ const QuestionEditor = ({
         <MoveControls isFirst={isFirst} isLast={isLast} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
 
         <div className="flex-1 space-y-3">
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={onToggle}
-              className="text-xs font-semibold text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10 px-2.5 py-1 rounded-full flex items-center gap-1 hover:bg-yrupink-500/20 transition-colors">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10 px-2.5 py-1 rounded-full flex-shrink-0">
               คำถามที่ {index + 1}
-              <ChevronUp className="w-3.5 h-3.5" />
-            </button>
+            </span>
             <div className="flex-1"></div>
+            <IconBtn onClick={onToggle} title="ย่อคำถาม"><ChevronUp className="w-4 h-4" /></IconBtn>
+            <IconBtn onClick={onCopy} title="คัดลอกคำถาม"><Copy className="w-4 h-4" /></IconBtn>
             <div className="relative">
               <TypeIcon className="w-4 h-4 text-slate-500 dark:text-yrugray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <select
