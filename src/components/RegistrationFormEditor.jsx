@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Users } from 'lucide-react';
+import { Lock, Users, Plus } from 'lucide-react';
 import DynamicFormBuilder, { makeRegistrationDefaults } from './DynamicFormBuilder';
 
 // Shared editor for an activity's registration model (เดี่ยว/ทีม) + its form
@@ -73,7 +73,7 @@ export const editorStateToPayload = (state) => {
   };
 };
 
-const RegistrationFormEditor = ({ value, onChange, locked = false }) => {
+const RegistrationFormEditor = ({ value, onChange, locked = false, addButtonSide = 'left' }) => {
   const { regType, teamCertMode, teamMax = 5, questions } = value;
 
   const patch = (next) => onChange({ ...value, ...next });
@@ -86,6 +86,14 @@ const RegistrationFormEditor = ({ value, onChange, locked = false }) => {
   const setTeamMax = (n) => {
     const v = Math.min(TEAM_MAX_LIMIT, Math.max(1, Number(n) || 1));
     patch({ teamMax: v });
+  };
+
+  // Append the 5 default member questions (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล),
+  // skipping any core field already present so it never double-maps.
+  const addDefaultSet = () => {
+    const existingKeys = new Set(questions.filter((q) => q.key).map((q) => q.key));
+    const toAdd = makeRegistrationDefaults().filter((q) => !existingKeys.has(q.key));
+    if (toAdd.length) patch({ questions: [...questions, ...toAdd] });
   };
 
   return (
@@ -137,6 +145,13 @@ const RegistrationFormEditor = ({ value, onChange, locked = false }) => {
               />
               <span className="text-sm text-slate-500 dark:text-yrugray-400">คน (ผู้สมัครเพิ่มสมาชิกได้ 1–{teamMax} คน แล้วกรอกคำถามชุดเดียวกันต่อคน)</span>
             </div>
+            <button
+              type="button"
+              onClick={addDefaultSet}
+              className="px-4 py-2 bg-white dark:bg-yrugray-800 border border-yrupink-400 text-yrupink-600 dark:text-yrupink-400 text-[15px] font-semibold rounded-lg flex items-center gap-2 hover:bg-yrupink-500/5 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> เพิ่มคำถามเริ่มต้น (ชุด)
+            </button>
             <div>
               <p className="text-sm font-medium text-slate-700 dark:text-yrugray-300 mb-1.5">รูปแบบใบรับรอง (ทีม)</p>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -156,6 +171,7 @@ const RegistrationFormEditor = ({ value, onChange, locked = false }) => {
         questions={questions}
         onChange={(q) => patch({ questions: q })}
         floatingAdd
+        floatingAddSide={addButtonSide}
         title={regType === 'team' ? 'คำถามสำหรับสมาชิกแต่ละคน (ทีม)' : 'คำถามฟอร์มลงทะเบียน (เดี่ยว)'}
         description="แก้ไข/เพิ่มคำถามได้ — คำถาม default (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล) จะจับคู่กับข้อมูลผู้สมัครอัตโนมัติ"
         emptyText={'ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่ม'}

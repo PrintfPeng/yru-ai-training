@@ -511,12 +511,14 @@ const RegistrationFormTab = ({ activity, onReload }) => {
 
   return (
     <div className="space-y-6 pb-28">
-      <RegistrationFormEditor value={state} onChange={setState} locked={locked} />
+      {/* ปุ่ม "สร้างคำถาม" ลอยอยู่มุมขวาล่าง (แทนที่ปุ่มบันทึกเดิม) */}
+      <RegistrationFormEditor value={state} onChange={setState} locked={locked} addButtonSide="right" />
 
+      {/* ปุ่มบันทึกฟอร์มลงทะเบียน — ย้ายมาอยู่ล่างสุดแบบปกติ (ไม่ลอย) */}
       <button
         onClick={save}
         disabled={saving}
-        className="fixed bottom-6 right-6 z-40 px-6 py-3.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-xl shadow-2xl shadow-yrupink-500/30 hover:shadow-yrupink-500/50 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+        className="w-full px-6 py-3.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-xl shadow-lg shadow-yrupink-500/20 transition-all flex items-center justify-center gap-2"
       >
         {saving
           ? <><Loader2 className="w-4 h-4 animate-spin" /> กำลังบันทึก...</>

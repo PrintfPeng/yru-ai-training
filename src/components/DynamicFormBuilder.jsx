@@ -89,6 +89,7 @@ const DynamicFormBuilder = ({
   description = 'ออกแบบคำถามที่ต้องการให้ผู้ใช้กรอก — พับเก็บเพื่อความเรียบร้อย และสลับลำดับขึ้น/ลงได้',
   emptyText = 'ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่มต้น',
   floatingAdd = false,
+  floatingAddSide = 'left',
 }) => {
   // Collapsed-by-default ("แพ็ครวมกัน"): a question is expanded only while its
   // id is in this set. New questions open automatically so they can be edited.
@@ -207,13 +208,13 @@ const DynamicFormBuilder = ({
         )}
       </div>
 
-      {/* Floating "สร้างคำถาม" — follows scroll (bottom-left so it never sits
-          under the bottom-right save FAB). */}
+      {/* Floating "สร้างคำถาม" — follows scroll. Side is configurable so it can
+          sit where the save button used to be (right) without clashing. */}
       {floatingAdd && (
         <button
           onClick={addQuestion}
           type="button"
-          className="fixed bottom-6 left-6 z-40 px-6 py-3.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-xl shadow-2xl shadow-yrupink-500/30 hover:shadow-yrupink-500/50 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+          className={`fixed bottom-6 ${floatingAddSide === 'right' ? 'right-6' : 'left-6'} z-40 px-6 py-3.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-xl shadow-2xl shadow-yrupink-500/30 hover:shadow-yrupink-500/50 transition-all hover:-translate-y-0.5 flex items-center gap-2`}
         >
           <Plus className="w-4 h-4" />
           สร้างคำถาม
