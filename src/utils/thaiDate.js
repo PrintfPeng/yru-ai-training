@@ -31,6 +31,35 @@ export const toDateTimeInputValue = (iso) => {
   return m ? `${m[1]}T${m[2]}` : '';
 };
 
+/**
+ * Normalize a date / datetime string to the Buddhist era (พ.ศ.).
+ *
+ * The whole app stores, displays, and compares activity dates in พ.ศ. (seed
+ * data uses 2569; registration-window checks shift NOW() by +543). Native
+ * <input type="date"> / <input type="datetime-local"> pickers may hand back a
+ * Gregorian (ค.ศ.) year, so we normalize on save: a year < 2500 is treated as
+ * ค.ศ. and shifted +543; a year already >= 2500 is left as-is. Idempotent, so
+ * it is safe to run on values that are already พ.ศ.
+ */
+export const toBE = (s) => {
+  const m = String(s || '').match(/^(\d{4})([-T].*)?$/);
+  if (!m) return s || '';
+  const y = +m[1];
+  return y < 2500 ? `${y + 543}${m[2] || ''}` : s;
+};
+
+/**
+ * Parse a stored พ.ศ. wall-clock string into a real (Gregorian) JS Date, so it
+ * can be compared/subtracted against Date.now(). The stored year is พ.ศ., so we
+ * subtract 543 to get the ค.ศ. year the JS Date constructor expects. Returns
+ * null when the input has no parseable date.
+ */
+export const beToLocalDate = (iso) => {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!m) return null;
+  return new Date(+m[1] - 543, +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+};
+
 /** "2569-11-01T09:00…" → "1 พ.ย. 2569 09:00 น." (date shown as-is, no +543). */
 export const formatThaiDateTime = (iso) => {
   const p = pickYMD(iso);

@@ -18,12 +18,11 @@ import {
   XCircle,
   Info,
   CalendarRange,
-  ClipboardCheck,
   Wallet,
   ExternalLink,
 } from 'lucide-react';
 import { activitiesApi, registrationsApi, assessmentsApi, ApiError } from '../api';
-import { formatThaiDate as fmtThaiDate, formatThaiDateTime as fmtThaiDateTime, durationText as durationInDays, registrationWindowState } from '../utils/thaiDate';
+import { formatThaiDate as fmtThaiDate, formatThaiDateTime as fmtThaiDateTime, durationText as durationInDays, registrationWindowState, beToLocalDate } from '../utils/thaiDate';
 import RegistrationForm from '../components/RegistrationForm';
 
 
@@ -33,6 +32,17 @@ const STATUS_LABEL = {
   draft: 'ยังไม่เปิดรับสมัคร',
   completed: 'จบไปแล้ว',
   cancelled: 'ยกเลิก',
+};
+
+// ms → "D วัน HH:MM:SS" (drops the day part when < 1 day).
+const formatCountdown = (ms) => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const pad = (n) => String(n).padStart(2, '0');
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return (d > 0 ? `${d} วัน ` : '') + `${pad(h)}:${pad(m)}:${pad(s)}`;
 };
 
 const ActivityDetail = ({ activity: initialActivity, onBack }) => {
@@ -46,6 +56,9 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
   const [assessmentAvailable, setAssessmentAvailable] = useState(false);
   // Masked list of people already registered (public confirmation list).
   const [registrants, setRegistrants] = useState([]);
+  // Ticks every second so the registration window flips live (ยังไม่เปิด →
+  // เปิดรับสมัคร → ปิดรับ) without the visitor pressing F5.
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   const loadRegistrants = (slug) =>
     registrationsApi.publicList(slug)
@@ -83,6 +96,14 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
 
     return () => { cancelled = true; };
   }, [initialActivity?.slug]);
+
+  // Drive the live registration-window countdown. Only runs while a window is
+  // actually set; recomputing windowState on each tick flips the UI by itself.
+  useEffect(() => {
+    if (!activity?.register_open_at && !activity?.register_close_date) return undefined;
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [activity?.register_open_at, activity?.register_close_date]);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -170,17 +191,32 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
   const seatsLeft = Number(activity?.seats_left ?? activity?.capacity ?? 0);
   const capacity  = Number(activity?.capacity ?? activity?.seats ?? 0);
   const registered = Math.max(0, capacity - seatsLeft);
+  const unlimited = capacity === 0;               // capacity 0 = ไม่จำกัดที่นั่ง (seats_left = NULL)
+  const soldOut   = !unlimited && seatsLeft <= 0; // เต็มเฉพาะเมื่อมีโควตาจำกัดเท่านั้น
   const assessmentMode = activity?.status === 'assessment';
   // Registration window (date+time). 'none' = no window set → gated by status only.
+  // Recomputed every render; nowTick (1s) re-renders so this flips by itself.
+  void nowTick;
   const windowState = registrationWindowState(activity?.register_open_at, activity?.register_close_date);
-  const isOpen = activity?.status === 'published' && seatsLeft > 0 && windowState !== 'before' && windowState !== 'closed';
+  const isOpen = activity?.status === 'published' && !soldOut && windowState !== 'before' && windowState !== 'closed';
+  // Live countdown to the open moment (only meaningful while 'before').
+  const openAt = beToLocalDate(activity?.register_open_at);
+  const openCountdown = windowState === 'before' && openAt
+    ? formatCountdown(openAt.getTime() - nowTick)
+    : null;
+  // Hero status chip reflects the live window for published activities.
+  const statusChipLabel = activity?.status === 'published'
+    ? (windowState === 'before' ? 'ยังไม่เปิดรับสมัคร'
+      : windowState === 'closed' ? 'ปิดรับสมัครแล้ว'
+      : 'เปิดรับสมัคร')
+    : (STATUS_LABEL[activity?.status] || 'ไม่ทราบสถานะ');
   const cannotRegister = activity && activity.status !== 'published'
     ? 'หลักสูตรยังไม่เปิดรับสมัคร'
     : windowState === 'before'
       ? `ยังไม่ถึงเวลาเปิดรับสมัคร (เปิด ${fmtThaiDateTime(activity.register_open_at)})`
       : windowState === 'closed'
         ? 'ปิดรับสมัครแล้ว'
-        : seatsLeft === 0
+        : soldOut
           ? 'หลักสูตรเต็มแล้ว'
           : null;
 
@@ -228,11 +264,6 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
-            {activity?.batch_no != null && activity?.batch_no !== '' && (
-              <span className="absolute top-4 right-4 px-3 py-1 text-sm font-bold rounded-full bg-yrupink-600 text-white shadow-lg">
-                รุ่นที่ {activity.batch_no}
-              </span>
-            )}
             {activity?.start_date && activity?.end_date && (
               <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1.5">
                 <span className="self-start px-3 py-1 text-xs md:text-sm font-semibold rounded-full bg-white/90 text-gray-800 backdrop-blur">
@@ -251,17 +282,12 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
         {/* Hero */}
         <section className="mb-8">
           <div className="flex flex-wrap items-center gap-2 mb-3 text-sm">
-            {activity?.batch_no != null && activity?.batch_no !== '' && (
-              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-yrupink-500/10 text-yrupink-600 dark:text-yrupink-400 border border-yrupink-500/30">
-                รุ่นที่ {activity.batch_no}
-              </span>
-            )}
             <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
               isOpen
                 ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30'
                 : 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-yrugray-500/10 dark:text-yrugray-300 dark:border-yrugray-500/30'
             }`}>
-              {STATUS_LABEL[activity?.status] || 'ไม่ทราบสถานะ'}
+              {statusChipLabel}
             </span>
             {reloading && <Loader2 className="w-3.5 h-3.5 text-yrupink-400 animate-spin" />}
           </div>
@@ -269,9 +295,6 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
           <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-1.5 text-gray-900 dark:text-white">
             <span className="text-gradient">{activity?.title || 'รายละเอียดหลักสูตร'}</span>
           </h1>
-          {activity?.title_en && (
-            <p className="text-base md:text-lg text-gray-500 dark:text-yrugray-400">{activity.title_en}</p>
-          )}
 
           {/* 3 stat cards — จำนวนรับ / สมัครแล้ว / ระยะเวลา */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
@@ -344,11 +367,6 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
                     value={`${fmtThaiDate(activity.start_date)} – ${fmtThaiDate(activity.end_date)}`}
                   />
                 )}
-                <DetailRow
-                  icon={<ClipboardCheck className="w-4 h-4" />}
-                  label="การพิจารณา"
-                  value={activity?.has_selection ? 'มีการพิจารณา' : 'ไม่มีการพิจารณา'}
-                />
                 {activity?.fee_text && (
                   <DetailRow icon={<Wallet className="w-4 h-4" />} label="ค่าลงทะเบียน" value={activity.fee_text} />
                 )}
@@ -478,9 +496,21 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
                     <XCircle className="w-7 h-7 text-slate-500 dark:text-yrugray-400" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{cannotRegister}</h3>
-                  <p className="text-sm text-gray-600 dark:text-yrugray-300">
-                    ตรวจสอบหลักสูตรอื่น ๆ ในหน้ารายการได้เลย
-                  </p>
+                  {openCountdown ? (
+                    <>
+                      <p className="text-sm text-gray-600 dark:text-yrugray-300 mb-2">เปิดรับสมัครในอีก</p>
+                      <p className="text-2xl font-extrabold tabular-nums text-yrupink-600 dark:text-yrupink-400 tracking-tight">
+                        {openCountdown}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-yrugray-400 mt-2">
+                        ปุ่มลงทะเบียนจะเปิดให้อัตโนมัติเมื่อถึงเวลา
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-600 dark:text-yrugray-300">
+                      ตรวจสอบหลักสูตรอื่น ๆ ในหน้ารายการได้เลย
+                    </p>
+                  )}
                 </div>
               ) : (
                 <RegistrationForm

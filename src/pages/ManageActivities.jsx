@@ -28,7 +28,7 @@ import AssessmentDashboard from './AssessmentDashboard';
 import BannerUploader from '../components/BannerUploader';
 import RegistrationFormEditor, { schemaToEditorState, editorStateToPayload } from '../components/RegistrationFormEditor';
 import { activitiesApi } from '../api';
-import { formatThaiDate, toDateInputValue, toDateTimeInputValue } from '../utils/thaiDate';
+import { formatThaiDate, toDateInputValue, toDateTimeInputValue, toBE } from '../utils/thaiDate';
 import { useToast } from '../contexts/ToastContext';
 import { errorMessage } from '../utils/errorMessage';
 
@@ -61,16 +61,14 @@ const normalize = (r) => ({
   slug:        r.slug,
   description: r.description,
   location:    r.location,
+  // All dates are พ.ศ. end to end — pickers show the stored year as-is.
   startDate:   toDateInputValue(r.start_date),
   endDate:     toDateInputValue(r.end_date),
   dateDisplay: r.start_date ? formatThaiDate(r.start_date) : '',
   endDateDisplay: r.end_date ? formatThaiDate(r.end_date) : '',
-  batchNo:     r.batch_no ?? '',
-  titleEn:     r.title_en ?? '',
   registerOpenAt:    toDateTimeInputValue(r.register_open_at),
   registerCloseDate: toDateTimeInputValue(r.register_close_date),
   registerCloseDateDisplay: r.register_close_date ? formatThaiDate(r.register_close_date) : '',
-  hasSelection: !!r.has_selection,
   feeText:     r.fee_text ?? '',
   travelText:  r.travel_text ?? '',
   noteText:    r.note_text ?? '',
@@ -128,7 +126,7 @@ const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSele
   const filtered = useMemo(() => activities.filter((a) => {
     const matchStatus = statusFilter === 'ทั้งหมด' || a.status === statusFilter;
     const q = searchQuery.toLowerCase();
-    const matchSearch = !q || (a.title || '').toLowerCase().includes(q) || (a.titleEn || '').toLowerCase().includes(q);
+    const matchSearch = !q || (a.title || '').toLowerCase().includes(q);
     return matchStatus && matchSearch;
   }), [activities, searchQuery, statusFilter]);
 
@@ -141,18 +139,15 @@ const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSele
         capacity:        Number(updated.seats) || 0,
         status:          STATUS_ENUM[updated.status] || updated.status,
         cover_image_url: updated.image || undefined,
-        title_en:        updated.titleEn || null,
-        batch_no:        updated.batchNo ? Number(updated.batchNo) : null,
-        register_open_at:    updated.registerOpenAt ? `${updated.registerOpenAt.replace('T', ' ')}:00` : null,
-        register_close_date: updated.registerCloseDate ? `${updated.registerCloseDate.replace('T', ' ')}:00` : null,
-        has_selection:   !!updated.hasSelection,
+        register_open_at:    updated.registerOpenAt ? `${toBE(updated.registerOpenAt).replace('T', ' ')}:00` : null,
+        register_close_date: updated.registerCloseDate ? `${toBE(updated.registerCloseDate).replace('T', ' ')}:00` : null,
         fee_text:        updated.feeText || null,
         travel_text:     updated.travelText || null,
         note_text:       updated.noteText || null,
         venue_links:     (updated.venueLinks || []).filter((v) => v.label?.trim() && v.url?.trim()),
       };
-      if (updated.startDate) patch.start_date = `${updated.startDate} 09:00:00`;
-      if (updated.endDate)   patch.end_date = `${updated.endDate} 16:30:00`;
+      if (updated.startDate) patch.start_date = `${toBE(updated.startDate)} 09:00:00`;
+      if (updated.endDate)   patch.end_date = `${toBE(updated.endDate)} 16:30:00`;
       await activitiesApi.update(updated.id, patch);
       toast.success('บันทึกการแก้ไขเรียบร้อยแล้ว', { title: 'สำเร็จ' });
       reload();
@@ -310,13 +305,6 @@ const ActivityCard = ({ activity, onOpen }) => {
           </div>
         )}
         
-        {/* ป้ายรุ่นที่ (ถ้ามี) */}
-        {activity.batchNo && (
-          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-lg">
-            รุ่นที่ {activity.batchNo}
-          </div>
-        )}
-
         {/* สถานะหลักสูตร */}
         <div className="absolute top-3 right-3 shadow-md">
           <StatusBadge status={activity.status} />
@@ -376,7 +364,7 @@ const ActivityCard = ({ activity, onOpen }) => {
               <MapPin className="w-4 h-4 text-yrupink-500 shrink-0 mt-0.5" />
               <div>
                 <span className="text-slate-400 block text-[11px]">สถานที่</span>
-                <span className="line-clamp-1 font-semibold text-slate-800 dark:text-slate-200">{activity.location || 'ยังไม่ระบุสถานที่'}</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 break-words">{activity.location || 'ยังไม่ระบุสถานที่'}</span>
               </div>
             </div>
           </div>
@@ -599,14 +587,6 @@ const InlineEditForm = ({ activity, onSave }) => {
           <input value={form.title} onChange={(e) => change('title', e.target.value)} className={`${inputCls} ${errors.title ? errBorder : ''}`} />
         </Field>
 
-        <Field label="ชื่อภาษาอังกฤษ (subtitle)" className="md:col-span-2">
-          <input value={form.titleEn || ''} onChange={(e) => change('titleEn', e.target.value)} className={inputCls} placeholder="e.g. Advanced Prompt Engineering" />
-        </Field>
-
-        <Field label="รุ่นที่">
-          <input type="number" min={1} value={form.batchNo || ''} onChange={(e) => change('batchNo', e.target.value)} className={inputCls} placeholder="เช่น 1" />
-        </Field>
-
         <Field label="จำนวนที่รับ" icon={<Users className="w-4 h-4" />}>
           <input type="number" value={form.seats} onChange={(e) => change('seats', Number(e.target.value))} className={inputCls} />
         </Field>
@@ -625,13 +605,6 @@ const InlineEditForm = ({ activity, onSave }) => {
 
         <Field label="วันเวลาปิดรับสมัคร" required icon={<Clock className="w-4 h-4" />} error={errors.registerCloseDate}>
           <input type="datetime-local" value={form.registerCloseDate || ''} onChange={(e) => change('registerCloseDate', e.target.value)} className={`${inputCls} ${errors.registerCloseDate ? errBorder : ''}`} />
-        </Field>
-
-        <Field label="การพิจารณาคัดเลือก">
-          <label className="flex items-center gap-2.5 h-full text-sm text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
-            <input type="checkbox" checked={!!form.hasSelection} onChange={(e) => change('hasSelection', e.target.checked)} className="w-4 h-4 accent-yrupink-500 rounded" />
-            มีการพิจารณาคัดเลือกผู้เข้าร่วม
-          </label>
         </Field>
 
         <Field label="ค่าลงทะเบียน">

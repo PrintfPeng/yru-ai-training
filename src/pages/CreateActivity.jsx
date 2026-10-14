@@ -13,6 +13,7 @@ import { makeRegistrationDefaults } from '../components/DynamicFormBuilder';
 import RegistrationFormEditor, { editorStateToPayload } from '../components/RegistrationFormEditor';
 import BannerUploader from '../components/BannerUploader';
 import { activitiesApi } from '../api';
+import { toBE } from '../utils/thaiDate';
 import { useToast } from '../contexts/ToastContext';
 import { errorMessage } from '../utils/errorMessage';
 
@@ -27,8 +28,6 @@ const CreateActivity = ({ onCreated } = {}) => {
   // Activity metadata
   const [activity, setActivity] = useState({
     title: '',
-    titleEn: '',
-    batchNo: '',
     category: '',
     level: 'เริ่มต้น',
     description: '',
@@ -36,7 +35,6 @@ const CreateActivity = ({ onCreated } = {}) => {
     endDate: '',
     registerOpenAt: '',       // datetime-local 'YYYY-MM-DDTHH:mm'
     registerCloseDate: '',    // datetime-local 'YYYY-MM-DDTHH:mm'
-    hasSelection: false,
     feeText: '',
     travelText: '',
     noteText: '',
@@ -107,10 +105,11 @@ const CreateActivity = ({ onCreated } = {}) => {
     }
     setSaving(true);
     try {
-      const start = `${activity.startDate} 09:00:00`;
-      const end = `${activity.endDate} 16:30:00`;
-      // datetime-local 'YYYY-MM-DDTHH:mm' → SQL 'YYYY-MM-DD HH:mm:00'
-      const dtLocalToSql = (v) => (v ? `${v.replace('T', ' ')}:00` : undefined);
+      // Everything is stored in พ.ศ.; normalize in case the picker returned ค.ศ.
+      const start = `${toBE(activity.startDate)} 09:00:00`;
+      const end = `${toBE(activity.endDate)} 16:30:00`;
+      // datetime-local 'YYYY-MM-DDTHH:mm' → SQL 'YYYY-MM-DD HH:mm:00' (พ.ศ.)
+      const dtLocalToSql = (v) => (v ? `${toBE(v).replace('T', ' ')}:00` : undefined);
       const links = venueLinks.filter((v) => v.label.trim() && v.url.trim());
 
       // Registration model (type + cert mode + form schema).
@@ -118,15 +117,12 @@ const CreateActivity = ({ onCreated } = {}) => {
 
       const created = await activitiesApi.create({
         title:       activity.title.trim(),
-        title_en:    activity.titleEn.trim() || undefined,
-        batch_no:    activity.batchNo ? Number(activity.batchNo) : undefined,
         description: activity.description || undefined,
         location:    activity.location || undefined,
         start_date:  start,
         end_date:    end,
         register_open_at: dtLocalToSql(activity.registerOpenAt),
         register_close_date: dtLocalToSql(activity.registerCloseDate),
-        has_selection: activity.hasSelection,
         fee_text:    activity.feeText.trim() || undefined,
         travel_text: activity.travelText.trim() || undefined,
         note_text:   activity.noteText.trim() || undefined,
@@ -182,28 +178,6 @@ const CreateActivity = ({ onCreated } = {}) => {
               onChange={handleActivityChange}
               placeholder="เช่น Prompt Engineering ขั้นสูง"
               className={`${adminInputCls} ${fieldErrors.title ? errBorder : ''}`}
-            />
-          </AdminField>
-
-          <AdminField label="ชื่อภาษาอังกฤษ (subtitle)">
-            <input
-              name="titleEn"
-              value={activity.titleEn}
-              onChange={handleActivityChange}
-              placeholder="e.g. Advanced Prompt Engineering"
-              className={adminInputCls}
-            />
-          </AdminField>
-
-          <AdminField label="รุ่นที่">
-            <input
-              type="number"
-              min={1}
-              name="batchNo"
-              value={activity.batchNo}
-              onChange={handleActivityChange}
-              placeholder="เช่น 1"
-              className={adminInputCls}
             />
           </AdminField>
 
@@ -301,19 +275,6 @@ const CreateActivity = ({ onCreated } = {}) => {
               onChange={handleActivityChange}
               className={`${adminInputCls} ${fieldErrors.registerCloseDate ? errBorder : ''}`}
             />
-          </AdminField>
-
-          <AdminField label="การพิจารณาคัดเลือก">
-            <label className="flex items-center gap-2 h-full text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                name="hasSelection"
-                checked={activity.hasSelection}
-                onChange={handleActivityChange}
-                className="w-4 h-4 accent-yrupink-500"
-              />
-              มีการพิจารณาคัดเลือก
-            </label>
           </AdminField>
 
           <AdminField label="ค่าลงทะเบียน">

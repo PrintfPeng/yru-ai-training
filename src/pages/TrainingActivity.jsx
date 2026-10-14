@@ -2,7 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight, Loader2, ClipboardList } from 'lucide-react';
 import ActivityDetail from './ActivityDetail';
 import { activitiesApi } from '../api';
-import { formatThaiDate, durationText } from '../utils/thaiDate';
+import { formatThaiDate, durationText, registrationWindowState } from '../utils/thaiDate';
+
+// Registration-status chip for a card, based on the real-time window state.
+const cardBadge = (row) => {
+  if (row?.status === 'assessment') {
+    return { label: 'เปิดทำแบบประเมิน', cls: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/80 dark:text-sky-300' };
+  }
+  const ws = registrationWindowState(row?.register_open_at, row?.register_close_date);
+  if (ws === 'before') return { label: 'ยังไม่เปิดรับสมัคร', cls: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300' };
+  if (ws === 'closed') return { label: 'ปิดรับสมัครแล้ว', cls: 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800/80 dark:text-slate-300' };
+  return { label: 'เปิดรับสมัคร', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300' };
+};
 
 // Normalize an API row into the card shape the UI expects.
 const normalizeRow = (r) => ({
@@ -18,7 +29,6 @@ const normalizeRow = (r) => ({
   seats_left: r.seats_left,
   registrants_count: r.total_registered ?? 0, 
   registerCloseDateDisplay: r.register_close_date ? formatThaiDate(r.register_close_date) : '',
-  batchNo: r.batch_no ?? '',
   image: r.cover_image_url,
   level: 'เริ่มต้น',
   category: '',
@@ -193,7 +203,7 @@ const TrainingActivity = ({ onBack }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredActivities.map((a) => {
                 const percent = a.seats > 0 ? Math.min(100, Math.round((a.registrants_count / a.seats) * 100)) : 0;
-                const isAssessment = a.raw?.status === 'assessment';
+                const badge = cardBadge(a.raw);
 
                 return (
                   <article
@@ -215,21 +225,10 @@ const TrainingActivity = ({ onBack }) => {
                           </div>
                         )}
                         
-                        {/* ป้ายรุ่นที่ (ถ้ามี) */}
-                        {a.batchNo && (
-                          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1 rounded-lg">
-                            รุ่นที่ {a.batchNo}
-                          </div>
-                        )}
-
-                        {/* สถานะหลักสูตร / เปิดทำแบบประเมิน */}
+                        {/* สถานะหลักสูตร — สะท้อนช่วงเวลารับสมัครตามเวลาจริง */}
                         <div className="absolute top-3 right-3 shadow-md">
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-full border backdrop-blur-xs ${
-                            isAssessment 
-                              ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/80 dark:text-sky-300' 
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300'
-                          }`}>
-                            {isAssessment ? 'เปิดทำแบบประเมิน' : 'เปิดรับสมัคร'}
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-full border backdrop-blur-xs ${badge.cls}`}>
+                            {badge.label}
                           </span>
                         </div>
                       </div>
@@ -287,7 +286,7 @@ const TrainingActivity = ({ onBack }) => {
                               <MapPin className="w-4 h-4 text-yrupink-500 shrink-0 mt-0.5" />
                               <div>
                                 <span className="text-slate-400 block text-[11px]">สถานที่</span>
-                                <span className="line-clamp-1 font-semibold text-slate-800 dark:text-slate-200">{a.location || 'ยังไม่ระบุสถานที่'}</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200 break-words">{a.location || 'ยังไม่ระบุสถานที่'}</span>
                               </div>
                             </div>
                           </div>

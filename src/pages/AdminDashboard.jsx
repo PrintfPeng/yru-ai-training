@@ -405,7 +405,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
                                 <td className="px-5 py-3 text-slate-700 dark:text-yrugray-300 font-medium hidden md:table-cell whitespace-nowrap">
                                   {fmtThaiDate(a.start_date)}
                                 </td>
-                                <td className="px-5 py-3 text-slate-600 dark:text-yrugray-400 hidden lg:table-cell max-w-xs truncate">
+                                <td className="px-5 py-3 text-slate-600 dark:text-yrugray-400 hidden lg:table-cell max-w-xs break-words">
                                   {a.location || '-'}
                                 </td>
                                 <td className="px-5 py-3 text-center text-slate-700 dark:text-yrugray-200 font-semibold tabular-nums">
