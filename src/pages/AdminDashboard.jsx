@@ -115,14 +115,14 @@ const AdminDashboard = ({ admin, onLogout }) => {
         badgeColor: 'bg-yrupink-500/10 dark:bg-yrupink-500/20 text-yrupink-600 dark:text-yrupink-400',
       },
       {
-        title: 'ผู้ลงทะเบียนสะสม',
+        title: 'ผู้ลงทะเบียนทั้งหมด',
         value: totalRegistered,
         sub: `ยืนยันแล้ว ${totalConfirmed}`,
         icon: <Users className="w-4 h-4 text-blue-500" />,
         badgeColor: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',
       },
       {
-        title: 'ผู้อบรมสำเร็จ',
+        title: 'ผู้ตอบแบบประเมิน',
         value: totalAttended,
         sub: 'นับตามใบรับรองที่ออก',
         icon: <Award className="w-4 h-4 text-emerald-500" />,
