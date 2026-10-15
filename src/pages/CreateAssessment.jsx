@@ -3,7 +3,6 @@ import {
   ClipboardCheck,
   Award,
   Save,
-  Timer,
   Pencil,
   BookOpen,
   FileSignature,
@@ -71,7 +70,6 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
     title: presetActivity ? `แบบสอบถามความพึงพอใจ — ${presetActivity.title}` : '',
     activityId: presetActivity ? String(presetActivity.id) : '',
     description: '',
-    timeLimit: 0,       // 0 = ไม่จำกัดเวลา (default สำหรับแบบสอบถามความพึงพอใจ)
     allowEdit: true,    // อนุญาตให้แก้ไขคำตอบภายหลัง
     publish:   true,    // is_published — ปุ่ม "เปิดให้ทำแบบประเมิน" ในหน้ากิจกรรม public
   });
@@ -295,18 +293,6 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
                 ))}
               </select>
             )}
-          </AdminField>
-
-          <AdminField label="เวลาทำ (นาที)" icon={<Timer className="w-4 h-4" />}>
-            <input
-              type="number"
-              min="0"
-              value={meta.timeLimit}
-              onChange={(e) => changeMeta('timeLimit', Number(e.target.value))}
-              placeholder="0 = ไม่จำกัดเวลา (แนะนำสำหรับความพึงพอใจ)"
-              className={adminInputCls}
-            />
-            <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">💡 แบบสอบถามความพึงพอใจไม่ควรจับเวลา ตั้ง 0 เพื่อไม่จำกัด</p>
           </AdminField>
 
           <AdminField label="แก้ไขคำตอบภายหลัง" icon={<Pencil className="w-4 h-4" />}>
