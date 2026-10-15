@@ -115,7 +115,7 @@ const Contact = ({ onBackHome, onNavigate, isAdmin }) => {
         <div className="max-w-4xl mx-auto mt-10 rounded-2xl overflow-hidden shadow-xl border border-gray-200 dark:border-yrugray-800">
           <iframe
             title="แผนที่มหาวิทยาลัยราชภัฏยะลา"
-            src="https://www.google.com/maps?q=มหาวิทยาลัยราชภัฏยะลา&output=embed"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.7853234799227!2d101.2896628!3d6.5487676!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31b37430f62893dd%3A0x1cb7c512b6083c5f!2z4Lih4Lir4Liy4Lin4Li04LiX4Lii4Liy4Lil4Lix4Lii4Lij4Liy4LiK4Lig4Lix4LiP4Lii4Liw4Lil4Liy!5e0!3m2!1sth!2sth!4v1792050399884!5m2!1sth!2sth"
             className="w-full h-72 md:h-96"
             style={{ border: 0 }}
             loading="lazy"
