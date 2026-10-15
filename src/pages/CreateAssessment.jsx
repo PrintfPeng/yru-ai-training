@@ -226,17 +226,6 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
 
   const selectedTemplate = CERT_TEMPLATES.find((t) => t.value === cert.template);
 
-  // Buddhist year of the selected activity — the cert running number is keyed by
-  // this year (same rule as issueCertificateForRegistration on the backend).
-  const selectedActivity = presetActivity
-    || activityOptions.find((a) => String(a.id) === String(meta.activityId));
-  const certBeYear = (() => {
-    const sd = selectedActivity?.raw?.start_date || selectedActivity?.start_date || selectedActivity?.startDate;
-    if (!sd) return null;
-    const y = new Date(sd).getFullYear();
-    return Number.isFinite(y) ? y : null;
-  })();
-
   return (
     <div className="space-y-6 pb-28">
       {/* Header — hidden when embedded (parent owns save/back UI) */}
@@ -425,8 +414,8 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
               </AdminField>
             </div>
 
-            {/* เลขเริ่มของใบรับรอง (เลขรันต่อปี ทั้งศูนย์) */}
-            <CertNumberStart beYear={certBeYear} />
+            {/* เลขเริ่มของใบรับรอง (เลขรันต่อปีที่ออกใบ ทั้งศูนย์) */}
+            <CertNumberStart />
 
             {/* Template picker */}
             <div>
@@ -487,31 +476,26 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
 // ---- Sub components ----
 
 // Set the STARTING running number for a year's certificate codes
-// (ควท.มรย.{ปี}/03/{run}). The counter is shared across the whole centre per
-// Buddhist year, so changing it affects every activity in that year.
-const CertNumberStart = ({ beYear }) => {
+// (ควท.มรย.{ปี}/03/{run}). The year here is the ISSUE year (ปีที่ออกใบ): the
+// counter is shared across the whole centre per Buddhist year, so changing it
+// affects every certificate issued in that year. Default to the current year;
+// the admin can switch to next year to pre-set its starting number.
+const CertNumberStart = () => {
+  const thisYear = new Date().getFullYear() + 543; // issue year in พ.ศ.
+  const [year, setYear] = useState(thisYear);
   const [info, setInfo] = useState(null);      // { last_no, next_no }
   const [startNo, setStartNo] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);        // { type:'ok'|'err', text }
 
   useEffect(() => {
-    if (!beYear) { setInfo(null); return undefined; }
     let cancelled = false;
-    setMsg(null);
-    certificatesApi.getCounter(beYear)
+    setMsg(null); setInfo(null);
+    certificatesApi.getCounter(year)
       .then((d) => { if (!cancelled) { setInfo(d); setStartNo(String(d.next_no)); } })
       .catch(() => { if (!cancelled) setInfo(null); });
     return () => { cancelled = true; };
-  }, [beYear]);
-
-  if (!beYear) {
-    return (
-      <div className="p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800 text-sm text-slate-500 dark:text-yrugray-400">
-        เลือกหลักสูตรก่อน เพื่อตั้งเลขเริ่มของใบรับรอง (อ้างอิงปี พ.ศ. ของหลักสูตร)
-      </div>
-    );
-  }
+  }, [year]);
 
   const save = async () => {
     const n = Number(startNo);
@@ -519,9 +503,9 @@ const CertNumberStart = ({ beYear }) => {
     setSaving(true);
     setMsg(null);
     try {
-      const d = await certificatesApi.setCounterStart(beYear, n);
+      const d = await certificatesApi.setCounterStart(year, n);
       setInfo(d); setStartNo(String(d.next_no));
-      setMsg({ type: 'ok', text: `ตั้งแล้ว — ใบถัดไปของปี ${beYear} จะเริ่มที่เลข ${d.next_no}` });
+      setMsg({ type: 'ok', text: `ตั้งแล้ว — ใบถัดไปที่ออกในปี ${year} จะเริ่มที่เลข ${d.next_no}` });
     } catch (e) {
       setMsg({ type: 'err', text: errorMessage(e, 'ตั้งเลขเริ่มไม่สำเร็จ') });
     } finally { setSaving(false); }
@@ -530,11 +514,23 @@ const CertNumberStart = ({ beYear }) => {
   return (
     <div className="p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800 space-y-2.5">
       <p className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 flex items-center gap-1.5">
-        <FileSignature className="w-4 h-4 text-yrupink-500" /> เลขเริ่มใบรับรองของปี พ.ศ. {beYear}
+        <FileSignature className="w-4 h-4 text-yrupink-500" /> เลขเริ่มใบรับรอง — ตามปีที่ออกใบ (พ.ศ.)
       </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-sm text-slate-600 dark:text-yrugray-400">ปี พ.ศ.</label>
+        <input
+          type="number"
+          min={thisYear}
+          max={thisYear + 1}
+          value={year}
+          onChange={(e) => setYear(Math.min(thisYear + 1, Math.max(thisYear, Number(e.target.value) || thisYear)))}
+          className={`${adminInputCls} w-28`}
+        />
+        <span className="text-sm text-slate-500 dark:text-yrugray-400">(ปัจจุบัน {thisYear} — ตั้งล่วงหน้าปีหน้าได้)</span>
+      </div>
       <p className="text-sm text-slate-500 dark:text-yrugray-400">
         {info
-          ? `ตอนนี้ออกไปแล้วถึงเลข ${info.last_no} — ใบถัดไปจะเป็นเลข ${info.next_no}`
+          ? `ปี ${year}: ออกไปแล้วถึงเลข ${info.last_no} — ใบถัดไปจะเป็นเลข ${info.next_no}`
           : 'กำลังโหลด...'}
       </p>
       <div className="flex items-center gap-2 flex-wrap">
@@ -560,7 +556,7 @@ const CertNumberStart = ({ beYear }) => {
         </p>
       )}
       <p className="text-xs text-amber-600 dark:text-amber-400">
-        ⚠ เลขรันนับต่อเนื่องทั้งศูนย์ต่อปี การตั้งค่านี้มีผลกับทุกกิจกรรมในปี {beYear} และตั้งได้ไม่ต่ำกว่าเลขที่ออกไปแล้ว
+        ⚠ เลขรันนับต่อเนื่องทั้งศูนย์ต่อปีที่ออกใบ มีผลกับทุกกิจกรรม และตั้งได้ไม่ต่ำกว่าเลขที่ออกไปแล้ว
       </p>
     </div>
   );

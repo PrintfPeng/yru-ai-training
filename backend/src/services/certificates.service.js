@@ -75,20 +75,10 @@ export async function issueCertificateForRegistration(registrationId, conn = poo
       }
     : DEFAULT_TEMPLATE;
 
-  // Buddhist year from the activity's start_date (fallback: issue year).
-  const [[act]] = await conn.query(
-    `SELECT a.start_date
-       FROM registrations r
-       JOIN activities    a ON a.id = r.activity_id
-      WHERE r.id = ? LIMIT 1`,
-    [registrationId]
-  );
-  // start_date is stored with a Buddhist year already (e.g. 2569-11-01), so its
-  // year IS the พ.ศ. — do NOT add 543 (that double-converted to 3112). Fallback
-  // only (no start_date): convert the current Gregorian year.
-  const beYear = act?.start_date
-    ? new Date(act.start_date).getFullYear()
-    : new Date().getFullYear() + 543;
+  // Code + running number are keyed by the ISSUE year (พ.ศ.) — the real calendar
+  // year the certificate is created. NOW() is Gregorian, so +543 to get พ.ศ.
+  // This way certs issued next year automatically get 2570, no data edit needed.
+  const beYear = new Date().getFullYear() + 543;
 
   // Next per-year running number, race-safe via connection-scoped
   // LAST_INSERT_ID() (works with or without an enclosing transaction).
