@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Download, Share2, CheckCircle2, Home, AlertCircle, Loader2 } from 'lucide-react';
 import { certificatesApi } from '../api';
 import { useToast } from '../contexts/ToastContext';
+import Navbar from '../components/Navbar';
+import PageBack from '../components/PageBack';
+import Breadcrumb from '../components/Breadcrumb';
 
 // A4-landscape reference size at ~96dpi. The cert is designed/rendered at this
 // fixed width so stored px font sizes stay proportional and never clip.
@@ -15,7 +18,7 @@ const CERT_REF_H = Math.round((CERT_REF_W * 210) / 297); // ≈ 794
  *                            when present we fetch the real cert from API
  *   onBackHome
  */
-const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome, verify = false }) => {
+const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome, verify = false, onNavigate, isAdmin }) => {
   const toast = useToast();
   const [certData, setCertData] = useState(null);
   const [loading, setLoading] = useState(!!certificateCode);
@@ -114,6 +117,19 @@ const CertificateDownload = ({ activity, registrant, certificateCode, onBackHome
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-yrugray-950">
+      <div className="no-print">
+        <Navbar onNavigate={onNavigate} isAdmin={isAdmin} />
+        {/* Breadcrumb trail (left) + back home (right) */}
+        <div className="max-w-4xl mx-auto px-4 md:px-6 pt-6 flex items-center justify-between gap-4">
+          <Breadcrumb
+            items={[
+              { label: 'หน้าแรก', onClick: onBackHome },
+              { label: verify ? 'ตรวจสอบวุฒิบัตร' : 'วุฒิบัตร' },
+            ]}
+          />
+          <PageBack onClick={onBackHome} label="กลับหน้าแรก" className="shrink-0" />
+        </div>
+      </div>
       {/* Print styles: hide everything except cert */}
       <style>{`
         @media print {

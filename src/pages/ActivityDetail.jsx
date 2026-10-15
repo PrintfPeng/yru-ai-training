@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  ArrowLeft,
   Calendar,
   Clock,
   Users,
@@ -24,6 +23,9 @@ import {
 import { activitiesApi, registrationsApi, assessmentsApi, ApiError } from '../api';
 import { formatThaiDate as fmtThaiDate, formatThaiDateTime as fmtThaiDateTime, durationText as durationInDays, registrationWindowState, beToLocalDate } from '../utils/thaiDate';
 import RegistrationForm from '../components/RegistrationForm';
+import Navbar from '../components/Navbar';
+import PageBack from '../components/PageBack';
+import Breadcrumb from '../components/Breadcrumb';
 
 
 const STATUS_LABEL = {
@@ -45,7 +47,7 @@ const formatCountdown = (ms) => {
   return (d > 0 ? `${d} วัน ` : '') + `${pad(h)}:${pad(m)}:${pad(s)}`;
 };
 
-const ActivityDetail = ({ activity: initialActivity, onBack }) => {
+const ActivityDetail = ({ activity: initialActivity, onBack, onNavigate, isAdmin }) => {
   // Prefer the freshest server copy — reloading gives us up-to-date seats_left
   // and status even if the caller was cached. Fall back to the prop while
   // fetching so the banner + hero don't flicker to empty.
@@ -234,27 +236,21 @@ const ActivityDetail = ({ activity: initialActivity, onBack }) => {
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* Header */}
-      <header className="w-full glass sticky top-0 z-50 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-yrupink-400 to-yrupink-700 rounded-lg flex items-center justify-center font-bold text-white shadow-lg">
-              AI
-            </div>
-            <span className="font-bold text-xl tracking-wide text-gray-900 dark:text-white transition-colors duration-300">
-              CENTER <span className="text-yrupink-400">YRU</span>
-            </span>
-          </div>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 rounded-lg bg-white/60 dark:bg-yrugray-800/60 hover:bg-gray-100 dark:hover:bg-yrugray-700 backdrop-blur border border-gray-200 dark:border-yrugray-700 text-sm text-gray-700 dark:text-yrugray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 shadow-md"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            กลับหน้ารายการหลักสูตร
-          </button>
-        </div>
-      </header>
+      <Navbar onNavigate={onNavigate} isAdmin={isAdmin} active="training" />
 
-      <main className="flex-grow w-full max-w-6xl mx-auto px-6 py-10 z-10">
+      <main className="flex-grow w-full max-w-6xl mx-auto px-6 py-8 z-10">
+        {/* Breadcrumb trail (left) + back to course list (right) */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <Breadcrumb
+            items={[
+              { label: 'หน้าแรก', onClick: () => onNavigate?.('home') },
+              { label: 'หลักสูตรอบรม', onClick: onBack },
+              { label: activity?.title || 'รายละเอียดหลักสูตร' },
+            ]}
+          />
+          <PageBack onClick={onBack} label="กลับหน้ารายการหลักสูตร" className="shrink-0" />
+        </div>
+
         {/* Banner */}
         {activity?.image && (
           <div className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden mb-8 border border-gray-200 dark:border-yrugray-800 shadow-xl">

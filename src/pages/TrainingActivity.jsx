@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, BookOpen, Calendar, Clock, Users, MapPin, Search, Filter, ArrowRight, Loader2, ClipboardList } from 'lucide-react';
+import { BookOpen, Calendar, Users, MapPin, Search, Filter, ArrowRight, Loader2, ClipboardList } from 'lucide-react';
 import ActivityDetail from './ActivityDetail';
+import Navbar from '../components/Navbar';
+import PageBack from '../components/PageBack';
+import Breadcrumb from '../components/Breadcrumb';
 import { activitiesApi } from '../api';
 import { formatThaiDate, durationText, registrationWindowState } from '../utils/thaiDate';
 
@@ -41,7 +44,7 @@ const readSlugFromUrl = () => {
   return new URLSearchParams(window.location.search).get('a');
 };
 
-const TrainingActivity = ({ onBack }) => {
+const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [activities, setActivities] = useState([]);
@@ -119,6 +122,8 @@ const TrainingActivity = ({ onBack }) => {
       <ActivityDetail
         activity={selectedActivity}
         onBack={() => setSelectedAndSync(null)}
+        onNavigate={onNavigate}
+        isAdmin={isAdmin}
       />
     );
   }
@@ -130,27 +135,20 @@ const TrainingActivity = ({ onBack }) => {
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* Header */}
-      <header className="w-full glass sticky top-0 z-50 transition-colors duration-300 border-b border-slate-200/80 dark:border-yrugray-800 bg-white/80 dark:bg-yrugray-900/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={onBack}>
-            <div className="w-9 h-9 bg-gradient-to-br from-yrupink-500 to-yrupink-700 rounded-xl flex items-center justify-center font-bold text-white shadow-md">
-              AI
-            </div>
-            <span className="font-bold text-lg tracking-wide text-slate-900 dark:text-white">
-              CENTER <span className="text-yrupink-500">YRU</span>
-            </span>
-          </div>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-200 dark:border-yrugray-700 text-sm font-semibold text-slate-700 dark:text-yrugray-300 transition-colors flex items-center gap-2 shadow-2xs"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            กลับสู่หน้าแรก
-          </button>
-        </div>
-      </header>
+      <Navbar onNavigate={onNavigate} isAdmin={isAdmin} active="training" />
 
-      <main className="flex-grow w-full max-w-7xl mx-auto px-6 py-12 z-10">
+      <main className="flex-grow w-full max-w-7xl mx-auto px-6 py-10 z-10">
+        {/* Breadcrumb trail (left) + back to home (right) */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <Breadcrumb
+            items={[
+              { label: 'หน้าแรก', onClick: () => onNavigate?.('home') },
+              { label: 'หลักสูตรอบรม' },
+            ]}
+          />
+          <PageBack onClick={onBack} className="shrink-0" />
+        </div>
+
         {/* Hero Section */}
         <section className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yrupink-500/10 border border-yrupink-500/30 text-yrupink-600 dark:text-yrupink-400 text-xs font-semibold mb-4">

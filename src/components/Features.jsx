@@ -32,7 +32,7 @@ const Features = ({ onViewTraining }) => {
   ];
 
   return (
-    <section id="features" className="w-full py-16 pb-24 transition-colors duration-300">
+    <section id="features" className="w-full py-16 pb-24 transition-colors duration-300 scroll-mt-20">
       <div className="text-center mb-16">
         <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white transition-colors duration-300">บริการหลักของเรา</h2>
         <div className="w-24 h-1 bg-gradient-to-r from-yrupink-600 to-yrupink-400 mx-auto rounded-full"></div>

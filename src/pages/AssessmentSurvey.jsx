@@ -1,8 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowRight, CheckCircle2, AlertCircle, Send, ClipboardList, User, Loader2 } from 'lucide-react';
 import { assessmentsApi, ApiError } from '../api';
+import Navbar from '../components/Navbar';
+import PageBack from '../components/PageBack';
+import Breadcrumb from '../components/Breadcrumb';
 
-const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
+const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel, onNavigate, isAdmin }) => {
   const [assessment, setAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -118,8 +121,10 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-yrugray-950 pb-24">
-      {/* Sticky header */}
-      <header className="sticky top-0 z-30 bg-white/90 dark:bg-yrugray-900/90 backdrop-blur border-b border-gray-200 dark:border-yrugray-800">
+      <Navbar onNavigate={onNavigate} isAdmin={isAdmin} />
+
+      {/* Sticky progress header — sits just under the navbar */}
+      <header className="sticky top-16 z-30 bg-white/90 dark:bg-yrugray-900/90 backdrop-blur border-b border-gray-200 dark:border-yrugray-800">
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-4">
           <div className="flex items-center justify-between mb-2">
             <div className="min-w-0 flex-1">
@@ -152,6 +157,18 @@ const AssessmentSurvey = ({ activity, registrant, onComplete, onCancel }) => {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 md:px-6 py-6">
+        {/* Breadcrumb trail (left) + back (right) */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <Breadcrumb
+            items={[
+              { label: 'หน้าแรก', onClick: onCancel },
+              { label: activity?.title || 'กิจกรรม' },
+              { label: 'แบบประเมิน' },
+            ]}
+          />
+          <PageBack onClick={onCancel} label="กลับ" className="shrink-0" />
+        </div>
+
         {/* Description — strip the hidden <!-- CERT_CONFIG:… --> block the
             admin create form tacks onto the end so the certificate editor's
             JSON state can round-trip. Only the human-readable part is shown. */}

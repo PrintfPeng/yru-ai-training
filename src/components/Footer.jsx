@@ -3,7 +3,7 @@ import { Mail, MapPin, Phone } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <footer className="w-full glass border-t border-gray-200 dark:border-yrugray-800/50 mt-auto transition-colors duration-300">
+    <footer id="contact" className="w-full glass border-t border-gray-200 dark:border-yrugray-800/50 mt-auto transition-colors duration-300 scroll-mt-20">
       <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-center md:items-start gap-8">
         
         <div className="flex flex-col items-center md:items-start max-w-sm">
@@ -25,7 +25,7 @@ const Footer = () => {
           </div>
           <div className="flex items-center gap-3">
             <Phone className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400" />
-            <span>+66 73 299 699</span>
+            <span>073 299 699 ต่อ 25202</span>
           </div>
           <div className="flex items-center gap-3">
             <Mail className="w-4 h-4 text-yrupink-500 dark:text-yrupink-400" />

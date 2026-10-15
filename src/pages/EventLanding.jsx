@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, User, ArrowRight, ArrowLeft, CheckCircle2, XCircle, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { Phone, User, ArrowRight, CheckCircle2, XCircle, MapPin, Calendar, Loader2 } from 'lucide-react';
 import { activitiesApi, registrationsApi, ApiError } from '../api';
 import { formatThaiDate } from '../utils/thaiDate';
+import Navbar from '../components/Navbar';
+import PageBack from '../components/PageBack';
+import Breadcrumb from '../components/Breadcrumb';
 
 const normalizePhone = (raw) => String(raw || '').replace(/\D/g, '').replace(/^66/, '0');
 
-const EventLanding = ({ activityId, onVerified, onCancel }) => {
+const EventLanding = ({ activityId, onVerified, onCancel, onNavigate, isAdmin }) => {
   const [activity, setActivity] = useState(null);
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [activityError, setActivityError] = useState(null);
@@ -111,19 +114,14 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yrupink-600/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none" />
 
+      <Navbar onNavigate={onNavigate} isAdmin={isAdmin} />
+
       {/* Banner */}
       <div className="relative w-full h-40 md:h-56 overflow-hidden bg-white dark:bg-yrugray-900">
         {activity.cover_image_url && (
           <img src={activity.cover_image_url} alt="" className="w-full h-full object-cover opacity-80" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-yrugray-950 via-transparent to-transparent" />
-        <button
-          onClick={onCancel}
-          className="absolute top-4 left-4 px-3 py-1.5 bg-white/80 dark:bg-yrugray-800/80 hover:bg-white dark:hover:bg-yrugray-700 backdrop-blur border border-gray-200 dark:border-yrugray-700 rounded-lg text-sm text-gray-700 dark:text-yrugray-200 flex items-center gap-1.5"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          กลับ
-        </button>
         <div className="absolute bottom-4 left-6 right-6 z-10">
           <div className="flex items-center gap-2 mb-1 text-xs">
             <span className="px-2 py-0.5 bg-yrupink-500/20 border border-yrupink-500/40 text-yrupink-100 rounded-full backdrop-blur">
@@ -149,7 +147,16 @@ const EventLanding = ({ activityId, onVerified, onCancel }) => {
       </div>
 
       {/* Card */}
-      <div className="flex-grow flex items-start justify-center px-4 py-8 z-10">
+      <div className="flex-grow flex flex-col items-center px-4 py-8 z-10">
+        <div className="w-full max-w-md mb-4 flex items-center justify-between gap-4">
+          <Breadcrumb
+            items={[
+              { label: 'หน้าแรก', onClick: onCancel },
+              { label: activity?.title || 'ลงทะเบียนกิจกรรม' },
+            ]}
+          />
+          <PageBack onClick={onCancel} label="กลับ" className="shrink-0" />
+        </div>
         <div className="w-full max-w-md bg-white dark:bg-yrugray-900 border border-gray-200 dark:border-yrugray-800 rounded-2xl shadow-xl overflow-hidden">
           {step === 'phone' ? (
             <PhoneStep

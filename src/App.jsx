@@ -3,6 +3,7 @@ import Hero from './components/Hero';
 import Features from './components/Features';
 import Footer from './components/Footer';
 import ThemeToggle from './components/ThemeToggle';
+import Navbar from './components/Navbar';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import TrainingActivity from './pages/TrainingActivity';
@@ -138,6 +139,26 @@ function App() {
     setEventState(null);
   };
 
+  // Single navigation entry point shared by the public Navbar on every page.
+  // target: 'home' | 'training' | 'admin'. An optional `hash` smooth-scrolls to
+  // a section once the home page has rendered. Any trainee/verify sub-flow is
+  // left before switching views so the navbar always returns to the real site.
+  const goTo = (target, hash) => {
+    try { sessionStorage.removeItem(EVENT_SS_KEY); } catch { /* ignore */ }
+    setEventState(null);
+    setVerifyCode(null);
+    if (target === 'admin') {
+      setCurrentView(admin ? 'dashboard' : 'admin');
+      return;
+    }
+    setCurrentView(target === 'training' ? 'training' : 'home');
+    if (hash) {
+      setTimeout(() => {
+        try { document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' }); } catch { /* ignore */ }
+      }, 180);
+    }
+  };
+
   // Public certificate verify view (?verify=<code>) — takes over the page
   if (verifyCode) {
     const exitVerify = () => {
@@ -148,20 +169,23 @@ function App() {
       setVerifyCode(null);
     };
     return (
-      <div className="relative">
-        <div className="absolute top-4 right-4 z-50">
-          <ThemeToggle variant="solid" />
-        </div>
-        <CertificateDownload certificateCode={verifyCode} onBackHome={exitVerify} verify />
-      </div>
+      <CertificateDownload
+        certificateCode={verifyCode}
+        onBackHome={exitVerify}
+        verify
+        onNavigate={goTo}
+        isAdmin={!!admin}
+      />
     );
   }
 
   // Trainee QR flow — takes over the whole page
   if (eventState) {
+    const navProps = { onNavigate: goTo, isAdmin: !!admin };
     const traineePage =
       eventState.step === 'landing' ? (
         <EventLanding
+          {...navProps}
           activityId={eventState.activityId}
           onVerified={(registrant, activity) =>
             // Already submitted the assessment → skip the survey, jump to the
@@ -177,6 +201,7 @@ function App() {
         />
       ) : eventState.step === 'survey' ? (
         <AssessmentSurvey
+          {...navProps}
           activity={eventState.activity}
           registrant={eventState.registrant}
           onComplete={(_answers, result) =>
@@ -187,6 +212,7 @@ function App() {
         />
       ) : eventState.step === 'cert' ? (
         <CertificateDownload
+          {...navProps}
           activity={eventState.activity}
           registrant={eventState.registrant}
           certificateCode={eventState.certificateCode}
@@ -194,14 +220,7 @@ function App() {
         />
       ) : null;
 
-    return (
-      <div className="relative">
-        <div className="absolute top-4 right-4 z-50">
-          <ThemeToggle variant="solid" />
-        </div>
-        {traineePage}
-      </div>
-    );
+    return traineePage;
   }
 
   // Dashboard requires a live session; without one, show the login screen
@@ -238,12 +257,11 @@ function App() {
 
   if (currentView === 'training') {
     return (
-      <div className="relative">
-        <div className="absolute top-4 right-4 z-50">
-          <ThemeToggle variant="solid" />
-        </div>
-        <TrainingActivity onBack={() => setCurrentView('home')} />
-      </div>
+      <TrainingActivity
+        onBack={() => setCurrentView('home')}
+        onNavigate={goTo}
+        isAdmin={!!admin}
+      />
     );
   }
 
@@ -253,40 +271,7 @@ function App() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yrupink-600/20 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-      <header className="w-full glass sticky top-0 z-50 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('home')}>
-            <div className="w-8 h-8 bg-gradient-to-br from-yrupink-400 to-yrupink-700 rounded-lg flex items-center justify-center font-bold text-white shadow-lg">
-              AI
-            </div>
-            <span className="font-bold text-xl tracking-wide text-gray-900 dark:text-white transition-colors duration-300">CENTER <span className="text-yrupink-400">YRU</span></span>
-          </div>
-          <nav className="hidden md:flex gap-8 text-sm font-medium text-gray-600 dark:text-yrugray-100 items-center transition-colors duration-300">
-            <a href="#" className="hover:text-yrupink-500 dark:hover:text-yrupink-400 transition-colors">หน้าแรก</a>
-            <a href="#features" className="hover:text-yrupink-500 dark:hover:text-yrupink-400 transition-colors">บริการ</a>
-            <a href="#about" className="hover:text-yrupink-500 dark:hover:text-yrupink-400 transition-colors">เกี่ยวกับเรา</a>
-            <a href="#contact" className="hover:text-yrupink-500 dark:hover:text-yrupink-400 transition-colors">ติดต่อเรา</a>
-            
-            <ThemeToggle className="ml-2" />
-
-            {/* Admin Login Button */}
-            <button 
-              onClick={() => setCurrentView(admin ? 'dashboard' : 'admin')}
-              className="px-4 py-2 rounded-lg bg-yrupink-500/10 dark:bg-yrupink-600/20 text-yrupink-600 dark:text-yrupink-400 border border-yrupink-500/30 hover:bg-yrupink-500 hover:text-white dark:hover:bg-yrupink-600 dark:hover:text-white dark:hover:border-yrupink-500 transition-all duration-300 ml-2 flex items-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              เข้าสู่ระบบผู้ดูแล
-            </button>
-          </nav>
-          <div className="md:hidden flex items-center gap-4">
-            <ThemeToggle />
-            <button className="text-gray-900 dark:text-white">
-              {/* Mobile menu icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar onNavigate={goTo} isAdmin={!!admin} active="home" />
 
       <main className="flex-grow flex flex-col items-center justify-center px-6 z-10 w-full max-w-7xl mx-auto">
         <Hero />
