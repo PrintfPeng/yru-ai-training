@@ -126,7 +126,7 @@ const RegistrationFormEditor = ({ value, onChange, locked = false, addButtonSide
           <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800">
             <div className="flex items-center gap-3 flex-wrap">
               <label className="text-sm font-medium text-slate-700 dark:text-yrugray-300 flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-yrupink-500" /> จำนวนสมาชิกสูงสุดต่อทีม
+                <Users className="w-4 h-4 text-yrupink-500" /> จำนวนสมาชิกในทีม (คงที่)
               </label>
               <input
                 type="number"
@@ -136,7 +136,7 @@ const RegistrationFormEditor = ({ value, onChange, locked = false, addButtonSide
                 onChange={(e) => setTeamMax(e.target.value)}
                 className="w-24 bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500"
               />
-              <span className="text-sm text-slate-500 dark:text-yrugray-400">คน (ผู้สมัครเพิ่มสมาชิกได้ 1–{teamMax} คน แล้วกรอกคำถามชุดเดียวกันต่อคน)</span>
+              <span className="text-sm text-slate-500 dark:text-yrugray-400">คน (หน้าสมัครจะแสดงช่องกรอกครบ {teamMax} คนทันที ใช้คำถามชุดเดียวกันต่อคน)</span>
             </div>
             <div>
               <p className="text-sm font-medium text-slate-700 dark:text-yrugray-300 mb-1.5">รูปแบบใบรับรอง (ทีม)</p>

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { CheckCircle2, XCircle, Plus, Trash2, Loader2, Send, Users } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { CheckCircle2, XCircle, Loader2, Send, Users } from 'lucide-react';
 import { registrationsApi, ApiError } from '../api';
 
 // Fallback schema for older activities with no register_form_schema.
@@ -99,21 +99,32 @@ const RegistrationForm = ({ activity, onSuccess }) => {
     const t = schemaFields.filter((f) => !f.member || f.member === 1);
     return t.length ? t : CORE_FALLBACK;
   }, [schemaFields]);
-  const teamMax = activity?.team_max_members || 5;
+  // Fixed team size set by the admin — the form shows exactly this many member
+  // blocks up front (no add/remove by the applicant).
+  const teamSize = Math.max(1, activity?.team_max_members || 1);
 
   const [answers, setAnswers] = useState({});                 // individual
   const [teamName, setTeamName] = useState('');               // team
-  const [members, setMembers] = useState([{}]);               // team: start 1 member
+  const [members, setMembers] = useState(() => Array.from({ length: teamSize }, () => ({})));
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   const indivFieldsResolved = indivFields.length ? indivFields : CORE_FALLBACK;
 
+  // Keep the number of member blocks in sync with the admin's configured size
+  // (e.g. when the activity row loads/changes after mount).
+  useEffect(() => {
+    setMembers((prev) => {
+      if (prev.length === teamSize) return prev;
+      const next = prev.slice(0, teamSize);
+      while (next.length < teamSize) next.push({});
+      return next;
+    });
+  }, [teamSize]);
+
   const setMemberVal = (idx, key, val) =>
     setMembers((prev) => prev.map((m, i) => (i === idx ? { ...m, [key]: val } : m)));
-  const addMember = () => members.length < teamMax && setMembers((prev) => [...prev, {}]);
-  const removeMember = (idx) => setMembers((prev) => prev.filter((_, i) => i !== idx));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -192,23 +203,12 @@ const RegistrationForm = ({ activity, onSuccess }) => {
                 <span className="text-sm font-semibold text-yrupink-600 dark:text-yrupink-400 flex items-center gap-1.5">
                   <Users className="w-4 h-4" /> สมาชิกคนที่ {idx + 1}
                 </span>
-                {members.length > 1 && (
-                  <button type="button" onClick={() => removeMember(idx)} className="text-gray-400 hover:text-red-500" title="ลบสมาชิก">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
               </div>
               {memberTemplate.map((f) => (
                 <FieldRow key={f.key} field={f} value={m[f.key]} onChange={(v) => setMemberVal(idx, f.key, v)} />
               ))}
             </div>
           ))}
-
-          {members.length < teamMax && (
-            <button type="button" onClick={addMember} className="w-full py-2.5 rounded-lg border border-dashed border-yrupink-400 text-yrupink-600 dark:text-yrupink-400 text-sm font-medium flex items-center justify-center gap-2 hover:bg-yrupink-500/5">
-              <Plus className="w-4 h-4" /> เพิ่มสมาชิก ({members.length}/{teamMax})
-            </button>
-          )}
         </>
       ) : (
         indivFieldsResolved.map((f) => (
