@@ -15,6 +15,14 @@ export const listForActivity = asyncHandler(async (req, res) => {
 });
 
 /**
+ * ADMIN — add a registrant to an activity after the fact (bypasses window/capacity).
+ */
+export const adminCreate = asyncHandler(async (req, res) => {
+  const data = await svc.adminCreateRegistration(req.params.id, req.body.participant, req.body.note);
+  res.status(201).json({ ok: true, data });
+});
+
+/**
  * PUBLIC — register a participant for an activity (from ActivityDetail form).
  * Uses activity slug so the URL is stable and marketing-friendly.
  */

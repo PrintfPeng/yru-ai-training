@@ -169,6 +169,26 @@ export async function registerForActivity(activityId, participantInput, note, fo
 }
 
 /**
+ * Admin-added registration (เพิ่มผู้ลงทะเบียนภายหลัง). Unlike the public flow it
+ * bypasses the registration window, capacity and "published" gates — an admin is
+ * explicitly overriding them — but still blocks duplicate phone/email so codes
+ * and verify-by-phone stay unique within the activity.
+ */
+export async function adminCreateRegistration(activityId, participantInput, note) {
+  return withTransaction(async (conn) => {
+    const [[act]] = await conn.query('SELECT id FROM activities WHERE id = ? LIMIT 1', [activityId]);
+    if (!act) throw new AppError('NOT_FOUND', 'Activity not found', 404);
+    const phone = require10DigitPhone(participantInput.phone);
+    await assertPhonesAvailable(conn, activityId, [phone]);
+    await assertEmailsAvailable(conn, activityId, [participantInput.email]);
+    const participantId = await upsertParticipantOnConn(conn, { ...participantInput, phone });
+    const registration_id = await insertRegistration(conn, activityId, participantId,
+      { note, teamId: null, formData: participantInput });
+    return { registration_id, participant_id: participantId };
+  });
+}
+
+/**
  * Team registration. Body: { team_name, members: [{prefix, first_name,
  * last_name, email, phone, ...}], note? }. Each member becomes its own
  * participant + registration linked to the new team (so each verifies by

@@ -68,6 +68,12 @@ router.get('/by-activity/:id',
   validate({ params: idParam, query: listQuery }),
   ctrl.listForActivity);
 
+// Admin adds a registrant manually (after the window closed / to a draft, etc.)
+router.post('/by-activity/:id',
+  requireAuth, requireRole('super_admin', 'admin'),
+  validate({ params: idParam, body: z.object({ participant: participantSchema, note: z.string().max(2000).nullable().optional() }) }),
+  ctrl.adminCreate);
+
 router.patch('/:id/status',
   requireAuth, requireRole('super_admin', 'admin'),
   validate({ params: idParam, body: statusPatchBody }),

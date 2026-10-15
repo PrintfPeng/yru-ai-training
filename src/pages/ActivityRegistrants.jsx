@@ -19,10 +19,11 @@ import {
   AlertTriangle,
   Save,
   Users,
+  UserPlus,
   Download,
   Loader2,
 } from 'lucide-react';
-import { registrationsApi } from '../api';
+import { registrationsApi, participantsApi } from '../api';
 import { useToast } from '../contexts/ToastContext';
 import { errorMessage } from '../utils/errorMessage';
 
@@ -68,11 +69,13 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ทั้งหมด');
   const [editing, setEditing] = useState(null);
+  const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
   // Normalize API row → the shape the table/modal UI expects
   const normalize = (r) => ({
     id: r.id,
+    participant_id: r.participant_id,
     fullName: `${r.first_name} ${r.last_name}`.trim(),
     first_name: r.first_name,
     last_name: r.last_name,
@@ -129,9 +132,20 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
   };
 
   const updateRegistrant = async (updated) => {
-    // MVP: only status change is round-tripped to backend here.
-    // Full participant edit could POST to /api/participants/:id in a follow-up.
     try {
+      // 1) Update the participant's personal data (name/email/phone/org/position).
+      if (updated.participant_id) {
+        const parts = (updated.fullName || '').trim().split(/\s+/);
+        await participantsApi.update(updated.participant_id, {
+          first_name:   parts[0] || '',
+          last_name:    parts.slice(1).join(' ') || '-',
+          email:        updated.email,
+          phone:        (updated.phone || '').replace(/\D/g, ''),
+          organization: updated.organization || null,
+          position:     updated.position || null,
+        });
+      }
+      // 2) Update the registration's status + note.
       await registrationsApi.updateStatus(
         updated.id,
         STATUS_UI_TO_API[updated.status] || updated.status,
@@ -139,8 +153,30 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
       );
       setEditing(null);
       reload();
+      toast.success('บันทึกการแก้ไขเรียบร้อยแล้ว', { title: 'สำเร็จ' });
     } catch (e) {
       toast.error(errorMessage(e, 'บันทึกไม่สำเร็จ'), { title: 'บันทึกไม่สำเร็จ' });
+    }
+  };
+
+  const addRegistrant = async (data) => {
+    const parts = (data.fullName || '').trim().split(/\s+/);
+    try {
+      await registrationsApi.adminCreate(activity.id, {
+        prefix:       data.prefix || null,
+        first_name:   parts[0] || '',
+        last_name:    parts.slice(1).join(' ') || '-',
+        email:        data.email,
+        phone:        (data.phone || '').replace(/\D/g, ''),
+        organization: data.organization || null,
+        position:     data.position || null,
+      }, data.note || null);
+      setAdding(false);
+      reload();
+      toast.success('เพิ่มผู้ลงทะเบียนเรียบร้อยแล้ว', { title: 'สำเร็จ' });
+    } catch (e) {
+      toast.error(errorMessage(e, 'เพิ่มไม่สำเร็จ'), { title: 'เพิ่มไม่สำเร็จ' });
+      throw e; // keep the modal open on failure
     }
   };
 
@@ -176,20 +212,36 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => exportCsv(activity, filtered)}
-            disabled={filtered.length === 0}
-            className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-slate-800 dark:text-white text-[15px] font-semibold rounded-lg border border-slate-300 dark:border-yrugray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            ส่งออก CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAdding(true)}
+              className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              เพิ่มผู้ลงทะเบียน
+            </button>
+            <button
+              onClick={() => exportCsv(activity, filtered)}
+              disabled={filtered.length === 0}
+              className="px-4 py-2 bg-slate-100 dark:bg-yrugray-800 hover:bg-slate-200 dark:hover:bg-yrugray-700 text-slate-800 dark:text-white text-[15px] font-semibold rounded-lg border border-slate-300 dark:border-yrugray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-4 h-4" />
+              ส่งออก CSV
+            </button>
+          </div>
         </div>
       )}
 
-      {/* When embedded: still expose the CSV button in a lightweight strip */}
+      {/* When embedded: still expose the add + CSV buttons in a lightweight strip */}
       {embedded && (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => setAdding(true)}
+            className="px-4 py-2 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            เพิ่มผู้ลงทะเบียน
+          </button>
           <button
             onClick={() => exportCsv(activity, filtered)}
             disabled={filtered.length === 0}
@@ -342,6 +394,14 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
         )}
       </div>
 
+      {/* Add Modal */}
+      {adding && (
+        <AddRegistrantModal
+          onClose={() => setAdding(false)}
+          onSave={addRegistrant}
+        />
+      )}
+
       {/* Edit Modal */}
       {editing && (
         <EditRegistrantModal
@@ -406,6 +466,86 @@ const ModalShell = ({ children, onClose, size = 'md' }) => {
       </div>
     </div>,
     document.body,
+  );
+};
+
+const AddRegistrantModal = ({ onClose, onSave }) => {
+  const [form, setForm] = useState({
+    fullName: '', email: '', phone: '', organization: '', position: '', note: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState('');
+  const change = (name, value) => setForm((prev) => ({ ...prev, [name]: value }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setErr('');
+    const name = form.fullName.trim();
+    const phone = form.phone.replace(/\D/g, '');
+    if (!name) { setErr('กรุณากรอกชื่อ - นามสกุล'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { setErr('กรุณากรอกอีเมลให้ถูกต้อง'); return; }
+    if (phone.length !== 10) { setErr('เบอร์โทรต้องมี 10 หลัก'); return; }
+    setSubmitting(true);
+    try {
+      await onSave(form);
+    } catch {
+      /* onSave shows a toast; keep modal open */
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ModalShell onClose={onClose} size="lg">
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-yrugray-800 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <UserPlus className="w-5 h-5 text-yrupink-500 dark:text-yrupink-400" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">เพิ่มผู้ลงทะเบียน</h3>
+        </div>
+        <button onClick={onClose} className="text-slate-500 dark:text-yrugray-400 hover:text-slate-900 dark:hover:text-white p-1 rounded">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <form onSubmit={submit} className="overflow-y-auto flex-1">
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="ชื่อ - นามสกุล" icon={<User className="w-4 h-4" />} required className="md:col-span-2">
+            <input value={form.fullName} onChange={(e) => change('fullName', e.target.value)} required className={inputCls} placeholder="เช่น สมชาย ใจดี" />
+          </Field>
+          <Field label="อีเมล" icon={<Mail className="w-4 h-4" />} required>
+            <input type="email" value={form.email} onChange={(e) => change('email', e.target.value)} required className={inputCls} />
+          </Field>
+          <Field label="เบอร์โทร (10 หลัก)" icon={<Phone className="w-4 h-4" />} required>
+            <input type="tel" inputMode="numeric" maxLength={10} value={form.phone} onChange={(e) => change('phone', e.target.value)} required className={inputCls} placeholder="08XXXXXXXX" />
+          </Field>
+          <Field label="หน่วยงาน / สถานศึกษา" icon={<Building2 className="w-4 h-4" />}>
+            <input value={form.organization} onChange={(e) => change('organization', e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="ตำแหน่ง" icon={<Briefcase className="w-4 h-4" />}>
+            <input value={form.position} onChange={(e) => change('position', e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="หมายเหตุ" icon={<MessageSquare className="w-4 h-4" />} className="md:col-span-2">
+            <textarea value={form.note} onChange={(e) => change('note', e.target.value)} rows={2} className={`${inputCls} resize-none`} />
+          </Field>
+          {err && (
+            <div className="md:col-span-2 flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
+              <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{err}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-yrugray-800 flex items-center justify-end gap-2 bg-white dark:bg-yrugray-900/50 sticky bottom-0">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-[15px] font-medium text-slate-700 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800 transition-colors">
+            ยกเลิก
+          </button>
+          <button type="submit" disabled={submitting} className="px-5 py-2 rounded-lg bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2">
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+            เพิ่มผู้ลงทะเบียน
+          </button>
+        </div>
+      </form>
+    </ModalShell>
   );
 };
 

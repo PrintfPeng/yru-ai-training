@@ -22,6 +22,8 @@ export const registrationsApi = {
   // Admin
   listForActivity: (activityId, params = {}) =>
     client.get(`/registrations/by-activity/${activityId}`, { params }),
+  adminCreate: (activityId, participant, note) =>
+    client.post(`/registrations/by-activity/${activityId}`, { participant, note }),
   updateStatus: (id, status, note) =>
     client.patch(`/registrations/${id}/status`, { status, note }),
   remove: (id) => client.delete(`/registrations/${id}`),
