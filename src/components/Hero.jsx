@@ -5,7 +5,7 @@ import logoAI from '../assets/logo-ai.png';
 
 const Hero = () => {
   return (
-    <section className="w-full pt-[25vh] lg:pt-[30vh] pb-20 lg:pb-32 flex flex-col items-center justify-center text-center">
+    <section className="w-full pt-28 lg:pt-32 pb-28 lg:pb-30 flex flex-col items-center justify-center text-center">
       <div className="flex flex-row items-center justify-center gap-6 md:gap-10 mb-8">
         <img src={logoYRU} alt="มหาวิทยาลัยราชภัฏยะลา" className="h-20 w-auto transition-transform duration-300 hover:scale-105" />
         <img src={logoSTA} alt="สำนักงานปลัดกระทรวง อว." className="h-20 w-auto transition-transform duration-300 hover:scale-105" />

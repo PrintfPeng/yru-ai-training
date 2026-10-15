@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Lock, LayoutDashboard } from 'lucide-react';
+import {
+  Menu, X, Lock, LayoutDashboard,
+  Home, GraduationCap, Award, LayoutGrid, Mail,
+} from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
 /**
@@ -14,10 +17,11 @@ import ThemeToggle from './ThemeToggle';
  *   active    — 'home' | 'training' | null : highlights the current link
  */
 const NAV_LINKS = [
-  { key: 'home', label: 'หน้าแรก', target: 'home' },
-  { key: 'training', label: 'หลักสูตรอบรม', target: 'training' },
-  { key: 'features', label: 'บริการ', target: 'home', hash: '#features' },
-  { key: 'contact', label: 'ติดต่อเรา', target: 'home', hash: '#contact' },
+  { key: 'home', label: 'หน้าแรก', target: 'home', Icon: Home },
+  { key: 'training', label: 'หลักสูตรอบรม', target: 'training', Icon: GraduationCap },
+  { key: 'certificates', label: 'รับเกียรติบัตร', target: 'certificates', Icon: Award },
+  { key: 'features', label: 'บริการ', target: 'services', Icon: LayoutGrid },
+  { key: 'contact', label: 'ติดต่อเรา', target: 'contact', Icon: Mail },
 ];
 
 export default function Navbar({ onNavigate, isAdmin = false, active = null }) {
@@ -71,12 +75,13 @@ export default function Navbar({ onNavigate, isAdmin = false, active = null }) {
                 key={link.key}
                 type="button"
                 onClick={() => go(link)}
-                className={`px-3.5 py-2 rounded-lg transition-colors ${
+                className={`px-3.5 py-2 rounded-lg transition-colors inline-flex items-center gap-1.5 ${
                   isActive
                     ? 'text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10'
                     : 'text-slate-600 dark:text-yrugray-300 hover:text-yrupink-600 dark:hover:text-yrupink-400 hover:bg-slate-100 dark:hover:bg-yrugray-800'
                 }`}
               >
+                {link.Icon && <link.Icon className="w-4 h-4" />}
                 {link.label}
               </button>
             );
@@ -123,12 +128,13 @@ export default function Navbar({ onNavigate, isAdmin = false, active = null }) {
                   key={link.key}
                   type="button"
                   onClick={() => go(link)}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors inline-flex items-center gap-2.5 ${
                     isActive
                       ? 'text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10'
                       : 'text-slate-700 dark:text-yrugray-200 hover:bg-slate-100 dark:hover:bg-yrugray-800'
                   }`}
                 >
+                  {link.Icon && <link.Icon className="w-5 h-5 shrink-0" />}
                   {link.label}
                 </button>
               );

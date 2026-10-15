@@ -10,6 +10,8 @@ import TrainingActivity from './pages/TrainingActivity';
 import EventLanding from './pages/EventLanding';
 import AssessmentSurvey from './pages/AssessmentSurvey';
 import CertificateDownload from './pages/CertificateDownload';
+import MyCertificates from './pages/MyCertificates';
+import Contact from './pages/Contact';
 import { authApi } from './api';
 
 // Detect scanned QR: URL like /?e=<activityId>
@@ -28,7 +30,7 @@ const readVerifyFromUrl = () => {
 // where they were. `dashboard` additionally requires a valid session (checked
 // after the /auth/me bootstrap) — if there is none it falls back to the login
 // screen, but the URL stays put.
-const ALL_VIEWS = ['home', 'training', 'admin', 'dashboard'];
+const ALL_VIEWS = ['home', 'training', 'services', 'certificates', 'contact', 'admin', 'dashboard'];
 const readViewFromUrl = () => {
   if (typeof window === 'undefined') return 'home';
   const v = new URLSearchParams(window.location.search).get('view');
@@ -151,6 +153,9 @@ function App() {
       setCurrentView(admin ? 'dashboard' : 'admin');
       return;
     }
+    if (target === 'certificates') { setCurrentView('certificates'); return; }
+    if (target === 'services') { setCurrentView('services'); return; }
+    if (target === 'contact') { setCurrentView('contact'); return; }
     setCurrentView(target === 'training' ? 'training' : 'home');
     if (hash) {
       setTimeout(() => {
@@ -252,6 +257,44 @@ function App() {
           setCurrentView('home');
         }}
       />
+    );
+  }
+
+  if (currentView === 'certificates') {
+    return (
+      <MyCertificates
+        onBackHome={() => setCurrentView('home')}
+        onNavigate={goTo}
+        isAdmin={!!admin}
+      />
+    );
+  }
+
+  if (currentView === 'contact') {
+    return (
+      <Contact
+        onBackHome={() => setCurrentView('home')}
+        onNavigate={goTo}
+        isAdmin={!!admin}
+      />
+    );
+  }
+
+  // "บริการ" as its own page — Features only, no Hero.
+  if (currentView === 'services') {
+    return (
+      <div className="min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yrupink-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+        <Navbar onNavigate={goTo} isAdmin={!!admin} active="features" />
+
+        <main className="flex-grow px-6 z-10 w-full max-w-7xl mx-auto pt-8">
+          <Features onViewTraining={() => setCurrentView('training')} />
+        </main>
+
+        <Footer />
+      </div>
     );
   }
 

@@ -19,10 +19,17 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,   // rewrites Host → target
           secure: false,
           // Browsers attach `Origin: http://localhost:5173` on writes (POST/
-          // PATCH/DELETE). The backend CORS whitelist only knows the prod
-          // origin, so it rejected those with a 500. Rewrite Origin to the
-          // target so same-origin dev writes are accepted. Dev-only.
+          // PATCH/DELETE) and on CORS preflights. The backend CORS whitelist
+          // only knows the prod origin and THROWS (→ HTTP 500) on an unknown
+          // one. The `headers` option alone doesn't reliably override an Origin
+          // the browser already set, so force it on every proxied request
+          // (incl. the OPTIONS preflight) via proxyReq. Dev-only.
           headers: { Origin: apiTarget },
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('origin', apiTarget);
+            });
+          },
         },
       },
     },
