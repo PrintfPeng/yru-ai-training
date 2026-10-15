@@ -89,6 +89,19 @@ export const DEFAULT_ELEMENTS = () => [
     field: 'courseTitle',
     x: 15, y: 68, width: 70, fontSize: 16, fontWeight: 'bold', color: '#f472b6', textAlign: 'center',
   },
+  {
+    id: uid(),
+    kind: 'placeholder',
+    field: 'issueDate',
+    x: 20, y: 86, width: 25, fontSize: 11, fontWeight: 'normal', color: '#9ca3af', textAlign: 'left',
+  },
+  {
+    // เลขที่ใบรับรอง (ควท.มรย.{ปี}/03/{รัน}) — เป็น placeholder ขยับ/แต่งได้เหมือนข้อความ
+    id: uid(),
+    kind: 'placeholder',
+    field: 'certificateId',
+    x: 55, y: 86, width: 25, fontSize: 11, fontWeight: 'normal', color: '#9ca3af', textAlign: 'right',
+  },
 ];
 
 const CertificateEditor = ({ cert, onChange, template }) => {

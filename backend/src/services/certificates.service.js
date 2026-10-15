@@ -112,6 +112,45 @@ export async function issueCertificateForRegistration(registrationId, conn = poo
 }
 
 /**
+ * Read the per-year running counter. `last_no` is the highest number issued so
+ * far this (Buddhist) year; `next_no` is what the next certificate would get.
+ */
+export async function getYearCounter(beYear) {
+  const [[row]] = await pool.query(
+    'SELECT last_no FROM cert_counters WHERE be_year = ? LIMIT 1', [beYear]
+  );
+  const last_no = row ? row.last_no : 0;
+  return { be_year: beYear, last_no, next_no: last_no + 1 };
+}
+
+/**
+ * Set the STARTING number for a year, i.e. the number the next certificate will
+ * get. Stored as last_no = startNo - 1. Refuses to go below what's already been
+ * issued, otherwise the next code would collide with an existing one.
+ */
+export async function setYearStart(beYear, startNo) {
+  if (!Number.isInteger(startNo) || startNo < 1) {
+    throw new AppError('INVALID_START', 'เลขเริ่มต้องเป็นจำนวนเต็มตั้งแต่ 1', 422);
+  }
+  const [[row]] = await pool.query(
+    'SELECT last_no FROM cert_counters WHERE be_year = ? LIMIT 1', [beYear]
+  );
+  const current = row ? row.last_no : 0;
+  const newLast = startNo - 1;
+  if (newLast < current) {
+    throw new AppError('START_TOO_LOW',
+      `ปี ${beYear} ออกใบถึงเลข ${current} แล้ว ตั้งเลขเริ่มได้ไม่ต่ำกว่า ${current + 1}`,
+      409, { current, minStart: current + 1 });
+  }
+  await pool.query(
+    `INSERT INTO cert_counters (be_year, last_no) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE last_no = VALUES(last_no)`,
+    [beYear, newLast]
+  );
+  return { be_year: beYear, last_no: newLast, next_no: startNo };
+}
+
+/**
  * Public lookup: `/verify/:code` — returns cert + substituted values so the page
  * can render or the client can build the PDF.
  */

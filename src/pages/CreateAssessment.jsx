@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import DynamicFormBuilder from '../components/DynamicFormBuilder';
 import CertificateEditor, { DEFAULT_ELEMENTS } from '../components/CertificateEditor';
-import { activitiesApi, assessmentsApi, ApiError } from '../api';
+import { activitiesApi, assessmentsApi, certificatesApi, ApiError } from '../api';
+import { errorMessage } from '../utils/errorMessage';
 
 const adminInputCls =
   'w-full bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 text-[15px] rounded-lg px-3.5 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-yrugray-500 focus:outline-none focus:border-yrupink-500 focus:ring-1 focus:ring-yrupink-500 transition-all';
@@ -225,6 +226,17 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
 
   const selectedTemplate = CERT_TEMPLATES.find((t) => t.value === cert.template);
 
+  // Buddhist year of the selected activity — the cert running number is keyed by
+  // this year (same rule as issueCertificateForRegistration on the backend).
+  const selectedActivity = presetActivity
+    || activityOptions.find((a) => String(a.id) === String(meta.activityId));
+  const certBeYear = (() => {
+    const sd = selectedActivity?.raw?.start_date || selectedActivity?.start_date || selectedActivity?.startDate;
+    if (!sd) return null;
+    const y = new Date(sd).getFullYear();
+    return Number.isFinite(y) ? y : null;
+  })();
+
   return (
     <div className="space-y-6 pb-28">
       {/* Header — hidden when embedded (parent owns save/back UI) */}
@@ -413,6 +425,9 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
               </AdminField>
             </div>
 
+            {/* เลขเริ่มของใบรับรอง (เลขรันต่อปี ทั้งศูนย์) */}
+            <CertNumberStart beYear={certBeYear} />
+
             {/* Template picker */}
             <div>
               <label className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 mb-2 flex items-center gap-1.5">
@@ -470,6 +485,86 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
 };
 
 // ---- Sub components ----
+
+// Set the STARTING running number for a year's certificate codes
+// (ควท.มรย.{ปี}/03/{run}). The counter is shared across the whole centre per
+// Buddhist year, so changing it affects every activity in that year.
+const CertNumberStart = ({ beYear }) => {
+  const [info, setInfo] = useState(null);      // { last_no, next_no }
+  const [startNo, setStartNo] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);        // { type:'ok'|'err', text }
+
+  useEffect(() => {
+    if (!beYear) { setInfo(null); return undefined; }
+    let cancelled = false;
+    setMsg(null);
+    certificatesApi.getCounter(beYear)
+      .then((d) => { if (!cancelled) { setInfo(d); setStartNo(String(d.next_no)); } })
+      .catch(() => { if (!cancelled) setInfo(null); });
+    return () => { cancelled = true; };
+  }, [beYear]);
+
+  if (!beYear) {
+    return (
+      <div className="p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800 text-sm text-slate-500 dark:text-yrugray-400">
+        เลือกหลักสูตรก่อน เพื่อตั้งเลขเริ่มของใบรับรอง (อ้างอิงปี พ.ศ. ของหลักสูตร)
+      </div>
+    );
+  }
+
+  const save = async () => {
+    const n = Number(startNo);
+    if (!Number.isInteger(n) || n < 1) { setMsg({ type: 'err', text: 'เลขเริ่มต้องเป็นจำนวนเต็มตั้งแต่ 1' }); return; }
+    setSaving(true);
+    setMsg(null);
+    try {
+      const d = await certificatesApi.setCounterStart(beYear, n);
+      setInfo(d); setStartNo(String(d.next_no));
+      setMsg({ type: 'ok', text: `ตั้งแล้ว — ใบถัดไปของปี ${beYear} จะเริ่มที่เลข ${d.next_no}` });
+    } catch (e) {
+      setMsg({ type: 'err', text: errorMessage(e, 'ตั้งเลขเริ่มไม่สำเร็จ') });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="p-4 rounded-xl bg-slate-50 dark:bg-yrugray-800/40 border border-slate-200 dark:border-yrugray-800 space-y-2.5">
+      <p className="text-[15px] font-medium text-slate-800 dark:text-yrugray-200 flex items-center gap-1.5">
+        <FileSignature className="w-4 h-4 text-yrupink-500" /> เลขเริ่มใบรับรองของปี พ.ศ. {beYear}
+      </p>
+      <p className="text-sm text-slate-500 dark:text-yrugray-400">
+        {info
+          ? `ตอนนี้ออกไปแล้วถึงเลข ${info.last_no} — ใบถัดไปจะเป็นเลข ${info.next_no}`
+          : 'กำลังโหลด...'}
+      </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <input
+          type="number"
+          min={1}
+          value={startNo}
+          onChange={(e) => setStartNo(e.target.value)}
+          className={`${adminInputCls} w-28`}
+        />
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="px-4 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 disabled:opacity-60 text-white text-[15px] font-semibold rounded-lg flex items-center gap-2"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} ตั้งเลขเริ่ม
+        </button>
+      </div>
+      {msg && (
+        <p className={`text-sm ${msg.type === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {msg.text}
+        </p>
+      )}
+      <p className="text-xs text-amber-600 dark:text-amber-400">
+        ⚠ เลขรันนับต่อเนื่องทั้งศูนย์ต่อปี การตั้งค่านี้มีผลกับทุกกิจกรรมในปี {beYear} และตั้งได้ไม่ต่ำกว่าเลขที่ออกไปแล้ว
+      </p>
+    </div>
+  );
+};
 
 const AdminField = ({ label, icon, required, className = '', children }) => (
   <div className={className}>

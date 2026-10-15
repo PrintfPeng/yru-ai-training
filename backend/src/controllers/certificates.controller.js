@@ -11,3 +11,15 @@ export const getByCode = asyncHandler(async (req, res) => {
   const data = await svc.getCertificateByCode(code);
   res.json({ ok: true, data });
 });
+
+/** ADMIN — read the per-year certificate running counter. */
+export const getCounter = asyncHandler(async (req, res) => {
+  const data = await svc.getYearCounter(Number(req.params.beYear));
+  res.json({ ok: true, data });
+});
+
+/** ADMIN — set the starting number for a year's certificate sequence. */
+export const setCounter = asyncHandler(async (req, res) => {
+  const data = await svc.setYearStart(Number(req.params.beYear), Number(req.body.start_no));
+  res.json({ ok: true, data });
+});
