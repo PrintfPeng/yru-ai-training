@@ -27,7 +27,22 @@ export function createApp() {
   // X-Forwarded-For headers on a bare-metal run.
   if (env.TRUST_PROXY) app.set('trust proxy', 1);
 
-  app.use(helmet({ crossOriginResourcePolicy: false }));
+  // Helmet's default CSP is `default-src 'self'` with no frame-src, which
+  // blocks the Google Maps embed on the Contact page and the Google Fonts /
+  // data: banner images the SPA loads. These directives merge over Helmet's
+  // defaults (useDefaults stays on) and only matter when this server serves
+  // the built frontend same-origin; Vite dev sets no CSP.
+  app.use(helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        'frame-src': ["'self'", 'https://www.google.com'],          // Maps embed
+        'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        'font-src': ["'self'", 'https://fonts.gstatic.com'],
+        'img-src': ["'self'", 'data:', 'https:'],                   // data: banners
+      },
+    },
+  }));
   app.use(cors({
     origin: (origin, cb) => {
       // Allow same-origin (no Origin header) and whitelisted origins
