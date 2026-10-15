@@ -10,6 +10,7 @@ import {
   Palette,
   Type as TypeIcon,
   Loader2,
+  XCircle,
 } from 'lucide-react';
 import DynamicFormBuilder from '../components/DynamicFormBuilder';
 import CertificateEditor, { DEFAULT_ELEMENTS } from '../components/CertificateEditor';
@@ -225,7 +226,7 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
   const selectedTemplate = CERT_TEMPLATES.find((t) => t.value === cert.template);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28">
       {/* Header — hidden when embedded (parent owns save/back UI) */}
       {!embedded && (
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -248,8 +249,9 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
       )}
 
       {saveError && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-300">
-          {saveError}
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-400">
+          <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{saveError}</span>
         </div>
       )}
       {savedOk && (
@@ -350,6 +352,8 @@ const CreateAssessment = ({ activity: presetActivity, embedded = false }) => {
       <DynamicFormBuilder
         questions={questions}
         onChange={setQuestions}
+        floatingAdd
+        floatingAddSide="right"
         title="คำถามในแบบสอบถาม (Dynamic Form)"
         description="ออกแบบคำถามที่ต้องการให้ผู้เข้าอบรมตอบ — รองรับหลายประเภท รวมตารางให้คะแนน (Rating matrix)"
         emptyText='ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่มต้น'
