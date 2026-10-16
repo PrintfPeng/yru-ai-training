@@ -12,9 +12,11 @@ const Hero = () => {
         <img src={logoAI} alt="AI Center YRU" className="h-20 w-auto transition-transform duration-300 hover:scale-105" />
       </div>
       <br />
-      <p className="text-xl md:text-2xl text-gray-600 dark:text-yrugray-100 max-w-2xl mb-10 leading-relaxed opacity-90 transition-colors duration-300">
-       พัฒนาศักยภาพกำลังคนและนวัตกรรมปัญญาประดิษฐ์ <br />เพื่อขับเคลื่อนการพัฒนาจังหวัดชายแดนภาคใต้
-      </p>
+      <h1 className="text-2xl md:text-3xl lg:text-5xl font-extrabold tracking-tight max-w-4xl leading-tight mb-10 transition-colors duration-300">
+        <span className="text-gradient">
+          พัฒนาศักยภาพกำลังคนและนวัตกรรมปัญญาประดิษฐ์ <br />เพื่อขับเคลื่อนการพัฒนาจังหวัดชายแดนภาคใต้
+        </span>
+      </h1>
     </section>
   );
 };
