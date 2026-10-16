@@ -25,11 +25,10 @@ const Hero = () => {
     />
   </div>
 
-  {/* หัวข้อหลัก — กางเต็มความกว้างจอ (full-bleed หลุดกรอบ max-w ของ main) และใช้ฟอนต์
-      ปรับตามความกว้างจอ (clamp+vw) ใหญ่สุด = text-5xl บนจอกว้าง แล้วย่อพอดีเองไม่ให้
-      ตัดบรรทัดหรือโดนตัดขอบ */}
- <h1 className="relative left-1/2 -translate-x-1/2 w-screen max-w-none font-extrabold tracking-tight text-gray-900 dark:text-white transition-colors duration-300">
-  <span className="text-gradient block text-[clamp(1.25rem,3vw,3rem)] !leading-normal md:!leading-relaxed py-2 px-4 md:whitespace-nowrap">
+  {/* หัวข้อหลัก — อยู่ใน flow ปกติของ main (จัดกลางอัตโนมัติ) ฟอนต์ปรับตามจอ (clamp+vw)
+      ให้พอดีกรอบทุกขนาดจอ ไม่ตัดบรรทัด/ไม่โดนตัดขอบ และอยู่กึ่งกลางเสมอ */}
+ <h1 className="w-full font-extrabold tracking-tight text-gray-900 dark:text-white transition-colors duration-300">
+  <span className="text-gradient block text-center text-[clamp(1.5rem,3vw,2.75rem)] !leading-normal md:!leading-relaxed py-2 px-4 md:whitespace-nowrap">
     พัฒนาศักยภาพกำลังคนและนวัตกรรมปัญญาประดิษฐ์ <br /> เพื่อขับเคลื่อนการพัฒนาจังหวัดชายแดนภาคใต้
   </span>
 </h1>
