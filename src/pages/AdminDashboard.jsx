@@ -166,18 +166,12 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
       {/* Sidebar - ปรับขนาดความกว้างให้พอดี w-64 */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-yrugray-900 border-r border-slate-200/80 dark:border-yrugray-800 shadow-xl lg:shadow-none transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
-        {/* Branding */}
+        {/* Section label — brand ตัดออก (ไปแสดงที่ navbar ด้านบนแล้ว) กัน AI CENTER YRU ซ้ำ */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200/80 dark:border-yrugray-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-tr from-yrupink-600 to-yrupink-400 rounded-lg flex items-center justify-center font-bold text-white shadow-sm shadow-yrupink-500/20 text-xs">
-              AI
-            </div>
-            <div>
-              <span className="font-bold text-base tracking-wide text-slate-900 dark:text-white block leading-tight">CENTER <span className="text-yrupink-500 dark:text-yrupink-400">YRU</span></span>
-              <span className="text-[10px] text-yrupink-600 dark:text-yrupink-400 font-bold tracking-wider bg-yrupink-500/10 px-1.5 py-0.5 rounded inline-block mt-0.5">ADMIN</span>
-            </div>
-          </div>
-          <button 
+          <span className="text-xs font-bold text-yrupink-600 dark:text-yrupink-400 tracking-wider uppercase bg-yrupink-500/10 px-2.5 py-1 rounded">
+            เมนูผู้ดูแลระบบ
+          </span>
+          <button
             onClick={() => setIsSidebarOpen(false)}
             className="lg:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md"
           >
