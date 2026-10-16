@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronLeft, ChevronRight, Loader2, X, ArrowUpRight } from 'lucide-react';
 import { portfoliosApi } from '../api';
 
 /**
- * "ผลงานที่ผ่านมา" — Expanding-panels / accordion carousel
- * (อ้างอิง https://codepen.io/Anantpatel9290/pen/azdLPra).
- * แผงที่ active จะขยายกว้างโชว์รูป+ชื่อ+คำอธิบายเต็ม ส่วนแผงอื่นหุบเป็นแถบแคบ
- * โชว์ชื่อแบบแนวตั้ง. ขยายเมื่อ hover (เดสก์ท็อป) หรือคลิก/ปัด (มือถือ).
+ * "ผลงานที่ผ่านมา" — 3D center-mode / coverflow carousel.
+ * การ์ดตรงกลางขยายเด่น การ์ดด้านข้างย่อ+เอียงเป็นมิติซ้อนกัน (perspective + rotateY).
+ * การ์ดโชว์ "แค่ชื่อ" — คลิกการ์ดกลางเพื่อเปิดหน้ารายละเอียดเต็ม (รูป+ชื่อ+คำอธิบาย).
  *
- * รองรับ: ปุ่มซ้าย/ขวา, คลิกแผงเพื่อขยาย, pagination dots, ปัดหน้าจอ (swipe),
- * auto-play หยุดเมื่อ hover. ใช้ Tailwind dark: variants → รองรับ Light/Dark.
+ * รองรับ: ปุ่มซ้าย/ขวา, คลิกการ์ดด้านข้างเพื่อเลื่อนมากลาง, pagination dots,
+ * ปัดหน้าจอ (swipe), auto-play หยุดเมื่อ hover. รองรับ Light/Dark mode.
  */
 const AUTOPLAY_MS = 4500;
 const SWIPE_THRESHOLD = 50; // px
@@ -19,6 +19,7 @@ const PastWorksCarousel = () => {
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [detail, setDetail] = useState(null); // ผลงานที่เปิดดูรายละเอียดอยู่
   const drag = useRef(null);
 
   useEffect(() => {
@@ -35,16 +36,16 @@ const PastWorksCarousel = () => {
   const go = useCallback((dir) => setActive((a) => (a + dir + n) % n), [n]);
   const goTo = useCallback((i) => setActive(((i % n) + n) % n), [n]);
 
-  // Auto-play — หยุดเมื่อ hover หรือมีแผงเดียว
+  // Auto-play — หยุดเมื่อ hover/เปิดรายละเอียด หรือมีการ์ดเดียว
   useEffect(() => {
-    if (paused || n <= 1) return undefined;
+    if (paused || detail || n <= 1) return undefined;
     const id = setInterval(() => setActive((a) => (a + 1) % n), AUTOPLAY_MS);
     return () => clearInterval(id);
-  }, [paused, n]);
+  }, [paused, detail, n]);
 
   useEffect(() => { if (active > n - 1) setActive(0); }, [n, active]);
 
-  const onPointerDown = (e) => { drag.current = { x: e.clientX, moved: false }; };
+  const onPointerDown = (e) => { drag.current = { x: e.clientX }; };
   const onPointerUp = (e) => {
     if (!drag.current) return;
     const dx = e.clientX - drag.current.x;
@@ -70,67 +71,59 @@ const PastWorksCarousel = () => {
         <div className="w-24 h-1 bg-gradient-to-r from-yrupink-600 to-yrupink-400 mx-auto rounded-full"></div>
       </div>
 
-      <div className="relative mx-auto max-w-6xl">
-        {/* Panels row */}
-        <div
-          className="flex gap-2 md:gap-3 w-full h-[360px] sm:h-[420px] md:h-[460px] select-none"
-          onMouseLeave={() => { setPaused(false); drag.current = null; }}
-          onPointerDown={onPointerDown}
-          onPointerUp={onPointerUp}
-        >
-          {items.map((item, i) => {
-            const isActive = i === active;
-            return (
-              <article
-                key={item.id}
-                onMouseEnter={() => { setActive(i); setPaused(true); }}
-                onClick={() => setActive(i)}
-                style={{ flexGrow: isActive ? 7 : 1 }}
-                className={`relative h-full rounded-2xl overflow-hidden cursor-pointer min-w-0 flex-shrink basis-0 border transition-[flex-grow] duration-500 ease-in-out ${
-                  isActive
-                    ? 'border-yrupink-500/50 shadow-2xl shadow-yrupink-500/20'
-                    : 'border-black/5 dark:border-white/10'
-                }`}
-                aria-label={item.title}
-              >
-                <img
-                  src={item.image_url}
-                  alt={item.title}
-                  draggable={false}
-                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                />
-                {/* Overlay */}
-                <div className={`absolute inset-0 transition-all duration-500 ${
-                  isActive
-                    ? 'bg-gradient-to-t from-black/85 via-black/35 to-transparent'
-                    : 'bg-black/45 hover:bg-black/30'
-                }`} />
+      {/* Stage */}
+      <div
+        className="relative mx-auto max-w-6xl h-[340px] sm:h-[400px] md:h-[460px] [perspective:1200px] select-none"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => { setPaused(false); drag.current = null; }}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerLeave={(e) => onPointerUp(e)}
+      >
+        {items.map((item, i) => {
+          let offset = i - active;
+          if (offset > n / 2) offset -= n;
+          if (offset < -n / 2) offset += n;
+          const abs = Math.abs(offset);
+          const hidden = abs > 2;
+          const isActive = offset === 0;
 
-                {/* Active content */}
-                <div className={`absolute bottom-0 left-0 right-0 p-5 md:p-7 text-left transition-all duration-500 ${
-                  isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-                }`}>
-                  <h3 className="text-xl md:text-3xl font-extrabold text-white drop-shadow line-clamp-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm md:text-[15px] text-white/85 mt-2 leading-relaxed line-clamp-3 max-w-xl">
-                    {item.description}
-                  </p>
-                </div>
-
-                {/* Collapsed vertical label — ตัดด้วย … เมื่อยาวเกินความสูงแผง
-                    (ชื่อเต็มจะเห็นตอนแผงขยาย) */}
-                <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-                  isActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
-                }`}>
-                  <span className="inline-block -rotate-90 whitespace-nowrap overflow-hidden text-ellipsis max-w-[260px] sm:max-w-[330px] md:max-w-[370px] text-white font-semibold text-sm md:text-base drop-shadow-md tracking-wide">
-                    {item.title}
+          return (
+            <article
+              key={item.id}
+              onClick={() => { if (hidden) return; isActive ? setDetail(item) : goTo(i); }}
+              className={`absolute top-0 left-1/2 w-[80%] sm:w-[62%] md:w-[48%] lg:w-[40%] h-full rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-slate-200 dark:bg-yrugray-800 shadow-xl transition-all duration-500 ease-out ${
+                isActive ? 'cursor-pointer ring-2 ring-yrupink-500/60 shadow-2xl shadow-yrupink-500/20' : 'cursor-pointer'
+              }`}
+              style={{
+                transform: `translateX(calc(-50% + ${offset * 52}%)) scale(${1 - abs * 0.14}) rotateY(${offset * -6}deg)`,
+                zIndex: 30 - abs,
+                opacity: hidden ? 0 : 1 - abs * 0.25,
+                pointerEvents: hidden ? 'none' : 'auto',
+              }}
+              aria-hidden={hidden}
+            >
+              <img
+                src={item.image_url}
+                alt={item.title}
+                draggable={false}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              />
+              {/* Overlay — โชว์แค่ชื่อ */}
+              <div className={`absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-70'}`} />
+              <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6 text-left">
+                <h3 className="text-lg md:text-2xl font-bold text-white drop-shadow-sm line-clamp-2">
+                  {item.title}
+                </h3>
+                {isActive && (
+                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-white/90 bg-white/15 hover:bg-yrupink-600 border border-white/25 rounded-full px-3 py-1 backdrop-blur transition-colors">
+                    ดูรายละเอียด <ArrowUpRight className="w-3.5 h-3.5" />
                   </span>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                )}
+              </div>
+            </article>
+          );
+        })}
 
         {/* Prev / Next */}
         {n > 1 && (
@@ -139,7 +132,7 @@ const PastWorksCarousel = () => {
               type="button"
               onClick={() => go(-1)}
               aria-label="ก่อนหน้า"
-              className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 z-40 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/90 dark:bg-yrugray-900/90 backdrop-blur border border-slate-200 dark:border-yrugray-700 text-slate-700 dark:text-white hover:bg-yrupink-600 hover:text-white hover:border-yrupink-500 shadow-lg flex items-center justify-center transition-colors"
+              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-40 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/80 dark:bg-yrugray-900/80 backdrop-blur border border-slate-200 dark:border-yrugray-700 text-slate-700 dark:text-white hover:bg-yrupink-600 hover:text-white hover:border-yrupink-500 shadow-lg flex items-center justify-center transition-colors"
             >
               <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
             </button>
@@ -147,7 +140,7 @@ const PastWorksCarousel = () => {
               type="button"
               onClick={() => go(1)}
               aria-label="ถัดไป"
-              className="absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 z-40 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/90 dark:bg-yrugray-900/90 backdrop-blur border border-slate-200 dark:border-yrugray-700 text-slate-700 dark:text-white hover:bg-yrupink-600 hover:text-white hover:border-yrupink-500 shadow-lg flex items-center justify-center transition-colors"
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-40 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/80 dark:bg-yrugray-900/80 backdrop-blur border border-slate-200 dark:border-yrugray-700 text-slate-700 dark:text-white hover:bg-yrupink-600 hover:text-white hover:border-yrupink-500 shadow-lg flex items-center justify-center transition-colors"
             >
               <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
             </button>
@@ -173,7 +166,45 @@ const PastWorksCarousel = () => {
           ))}
         </div>
       )}
+
+      {detail && <PortfolioDetailModal item={detail} onClose={() => setDetail(null)} />}
     </section>
+  );
+};
+
+// หน้ารายละเอียดผลงาน (รูปเต็ม + ชื่อ + คำอธิบายทั้งหมด)
+const PortfolioDetailModal = ({ item, onClose }) => {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[120] flex items-start sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+      <div onClick={onClose} className="absolute inset-0" />
+      <div className="relative my-8 w-full max-w-3xl bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="relative">
+          <img src={item.image_url} alt={item.title} className="w-full max-h-[55vh] object-cover bg-slate-100 dark:bg-yrugray-800" />
+          <button
+            onClick={onClose}
+            aria-label="ปิด"
+            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/55 hover:bg-black/75 text-white flex items-center justify-center backdrop-blur transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 md:p-8 overflow-y-auto">
+          <h3 className="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white mb-3">{item.title}</h3>
+          <p className="text-[15px] md:text-base text-slate-700 dark:text-yrugray-300 leading-relaxed whitespace-pre-line">
+            {item.description}
+          </p>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 };
 
