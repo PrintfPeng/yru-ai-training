@@ -11,7 +11,6 @@ const Hero = () => {
         <img src={logoSTA} alt="สำนักงานปลัดกระทรวง อว." className="h-20 w-auto transition-transform duration-300 hover:scale-105" />
         <img src={logoAI} alt="AI Center YRU" className="h-20 w-auto transition-transform duration-300 hover:scale-105" />
       </div>
-      <br /> 
       <br />
       <p className="text-xl md:text-2xl text-gray-600 dark:text-yrugray-100 max-w-2xl mb-10 leading-relaxed opacity-90 transition-colors duration-300">
        พัฒนาศักยภาพกำลังคนและนวัตกรรมปัญญาประดิษฐ์ <br />เพื่อขับเคลื่อนการพัฒนาจังหวัดชายแดนภาคใต้
