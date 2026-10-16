@@ -40,27 +40,32 @@ export function requireRole(...allowed) {
   };
 }
 
+// "จดจำฉันไว้ในระบบ": remember = อยู่ 30 วัน, ไม่ remember = อายุปกติ (8 ชม.)
+const REMEMBER_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const DEFAULT_MS  = 8 * 60 * 60 * 1000;       // 8 hours
+
 /**
- * Sign a JWT for an admin row.
+ * Sign a JWT for an admin row. `remember` ยืดอายุ token เป็น 30 วัน.
  */
-export function issueToken(admin) {
+export function issueToken(admin, remember = false) {
   return jwt.sign(
     { sub: admin.id, username: admin.username, role: admin.role },
     env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN }
+    { expiresIn: remember ? '30d' : env.JWT_EXPIRES_IN }
   );
 }
 
 /**
  * Cookie options shared between login (set) and logout (clear).
+ * `remember` ยืดอายุ cookie เป็น 30 วัน (ไม่งั้น 8 ชม.).
  */
-export function cookieOptions() {
+export function cookieOptions(remember = false) {
   return {
     httpOnly: true,
     secure: env.COOKIE_SECURE,
     sameSite: env.COOKIE_SAMESITE,
     path: '/',
     // maxAge is set on setCookie only; clearCookie ignores it
-    maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    maxAge: remember ? REMEMBER_MS : DEFAULT_MS,
   };
 }

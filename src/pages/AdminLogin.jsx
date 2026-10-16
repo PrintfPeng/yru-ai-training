@@ -6,6 +6,7 @@ const AdminLogin = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -14,7 +15,7 @@ const AdminLogin = ({ onLogin }) => {
     setError('');
     setSubmitting(true);
     try {
-      const { admin } = await authApi.login(username.trim(), password);
+      const { admin } = await authApi.login(username.trim(), password, remember);
       onLogin?.(admin);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'INVALID_CREDENTIALS') {
@@ -104,7 +105,13 @@ const AdminLogin = ({ onLogin }) => {
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer group">
                 <div className="relative flex items-center justify-center">
-                  <input type="checkbox" className="peer sr-only" />
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    disabled={submitting}
+                  />
                   <div className="w-5 h-5 border-2 border-slate-400 dark:border-yrugray-600 rounded bg-slate-100/50 dark:bg-yrugray-800/50 peer-checked:bg-yrupink-500 peer-checked:border-yrupink-500 transition-all"></div>
                   <svg className="absolute w-3 h-3 text-slate-900 dark:text-white opacity-0 peer-checked:opacity-100 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </div>

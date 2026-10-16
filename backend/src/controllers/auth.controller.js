@@ -5,8 +5,9 @@ import { issueToken, cookieOptions } from '../middleware/auth.js';
 
 export const login = asyncHandler(async (req, res) => {
   const admin = await authenticate(req.body.username, req.body.password);
-  const token = issueToken(admin);
-  res.cookie(env.COOKIE_NAME, token, cookieOptions());
+  const remember = !!req.body.remember;
+  const token = issueToken(admin, remember);
+  res.cookie(env.COOKIE_NAME, token, cookieOptions(remember));
   res.json({ ok: true, data: { admin } });
 });
 
