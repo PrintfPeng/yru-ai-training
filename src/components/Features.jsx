@@ -27,7 +27,8 @@ const Features = ({ onViewTraining }) => {
       description: "ตรวจสอบสถานะห้องว่างแบบเรียลไทม์ และจองห้องประชุมอัจฉริยะที่เพียบพร้อมด้วยเทคโนโลยีทันสมัยได้อย่างง่ายดาย",
       icon: <CalendarCheck className="w-10 h-10 text-yrupink-400" />,
       buttonText: "จองห้องทันที",
-      glowColor: "group-hover:shadow-purple-500/20"
+      glowColor: "group-hover:shadow-purple-500/20",
+      link: "https://docs.google.com/spreadsheets/d/16kTVFVuZNuCpChaN557EusPtbpwrK-Hx3Ld8Kl80dRE/edit?gid=0#gid=0"
     }
   ];
 
