@@ -436,23 +436,16 @@ const ActivityDetail = ({ activity: initialActivity, onBack, onNavigate, isAdmin
               {registrants.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-yrugray-400">ยังไม่มีผู้ลงทะเบียน</p>
               ) : (
-                <ul className="flex flex-col gap-2">
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {registrants.map((r, i) => (
                     <li
                       key={i}
-                      className="flex items-center gap-3 text-sm text-gray-700 dark:text-yrugray-200 bg-white/50 dark:bg-yrugray-900/40 rounded-lg px-3 py-2 border border-gray-200 dark:border-yrugray-700"
+                      className="flex items-center gap-2 text-sm text-gray-700 dark:text-yrugray-200 bg-white/50 dark:bg-yrugray-900/40 rounded-lg px-3 py-2 border border-gray-200 dark:border-yrugray-700"
                     >
                       <span className="w-6 h-6 rounded-full bg-yrupink-500/10 text-yrupink-600 dark:text-yrupink-400 text-xs font-semibold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">
-                          {r.first_name} {r.last_name_masked}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-yrugray-400 truncate">
-                          {r.organization || 'ไม่ระบุหน่วยงาน'}
-                        </p>
-                      </div>
+                      <span className="truncate">{r.first_name} {r.last_name_masked}</span>
                     </li>
                   ))}
                 </ul>
