@@ -9,7 +9,7 @@ import Breadcrumb from '../components/Breadcrumb';
 const ADDRESS = '133 ถนนเทศบาล 3 ตำบลสะเตง อำเภอเมือง จังหวัดยะลา 95000';
 const PHONE = '073 299 699 ต่อ 25202';
 const PHONE_TEL = 'tel:073299699';
-const EMAIL = 'aicenter@yru.ac.th';
+const EMAIL = 'ai-center@yru.ac.th';
 const MAP_URL ='https://www.google.com/maps/search/?api=1&query=' +
   encodeURIComponent('มหาวิทยาลัยราชภัฏยะลา');
 
