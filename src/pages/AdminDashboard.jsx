@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
+import RoomBookings from './RoomBookings';
 import ThemeToggle from '../components/ThemeToggle';
 import Navbar from '../components/Navbar';
 import { activitiesApi } from '../api';
@@ -289,6 +290,8 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
                 initialSelectedId={openActivityId}
                 onConsumedInitialSelect={() => setOpenActivityId(null)}
               />
+            ) : activeMenu === 'จัดการการจองห้อง' ? (
+              <RoomBookings />
             ) : (
               <>
                 {/* Quick Stats Row */}

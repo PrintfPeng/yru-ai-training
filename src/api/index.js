@@ -5,3 +5,4 @@ export { participantsApi }  from './participants';
 export { registrationsApi } from './registrations';
 export { assessmentsApi }   from './assessments';
 export { certificatesApi }  from './certificates';
+export { roomsApi }         from './rooms';

@@ -46,6 +46,12 @@ const schema = z.object({
 
   PUBLIC_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
   PUBLIC_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+
+  // Public Google Sheet (Form responses) ของการจองห้อง — อ่านเป็น CSV ฝั่ง server.
+  // เปลี่ยน sheet ได้ด้วยการตั้ง ROOM_SHEET_CSV_URL ใน .env (ต้องเป็น URL export CSV).
+  ROOM_SHEET_CSV_URL: z.string().url().default(
+    'https://docs.google.com/spreadsheets/d/16kTVFVuZNuCpChaN557EusPtbpwrK-Hx3Ld8Kl80dRE/export?format=csv&gid=0'
+  ),
 });
 
 const parsed = schema.safeParse(process.env);
