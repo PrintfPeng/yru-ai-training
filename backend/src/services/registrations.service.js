@@ -30,12 +30,12 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
 
 /**
  * Public list of registrants for an activity (shown on the registration page
- * so applicants can confirm their sign-up). Names are masked: full first name
- * + first 4 chars of the last name + "*****". Only approved/attended rows.
+ * so applicants can confirm their sign-up). Full names + organization are shown
+ * (no masking). Only approved/attended rows.
  */
 export async function listPublicRegistrants(activitySlug) {
   const [rows] = await pool.query(
-    `SELECT p.first_name, p.last_name
+    `SELECT p.first_name, p.last_name, p.organization
        FROM registrations r
        JOIN participants  p ON p.id = r.participant_id
        JOIN activities    a ON a.id = r.activity_id
@@ -44,10 +44,10 @@ export async function listPublicRegistrants(activitySlug) {
       ORDER BY r.registered_at ASC`,
     [activitySlug]
   );
-  const maskLast = (ln) => `${String(ln || '').slice(0, 4)}*****`;
   return rows.map((r) => ({
     first_name: r.first_name,
-    last_name_masked: maskLast(r.last_name),
+    last_name: r.last_name,
+    organization: r.organization,
   }));
 }
 

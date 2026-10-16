@@ -251,6 +251,7 @@ function App() {
     return (
       <AdminDashboard
         admin={admin}
+        onNavigate={goTo}
         onLogout={async () => {
           try { await authApi.logout(); } catch (_) { /* ignore */ }
           setAdmin(null);

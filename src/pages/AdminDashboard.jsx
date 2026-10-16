@@ -17,6 +17,7 @@ import {
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
 import ThemeToggle from '../components/ThemeToggle';
+import Navbar from '../components/Navbar';
 import { activitiesApi } from '../api';
 
 const ROLE_LABEL = {
@@ -47,7 +48,7 @@ const readTab = () => {
   } catch { return 'ภาพรวมระบบ'; }
 };
 
-const AdminDashboard = ({ admin, onLogout }) => {
+const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState(() => readTab());
   // When a new activity is created we jump to "จัดการหลักสูตร" and ask it to
@@ -147,7 +148,12 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const avatarSeed = admin?.username || 'Admin';
 
   return (
-    <div className="min-h-screen bg-slate-100/70 dark:bg-yrugray-950 flex font-sans text-slate-900 dark:text-white antialiased text-sm">
+    <div className="min-h-screen bg-slate-100/70 dark:bg-yrugray-950 flex flex-col font-sans text-slate-900 dark:text-white antialiased text-sm">
+
+      {/* Public site navbar — lets the admin jump back to the public pages */}
+      <Navbar onNavigate={onNavigate} isAdmin />
+
+      <div className="flex flex-1 min-h-0">
 
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
@@ -430,6 +436,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
             )}
           </div>
         </main>
+      </div>
       </div>
     </div>
   );

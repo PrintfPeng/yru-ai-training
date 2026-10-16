@@ -431,7 +431,7 @@ const ActivityDetail = ({ activity: initialActivity, onBack, onNavigate, isAdmin
                 )}
               </h2>
               <p className="text-xs text-gray-500 dark:text-yrugray-400 mb-4">
-                แสดงชื่อแบบปิดบางส่วนเพื่อความเป็นส่วนตัว — ตรวจสอบว่าคุณลงทะเบียนสำเร็จ
+                ตรวจสอบว่าคุณลงทะเบียนสำเร็จ
               </p>
               {registrants.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-yrugray-400">ยังไม่มีผู้ลงทะเบียน</p>
@@ -445,7 +445,12 @@ const ActivityDetail = ({ activity: initialActivity, onBack, onNavigate, isAdmin
                       <span className="w-6 h-6 rounded-full bg-yrupink-500/10 text-yrupink-600 dark:text-yrupink-400 text-xs font-semibold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
-                      <span className="truncate">{r.first_name} {r.last_name_masked}</span>
+                      <span className="truncate min-w-0">
+                        {r.first_name} {r.last_name}
+                        {r.organization && (
+                          <span className="text-gray-500 dark:text-yrugray-400"> · {r.organization}</span>
+                        )}
+                      </span>
                     </li>
                   ))}
                 </ul>

@@ -44,7 +44,8 @@ export const publicRegisterTeam = asyncHandler(async (req, res) => {
 });
 
 /**
- * PUBLIC — masked list of registrants for the activity registration page.
+ * PUBLIC — list of registrants (full name + organization) for the activity
+ * registration page.
  */
 export const publicListRegistrants = asyncHandler(async (req, res) => {
   const data = await svc.listPublicRegistrants(req.params.slug);

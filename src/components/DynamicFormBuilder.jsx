@@ -41,7 +41,7 @@ export const DEFAULT_SCALE_MAX = 5;
 export const PREFIX_OPTIONS = ['นาย', 'นาง', 'นางสาว', 'เด็กชาย', 'เด็กหญิง'];
 
 /**
- * The 5 default registration questions. Pass a member number for team blocks
+ * The 6 default registration questions. Pass a member number for team blocks
  * (labels get a "สมาชิกคนที่ N" prefix and a `member` tag).
  */
 export const makeRegistrationDefaults = (memberNo = null) => {
@@ -54,11 +54,12 @@ export const makeRegistrationDefaults = (memberNo = null) => {
     ...extra,
   });
   return [
-    base('prefix',     'dropdown',     'คำนำหน้าชื่อ', { options: [...PREFIX_OPTIONS] }),
-    base('first_name', 'short_answer', 'ชื่อ (ไม่ต้องใส่คำนำหน้า)'),
-    base('last_name',  'short_answer', 'นามสกุล'),
-    base('phone',      'phone',        'เบอร์โทรศัพท์'),
-    base('email',      'email',        'email'),
+    base('prefix',       'dropdown',     'คำนำหน้าชื่อ', { options: [...PREFIX_OPTIONS] }),
+    base('first_name',   'short_answer', 'ชื่อ (ไม่ต้องใส่คำนำหน้า)'),
+    base('last_name',    'short_answer', 'นามสกุล'),
+    base('phone',        'phone',        'เบอร์โทรศัพท์'),
+    base('email',        'email',        'email'),
+    base('organization', 'short_answer', 'หน่วยงาน'),
   ];
 };
 
