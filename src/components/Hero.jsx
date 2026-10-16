@@ -25,10 +25,11 @@ const Hero = () => {
     />
   </div>
 
-  {/* หัวข้อหลัก — กางเต็มความกว้างจอ (full-bleed หลุดกรอบ max-w ของ main) เพื่อให้
-      แต่ละบรรทัดอยู่บรรทัดเดียวบนจอใหญ่ โดยไม่ลดขนาดฟอนต์ */}
+  {/* หัวข้อหลัก — กางเต็มความกว้างจอ (full-bleed หลุดกรอบ max-w ของ main) และใช้ฟอนต์
+      ปรับตามความกว้างจอ (clamp+vw) ใหญ่สุด = text-5xl บนจอกว้าง แล้วย่อพอดีเองไม่ให้
+      ตัดบรรทัดหรือโดนตัดขอบ */}
  <h1 className="relative left-1/2 -translate-x-1/2 w-screen max-w-none font-extrabold tracking-tight text-gray-900 dark:text-white transition-colors duration-300">
-  <span className="text-gradient block text-2xl sm:text-3xl md:text-4xl lg:text-5xl !leading-normal md:!leading-relaxed py-2 px-4 md:whitespace-nowrap">
+  <span className="text-gradient block text-[clamp(1.25rem,3vw,3rem)] !leading-normal md:!leading-relaxed py-2 px-4 md:whitespace-nowrap">
     พัฒนาศักยภาพกำลังคนและนวัตกรรมปัญญาประดิษฐ์ <br /> เพื่อขับเคลื่อนการพัฒนาจังหวัดชายแดนภาคใต้
   </span>
 </h1>
