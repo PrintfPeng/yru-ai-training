@@ -118,11 +118,12 @@ const PastWorksCarousel = () => {
                   </p>
                 </div>
 
-                {/* Collapsed vertical label */}
-                <div className={`absolute inset-0 flex items-end justify-center pb-6 transition-opacity duration-300 ${
+                {/* Collapsed vertical label — ตัดด้วย … เมื่อยาวเกินความสูงแผง
+                    (ชื่อเต็มจะเห็นตอนแผงขยาย) */}
+                <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
                   isActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
                 }`}>
-                  <span className="whitespace-nowrap -rotate-90 origin-center text-white font-semibold text-sm md:text-base drop-shadow-md tracking-wide">
+                  <span className="inline-block -rotate-90 whitespace-nowrap overflow-hidden text-ellipsis max-w-[260px] sm:max-w-[330px] md:max-w-[370px] text-white font-semibold text-sm md:text-base drop-shadow-md tracking-wide">
                     {item.title}
                   </span>
                 </div>
