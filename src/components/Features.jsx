@@ -28,7 +28,7 @@ const Features = ({ onViewTraining }) => {
       icon: <CalendarCheck className="w-10 h-10 text-yrupink-400" />,
       buttonText: "จองห้องทันที",
       glowColor: "group-hover:shadow-purple-500/20",
-      link: "https://docs.google.com/spreadsheets/d/16kTVFVuZNuCpChaN557EusPtbpwrK-Hx3Ld8Kl80dRE/edit?gid=0#gid=0"
+      link: "https://script.google.com/macros/s/AKfycbxQIo0t-s8y8V0xtq1IITzX2Li6ddwLDhcLguRSdwnT6nmobsfjiXrGBYVgdwdFLgPa/exec"
     }
   ];
 
