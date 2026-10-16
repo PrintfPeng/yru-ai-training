@@ -150,8 +150,11 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
   return (
     <div className="min-h-screen bg-slate-100/70 dark:bg-yrugray-950 flex flex-col font-sans text-slate-900 dark:text-white antialiased text-sm">
 
-      {/* Public site navbar — lets the admin jump back to the public pages */}
-      <Navbar onNavigate={onNavigate} isAdmin />
+      {/* Public site navbar — lets the admin jump back to the public pages.
+          Wrapped so admin-scale (120%) doesn't make it bigger than on public pages. */}
+      <div className="admin-navbar-unscale">
+        <Navbar onNavigate={onNavigate} isAdmin />
+      </div>
 
       <div className="flex flex-1 min-h-0">
 
