@@ -14,13 +14,13 @@ import {
   RefreshCw,
   CalendarRange,
   Image as ImageIcon,
+  Home,
 } from 'lucide-react';
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
 import RoomBookings from './RoomBookings';
 import ManagePortfolios from './ManagePortfolios';
 import ThemeToggle from '../components/ThemeToggle';
-import Navbar from '../components/Navbar';
 import { activitiesApi } from '../api';
 
 const ROLE_LABEL = {
@@ -153,15 +153,7 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
   const avatarSeed = admin?.username || 'Admin';
 
   return (
-    <div className="min-h-screen bg-slate-100/70 dark:bg-yrugray-950 flex flex-col font-sans text-slate-900 dark:text-white antialiased text-sm">
-
-      {/* Public site navbar — lets the admin jump back to the public pages.
-          Wrapped so admin-scale (120%) doesn't make it bigger than on public pages. */}
-      <div className="admin-navbar-unscale">
-        <Navbar onNavigate={onNavigate} isAdmin />
-      </div>
-
-      <div className="flex flex-1 min-h-0">
+    <div className="min-h-screen bg-slate-100/70 dark:bg-yrugray-950 flex font-sans text-slate-900 dark:text-white antialiased text-sm">
 
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
@@ -248,6 +240,16 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
+            {/* กลับสู่หน้าหลัก (เว็บสาธารณะ) */}
+            <button
+              onClick={() => onNavigate?.('home')}
+              title="กลับสู่หน้าหลัก"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 dark:text-yrugray-300 bg-slate-100 dark:bg-yrugray-800 hover:text-yrupink-600 dark:hover:text-yrupink-400 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-200 dark:border-yrugray-700 transition-colors"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">หน้าหลัก</span>
+            </button>
+
             {/* Theme toggle */}
             <ThemeToggle />
 
@@ -442,7 +444,6 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
             )}
           </div>
         </main>
-      </div>
       </div>
     </div>
   );

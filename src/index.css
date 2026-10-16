@@ -41,11 +41,6 @@ body {
 html.admin-scale {
   font-size: 120%;
 }
-/* The shared public navbar is sized in rem, so admin-scale (120%) enlarges it
-   too. Zoom it back by 1/1.2 so it matches its size on the public pages. */
-html.admin-scale .admin-navbar-unscale {
-  zoom: 0.8333333;
-}
 /* Toast notifications (ToastContext) — slide/fade in from the right. */
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(16px); }
