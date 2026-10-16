@@ -35,7 +35,7 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
  */
 export async function listPublicRegistrants(activitySlug) {
   const [rows] = await pool.query(
-    `SELECT p.first_name, p.last_name
+    `SELECT p.first_name, p.last_name, p.organization
        FROM registrations r
        JOIN participants  p ON p.id = r.participant_id
        JOIN activities    a ON a.id = r.activity_id
@@ -48,6 +48,7 @@ export async function listPublicRegistrants(activitySlug) {
   return rows.map((r) => ({
     first_name: r.first_name,
     last_name_masked: maskLast(r.last_name),
+    organization: r.organization || null,
   }));
 }
 
