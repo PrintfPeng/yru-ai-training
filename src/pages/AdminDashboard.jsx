@@ -13,10 +13,12 @@ import {
   AlertCircle,
   RefreshCw,
   CalendarRange,
+  Image as ImageIcon,
 } from 'lucide-react';
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
 import RoomBookings from './RoomBookings';
+import ManagePortfolios from './ManagePortfolios';
 import ThemeToggle from '../components/ThemeToggle';
 import Navbar from '../components/Navbar';
 import { activitiesApi } from '../api';
@@ -39,6 +41,7 @@ const TAB_SLUG = {
   'ภาพรวมระบบ': 'overview',
   'จัดการหลักสูตร': 'courses',
   'จัดการการจองห้อง': 'rooms',
+  'จัดการผลงานที่ผ่านมา': 'portfolios',
   'สร้างกิจกรรม': 'create',
 };
 const SLUG_TAB = Object.fromEntries(Object.entries(TAB_SLUG).map(([k, v]) => [v, k]));
@@ -78,6 +81,7 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
     { name: 'ภาพรวมระบบ', icon: <LayoutDashboard className="w-4 h-4" /> },
     { name: 'จัดการหลักสูตร', icon: <BookOpen className="w-4 h-4" /> },
     { name: 'จัดการการจองห้อง', icon: <CalendarCheck className="w-4 h-4" /> },
+    { name: 'จัดการผลงานที่ผ่านมา', icon: <ImageIcon className="w-4 h-4" /> },
   ];
 
   useEffect(() => {
@@ -292,6 +296,8 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
               />
             ) : activeMenu === 'จัดการการจองห้อง' ? (
               <RoomBookings />
+            ) : activeMenu === 'จัดการผลงานที่ผ่านมา' ? (
+              <ManagePortfolios />
             ) : (
               <>
                 {/* Quick Stats Row */}

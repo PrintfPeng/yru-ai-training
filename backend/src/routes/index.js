@@ -6,6 +6,7 @@ import registrationsRoutes from './registrations.routes.js';
 import assessmentsRoutes   from './assessments.routes.js';
 import certificatesRoutes  from './certificates.routes.js';
 import roomsRoutes         from './rooms.routes.js';
+import portfoliosRoutes    from './portfolios.routes.js';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/registrations', registrationsRoutes);
 router.use('/assessments',   assessmentsRoutes);
 router.use('/certificates',  certificatesRoutes);
 router.use('/rooms',         roomsRoutes);
+router.use('/portfolios',    portfoliosRoutes);
 
 export default router;

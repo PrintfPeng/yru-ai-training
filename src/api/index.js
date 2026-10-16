@@ -6,3 +6,4 @@ export { registrationsApi } from './registrations';
 export { assessmentsApi }   from './assessments';
 export { certificatesApi }  from './certificates';
 export { roomsApi }         from './rooms';
+export { portfoliosApi }    from './portfolios';

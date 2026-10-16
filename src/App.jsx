@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Hero from './components/Hero';
 import Features from './components/Features';
+import PastWorksCarousel from './components/PastWorksCarousel';
 import Footer from './components/Footer';
 import ThemeToggle from './components/ThemeToggle';
 import Navbar from './components/Navbar';
@@ -320,6 +321,7 @@ function App() {
       <main className="flex-grow flex flex-col items-center justify-center px-6 z-10 w-full max-w-7xl mx-auto">
         <Hero />
         <Features onViewTraining={() => setCurrentView('training')} />
+        <PastWorksCarousel />
       </main>
 
       <Footer />
