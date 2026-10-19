@@ -436,7 +436,7 @@ const ActivityDetail = ({ activity: initialActivity, onBack, onNavigate, isAdmin
               {registrants.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-yrugray-400">ยังไม่มีผู้ลงทะเบียน</p>
               ) : (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <ul className="grid grid-cols-1 gap-2">
                   {registrants.map((r, i) => (
                     <li
                       key={i}
