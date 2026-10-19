@@ -43,6 +43,7 @@ export const schemaToEditorState = (activity) => {
       options: f.options?.length ? f.options : ['ตัวเลือก 1'],
       ...(f.core && f.key ? { key: f.key } : {}),
       ...(f.allowOther ? { allowOther: true } : {}),
+      ...(typeof f.showInPublicList === 'boolean' ? { showInPublicList: f.showInPublicList } : {}),
     }));
     // The 5 core questions (prefix/first/last/phone/email) are mandatory — the
     // backend requires them on every participant. Re-inject any the admin's
@@ -71,6 +72,7 @@ export const editorStateToPayload = (state) => {
       options:  q.options?.length ? q.options : undefined,
       ...(q.key ? { core: true } : {}),
       ...(q.allowOther ? { allowOther: true } : {}),
+      ...(typeof q.showInPublicList === 'boolean' ? { showInPublicList: q.showInPublicList } : {}),
     })),
   } : null;
   return {
@@ -168,6 +170,7 @@ const RegistrationFormEditor = ({ value, onChange, locked = false, addButtonSide
         onChange={(q) => patch({ questions: q })}
         floatingAdd
         floatingAddSide={addButtonSide}
+        publicListToggle
         title={regType === 'team' ? 'คำถามสำหรับสมาชิกแต่ละคน (ทีม)' : 'คำถามฟอร์มลงทะเบียน (เดี่ยว)'}
         description="แก้ไข/เพิ่มคำถามได้ — คำถาม default (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล/ชื่อโรงเรียน หรือ หน่วยงาน) จะจับคู่กับข้อมูลผู้สมัครอัตโนมัติ"
         emptyText={'ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่ม'}

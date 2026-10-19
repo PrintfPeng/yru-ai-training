@@ -446,9 +446,9 @@ const ActivityDetail = ({ activity: initialActivity, onBack, onNavigate, isAdmin
                         {i + 1}
                       </span>
                       <span className="truncate min-w-0">
-                        {r.first_name} {r.last_name}
-                        {r.organization && (
-                          <span className="text-gray-500 dark:text-yrugray-400"> · {r.organization}</span>
+                        <span className="font-medium">{r.first_name} {r.last_name}</span>
+                        {Array.isArray(r.extras) && r.extras.length > 0 && (
+                          <span className="text-gray-500 dark:text-yrugray-400"> · {r.extras.join(' · ')}</span>
                         )}
                       </span>
                     </li>

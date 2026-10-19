@@ -53,13 +53,15 @@ export const makeRegistrationDefaults = (memberNo = null) => {
     ...(memberNo ? { member: memberNo } : {}),
     ...extra,
   });
+  // showInPublicList: ค่าเริ่มต้น เปิดเฉพาะ ชื่อ/นามสกุล + โรงเรียน/หน่วยงาน
+  // ส่วน เบอร์/อีเมล/คำนำหน้า ปิดไว้เพื่อความเป็นส่วนตัว
   return [
-    base('prefix',       'dropdown',     'คำนำหน้าชื่อ', { options: [...PREFIX_OPTIONS] }),
-    base('first_name',   'short_answer', 'ชื่อ (ไม่ต้องใส่คำนำหน้า)'),
-    base('last_name',    'short_answer', 'นามสกุล'),
-    base('phone',        'phone',        'เบอร์โทรศัพท์'),
-    base('email',        'email',        'email'),
-    base('organization', 'short_answer', 'ชื่อโรงเรียน หรือ หน่วยงาน'),
+    base('prefix',       'dropdown',     'คำนำหน้าชื่อ', { options: [...PREFIX_OPTIONS], showInPublicList: false }),
+    base('first_name',   'short_answer', 'ชื่อ (ไม่ต้องใส่คำนำหน้า)', { showInPublicList: true }),
+    base('last_name',    'short_answer', 'นามสกุล', { showInPublicList: true }),
+    base('phone',        'phone',        'เบอร์โทรศัพท์', { showInPublicList: false }),
+    base('email',        'email',        'email', { showInPublicList: false }),
+    base('organization', 'short_answer', 'ชื่อโรงเรียน หรือ หน่วยงาน', { showInPublicList: true }),
   ];
 };
 
@@ -91,6 +93,7 @@ const DynamicFormBuilder = ({
   emptyText = 'ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่มต้น',
   floatingAdd = false,
   floatingAddSide = 'left',
+  publicListToggle = false,   // registration form: show "แสดงในรายชื่อหน้าเว็บ" per question
 }) => {
   // Collapsed-by-default ("แพ็ครวมกัน"): a question is expanded only while its
   // id is in this set. New questions open automatically so they can be edited.
@@ -192,6 +195,7 @@ const DynamicFormBuilder = ({
               key={q.id}
               index={idx}
               question={q}
+              publicListToggle={publicListToggle}
               collapsed={!expanded.has(q.id)}
               onToggle={() => toggleExpand(q.id)}
               isFirst={idx === 0}
@@ -260,6 +264,7 @@ const IconBtn = ({ onClick, title, danger, children }) => (
 const QuestionEditor = ({
   index, question, collapsed, onToggle, isFirst, isLast, onMoveUp, onMoveDown,
   onCopy, onUpdate, onRemove, onAddOption, onUpdateOption, onRemoveOption,
+  publicListToggle = false,
 }) => {
   const currentType = QUESTION_TYPES.find((t) => t.value === question.type);
   const TypeIcon = currentType?.icon || Type;
@@ -368,15 +373,28 @@ const QuestionEditor = ({
           )}
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-yrugray-800">
-            <label className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={question.required}
-                onChange={(e) => onUpdate({ required: e.target.checked })}
-                className="w-4 h-4 accent-yrupink-500"
-              />
-              บังคับตอบ
-            </label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <label className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={question.required}
+                  onChange={(e) => onUpdate({ required: e.target.checked })}
+                  className="w-4 h-4 accent-yrupink-500"
+                />
+                บังคับตอบ
+              </label>
+              {publicListToggle && (
+                <label className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!question.showInPublicList}
+                    onChange={(e) => onUpdate({ showInPublicList: e.target.checked })}
+                    className="w-4 h-4 accent-yrupink-500"
+                  />
+                  แสดงในรายชื่อหน้าเว็บ
+                </label>
+              )}
+            </div>
             <button
               type="button"
               onClick={onRemove}

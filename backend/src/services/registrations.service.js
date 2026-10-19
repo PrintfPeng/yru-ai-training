@@ -33,23 +33,29 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
  * so applicants can confirm their sign-up). Full names + organization are shown
  * (no masking). Only approved/attended rows.
  */
-// Pick the key of the "โรงเรียน/หน่วยงาน" question from a form schema, so the
-// affiliation shown next to a name follows how THIS activity named the field
-// (preferred: "ชื่อโรงเรียน หรือ หน่วยงาน"; then any label mentioning
-// โรงเรียน/หน่วยงาน; then the legacy `organization` key).
-function findAffiliationKey(fields) {
-  const label = (x) => String(x?.label || '');
-  return (
-    fields.find((x) => label(x).trim() === 'ชื่อโรงเรียน หรือ หน่วยงาน') ||
-    fields.find((x) => /โรงเรียน|หน่วยงาน/.test(label(x))) ||
-    fields.find((x) => x.key === 'organization')
-  )?.key || 'organization';
-}
-
 const parseJson = (d) => {
   if (d && typeof d === 'object') return d;
   try { return JSON.parse(d) || {}; } catch { return {}; }
 };
+
+const NAME_KEYS = new Set(['prefix', 'first_name', 'last_name']);
+
+/**
+ * Columns to append after the name on the public registrant card, in form
+ * order. Driven by each field's `showInPublicList` flag (set by the admin).
+ * Backward compatible: a schema with no flags at all shows only the
+ * "ชื่อโรงเรียน หรือ หน่วยงาน" / "หน่วยงาน" field (exact label match — no fuzzy
+ * .includes that would grab "ประเภทสถานศึกษา").
+ */
+function publicListColumns(fields) {
+  const nonName = fields.filter((f) => f.key && !NAME_KEYS.has(f.key));
+  const hasFlag = nonName.some((f) => typeof f.showInPublicList === 'boolean');
+  if (hasFlag) return nonName.filter((f) => f.showInPublicList === true);
+  return nonName.filter((f) => {
+    const l = String(f.label || '').trim();
+    return l === 'ชื่อโรงเรียน หรือ หน่วยงาน' || l === 'หน่วยงาน';
+  });
+}
 
 export async function listPublicRegistrants(activitySlug) {
   const [[act]] = await pool.query(
@@ -57,8 +63,7 @@ export async function listPublicRegistrants(activitySlug) {
     [activitySlug]
   );
   if (!act) return [];
-  const fields = parseJson(act.register_form_schema).fields || [];
-  const affiliationKey = findAffiliationKey(fields);
+  const cols = publicListColumns(parseJson(act.register_form_schema).fields || []);
 
   const [rows] = await pool.query(
     `SELECT p.first_name, p.last_name, p.organization, r.form_data
@@ -71,9 +76,14 @@ export async function listPublicRegistrants(activitySlug) {
   );
   return rows.map((r) => {
     const fd = parseJson(r.form_data);
-    const organization =
-      (affiliationKey && fd[affiliationKey]) || r.organization || '';
-    return { first_name: r.first_name, last_name: r.last_name, organization };
+    const extras = cols
+      .map((c) => {
+        let v = fd[c.key];
+        if ((v == null || v === '') && c.key === 'organization') v = r.organization; // old data
+        return v == null ? '' : String(v).trim();
+      })
+      .filter((v) => v && v !== '-');
+    return { first_name: r.first_name, last_name: r.last_name, extras };
   });
 }
 

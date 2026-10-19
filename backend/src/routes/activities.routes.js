@@ -60,6 +60,7 @@ const createBody = z.object({
       core:     z.boolean().optional(),
       member:   z.number().int().min(1).max(20).optional(), // team: which member block (1-based)
       allowOther: z.boolean().optional(),                   // dropdown: allow "อื่นๆ" free text
+      showInPublicList: z.boolean().optional(),             // show this column in the public registrant card
     })),
   }).nullable().optional(),
 });
