@@ -17,17 +17,47 @@ const inputCls =
 
 const cleanLabel = (s) => String(s || '').replace(/^สมาชิกคนที่\s*\d+\s*·\s*/, '');
 
+const OTHER = '__other__';
+
+// Dropdown with an optional "อื่นๆ (ระบุ)" choice that reveals a free-text box.
+// The stored value is always the final answer (the typed text when "other").
+const DropdownField = ({ field, value, onChange }) => {
+  const opts = field.options || [];
+  // "other" when a value exists that isn't one of the fixed options.
+  const [other, setOther] = useState(!!field.allowOther && !!value && !opts.includes(value));
+  const selectVal = other ? OTHER : (value ?? '');
+  return (
+    <>
+      <select
+        value={selectVal}
+        onChange={(e) => {
+          if (e.target.value === OTHER) { setOther(true); onChange(''); }
+          else { setOther(false); onChange(e.target.value); }
+        }}
+        className={inputCls}
+      >
+        <option value="">— เลือก —</option>
+        {opts.map((o, i) => <option key={i} value={o}>{o}</option>)}
+        {field.allowOther && <option value={OTHER}>อื่นๆ (ระบุ)</option>}
+      </select>
+      {other && (
+        <input
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="โปรดระบุ"
+          className={`${inputCls} mt-2`}
+        />
+      )}
+    </>
+  );
+};
+
 // Single field renderer.
 const RegField = ({ field, value, onChange }) => {
   const common = { value: value ?? '', onChange: (e) => onChange(e.target.value), className: inputCls };
   switch (field.type) {
     case 'dropdown':
-      return (
-        <select {...common}>
-          <option value="">— เลือก —</option>
-          {(field.options || []).map((o, i) => <option key={i} value={o}>{o}</option>)}
-        </select>
-      );
+      return <DropdownField field={field} value={value} onChange={onChange} />;
     case 'multiple_choice':
       return (
         <div className="space-y-1.5">

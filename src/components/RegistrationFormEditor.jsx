@@ -42,6 +42,7 @@ export const schemaToEditorState = (activity) => {
       required: !!f.required,
       options: f.options?.length ? f.options : ['ตัวเลือก 1'],
       ...(f.core && f.key ? { key: f.key } : {}),
+      ...(f.allowOther ? { allowOther: true } : {}),
     }));
   } else {
     // No saved schema → the 5 core questions (one set, works for both types).
@@ -61,6 +62,7 @@ export const editorStateToPayload = (state) => {
       required: !!q.required,
       options:  q.options?.length ? q.options : undefined,
       ...(q.key ? { core: true } : {}),
+      ...(q.allowOther ? { allowOther: true } : {}),
     })),
   } : null;
   return {

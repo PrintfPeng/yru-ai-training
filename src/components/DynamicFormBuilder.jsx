@@ -355,6 +355,18 @@ const QuestionEditor = ({
             <TypePreview type={question.type} />
           )}
 
+          {question.type === 'dropdown' && (
+            <label className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none mt-1">
+              <input
+                type="checkbox"
+                checked={!!question.allowOther}
+                onChange={(e) => onUpdate({ allowOther: e.target.checked })}
+                className="w-4 h-4 accent-yrupink-500"
+              />
+              อนุญาตให้เลือก “อื่นๆ” แล้วกรอกเอง
+            </label>
+          )}
+
           <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-yrugray-800">
             <label className="flex items-center gap-2 text-[15px] text-slate-700 dark:text-yrugray-300 cursor-pointer select-none">
               <input
