@@ -44,6 +44,12 @@ export const schemaToEditorState = (activity) => {
       ...(f.core && f.key ? { key: f.key } : {}),
       ...(f.allowOther ? { allowOther: true } : {}),
     }));
+    // The 5 core questions (prefix/first/last/phone/email) are mandatory — the
+    // backend requires them on every participant. Re-inject any the admin's
+    // saved schema is missing so they're visible + editable here too.
+    const have = new Set(questions.filter((q) => q.key).map((q) => q.key));
+    const missing = makeRegistrationDefaults().filter((c) => !have.has(c.key));
+    if (missing.length) questions = [...questions, ...missing];
   } else {
     // No saved schema → the 5 core questions (one set, works for both types).
     questions = makeRegistrationDefaults();

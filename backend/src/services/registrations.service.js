@@ -14,7 +14,7 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
 
   const [rows] = await pool.query(
     `SELECT r.id, r.registration_status, r.note, r.checked_in_at,
-            r.registered_at, r.updated_at, r.team_id,
+            r.registered_at, r.updated_at, r.team_id, r.form_data,
             t.team_name,
             p.id AS participant_id, p.first_name, p.last_name, p.email,
             p.phone, p.organization, p.position

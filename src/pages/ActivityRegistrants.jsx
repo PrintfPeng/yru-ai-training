@@ -87,6 +87,9 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
     registeredAt: r.registered_at ? new Date(r.registered_at).toLocaleDateString('th-TH') : '',
     status: STATUS_API_TO_UI[r.registration_status] || r.registration_status,
     note: r.note,
+    formData: (r.form_data && typeof r.form_data === 'object')
+      ? r.form_data
+      : (() => { try { return JSON.parse(r.form_data); } catch { return {}; } })(),
     _apiStatus: r.registration_status,
   });
 
@@ -121,6 +124,33 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
     }),
     [registrants]
   );
+
+  // Custom columns from this activity's registration form (non-core questions).
+  // Different activities name fields differently (หน่วยงาน vs ต้นสังกัด), so we
+  // derive the columns from the schema and read values out of each row's
+  // form_data instead of a fixed column.
+  const customFields = useMemo(() => {
+    const schema = activity?.raw?.register_form_schema || activity?.register_form_schema;
+    const CORE = new Set(['prefix', 'first_name', 'last_name', 'phone', 'email']);
+    const seen = new Set();
+    const out = [];
+    for (const f of (schema?.fields || [])) {
+      if (!f.key || CORE.has(f.key) || seen.has(f.key)) continue;
+      seen.add(f.key);
+      out.push({ key: f.key, label: String(f.label || f.key).replace(/^สมาชิกคนที่\s*\d+\s*·\s*/, '') });
+    }
+    return out;
+  }, [activity]);
+
+  const [hiddenCols, setHiddenCols] = useState(new Set());
+  const toggleCol = (key) => setHiddenCols((prev) => {
+    const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n;
+  });
+  const visibleCustom = customFields.filter((f) => !hiddenCols.has(f.key));
+  const cellValue = (r, key) =>
+    (r.formData && r.formData[key] != null && r.formData[key] !== '')
+      ? r.formData[key]
+      : (key === 'organization' ? (r.organization || '') : '');
 
   const updateStatus = async (id, uiStatus) => {
     try {
@@ -321,13 +351,38 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
             )}
           </div>
         ) : (
+          <>
+          {customFields.length > 0 && (
+            <div className="px-6 py-3 border-b border-slate-200 dark:border-yrugray-800 flex items-center gap-2 flex-wrap">
+              <span className="text-[13px] font-medium text-slate-600 dark:text-yrugray-400">คอลัมน์ที่แสดง:</span>
+              {customFields.map((c) => {
+                const on = !hiddenCols.has(c.key);
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => toggleCol(c.key)}
+                    className={`px-2.5 py-1 rounded-full text-[13px] border transition-colors ${
+                      on
+                        ? 'bg-yrupink-600 text-white border-yrupink-500'
+                        : 'bg-white dark:bg-yrugray-800 text-slate-500 dark:text-yrugray-500 border-slate-300 dark:border-yrugray-700 line-through'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50 dark:bg-yrugray-900/50 border-b border-slate-200 dark:border-yrugray-800">
                 <tr className="text-left text-[13px] font-semibold text-slate-700 dark:text-yrugray-300 uppercase tracking-wider">
                   <th className="px-6 py-4">ผู้ลงทะเบียน</th>
                   <th className="px-6 py-4">ติดต่อ</th>
-                  <th className="px-6 py-4">หน่วยงาน</th>
+                  {visibleCustom.map((c) => (
+                    <th key={c.key} className="px-6 py-4 whitespace-nowrap">{c.label}</th>
+                  ))}
                   <th className="px-6 py-4">วันที่สมัคร</th>
                   <th className="px-6 py-4">สถานะ</th>
                   <th className="px-6 py-4 text-right">การจัดการ</th>
@@ -357,11 +412,13 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
                         {r.phone}
                       </p>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-[15px] text-slate-800 dark:text-yrugray-200 line-clamp-1 max-w-[200px]">
-                        {r.organization || '-'}
-                      </p>
-                    </td>
+                    {visibleCustom.map((c) => (
+                      <td key={c.key} className="px-6 py-4">
+                        <p className="text-[15px] text-slate-800 dark:text-yrugray-200 line-clamp-1 max-w-[220px]">
+                          {cellValue(r, c.key) || '-'}
+                        </p>
+                      </td>
+                    ))}
                     <td className="px-6 py-4">
                       <p className="text-[15px] text-slate-800 dark:text-yrugray-200 tabular-nums">{r.registeredAt}</p>
                     </td>
@@ -391,6 +448,7 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
