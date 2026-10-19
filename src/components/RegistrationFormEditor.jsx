@@ -169,7 +169,7 @@ const RegistrationFormEditor = ({ value, onChange, locked = false, addButtonSide
         floatingAdd
         floatingAddSide={addButtonSide}
         title={regType === 'team' ? 'คำถามสำหรับสมาชิกแต่ละคน (ทีม)' : 'คำถามฟอร์มลงทะเบียน (เดี่ยว)'}
-        description="แก้ไข/เพิ่มคำถามได้ — คำถาม default (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล/หน่วยงาน) จะจับคู่กับข้อมูลผู้สมัครอัตโนมัติ"
+        description="แก้ไข/เพิ่มคำถามได้ — คำถาม default (คำนำหน้า/ชื่อ/นามสกุล/เบอร์/อีเมล/ชื่อโรงเรียน หรือ หน่วยงาน) จะจับคู่กับข้อมูลผู้สมัครอัตโนมัติ"
         emptyText={'ยังไม่มีคำถาม — กดปุ่ม "สร้างคำถาม" เพื่อเริ่ม'}
       />
     </div>

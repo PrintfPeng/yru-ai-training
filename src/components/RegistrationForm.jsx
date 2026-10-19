@@ -9,7 +9,7 @@ const CORE_FALLBACK = [
   { key: 'last_name',  type: 'short_answer', label: 'นามสกุล',       required: true, core: true },
   { key: 'phone',        type: 'phone',        label: 'เบอร์โทรศัพท์',  required: true, core: true },
   { key: 'email',        type: 'email',        label: 'อีเมล',         required: true, core: true },
-  { key: 'organization', type: 'short_answer', label: 'หน่วยงาน',       required: true, core: true },
+  { key: 'organization', type: 'short_answer', label: 'ชื่อโรงเรียน หรือ หน่วยงาน', required: true, core: true },
 ];
 
 const inputCls =

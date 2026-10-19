@@ -33,22 +33,48 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
  * so applicants can confirm their sign-up). Full names + organization are shown
  * (no masking). Only approved/attended rows.
  */
+// Pick the key of the "โรงเรียน/หน่วยงาน" question from a form schema, so the
+// affiliation shown next to a name follows how THIS activity named the field
+// (preferred: "ชื่อโรงเรียน หรือ หน่วยงาน"; then any label mentioning
+// โรงเรียน/หน่วยงาน; then the legacy `organization` key).
+function findAffiliationKey(fields) {
+  const label = (x) => String(x?.label || '');
+  return (
+    fields.find((x) => label(x).trim() === 'ชื่อโรงเรียน หรือ หน่วยงาน') ||
+    fields.find((x) => /โรงเรียน|หน่วยงาน/.test(label(x))) ||
+    fields.find((x) => x.key === 'organization')
+  )?.key || 'organization';
+}
+
+const parseJson = (d) => {
+  if (d && typeof d === 'object') return d;
+  try { return JSON.parse(d) || {}; } catch { return {}; }
+};
+
 export async function listPublicRegistrants(activitySlug) {
-  const [rows] = await pool.query(
-    `SELECT p.first_name, p.last_name, p.organization
-       FROM registrations r
-       JOIN participants  p ON p.id = r.participant_id
-       JOIN activities    a ON a.id = r.activity_id
-      WHERE a.slug = ?
-        AND r.registration_status IN ('confirmed', 'attended')
-      ORDER BY r.registered_at ASC`,
+  const [[act]] = await pool.query(
+    'SELECT id, register_form_schema FROM activities WHERE slug = ? LIMIT 1',
     [activitySlug]
   );
-  return rows.map((r) => ({
-    first_name: r.first_name,
-    last_name: r.last_name,
-    organization: r.organization,
-  }));
+  if (!act) return [];
+  const fields = parseJson(act.register_form_schema).fields || [];
+  const affiliationKey = findAffiliationKey(fields);
+
+  const [rows] = await pool.query(
+    `SELECT p.first_name, p.last_name, p.organization, r.form_data
+       FROM registrations r
+       JOIN participants p ON p.id = r.participant_id
+      WHERE r.activity_id = ?
+        AND r.registration_status IN ('confirmed', 'attended')
+      ORDER BY r.registered_at ASC`,
+    [act.id]
+  );
+  return rows.map((r) => {
+    const fd = parseJson(r.form_data);
+    const organization =
+      (affiliationKey && fd[affiliationKey]) || r.organization || '';
+    return { first_name: r.first_name, last_name: r.last_name, organization };
+  });
 }
 
 /* ---------- register helpers (shared by individual + team) ---------- */

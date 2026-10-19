@@ -59,7 +59,7 @@ export const makeRegistrationDefaults = (memberNo = null) => {
     base('last_name',    'short_answer', 'นามสกุล'),
     base('phone',        'phone',        'เบอร์โทรศัพท์'),
     base('email',        'email',        'email'),
-    base('organization', 'short_answer', 'หน่วยงาน'),
+    base('organization', 'short_answer', 'ชื่อโรงเรียน หรือ หน่วยงาน'),
   ];
 };
 

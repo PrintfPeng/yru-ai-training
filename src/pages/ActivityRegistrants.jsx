@@ -43,8 +43,8 @@ const csvEscape = (v) => {
 function exportCsv(activity, rows) {
   const isTeam = (activity?.raw?.registration_type || activity?.registration_type) === 'team';
   const headers = isTeam
-    ? ['ชื่อทีม', 'ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ']
-    : ['ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ'];
+    ? ['ชื่อทีม', 'ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'ชื่อโรงเรียน หรือ หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ']
+    : ['ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'ชื่อโรงเรียน หรือ หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ'];
   const body = rows.map((r) => (isTeam
     ? [r.teamName, r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.note]
     : [r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.note]
