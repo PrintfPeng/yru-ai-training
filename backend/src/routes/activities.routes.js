@@ -52,7 +52,7 @@ const createBody = z.object({
   team_cert_mode:      z.enum(['per_person', 'team']).nullable().optional(),
   register_form_schema: z.object({
     fields: z.array(z.object({
-      key:      z.string().min(1).max(40),
+      key:      z.string().min(1).max(64),
       type:     z.string().min(1).max(30),
       label:    z.string().min(1).max(200),
       options:  z.array(z.string()).optional(),

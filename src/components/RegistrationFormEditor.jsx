@@ -55,8 +55,10 @@ export const schemaToEditorState = (activity) => {
 export const editorStateToPayload = (state) => {
   const { regType, teamCertMode, teamMax, questions } = state;
   const register_form_schema = questions.length ? {
-    fields: questions.map((q) => ({
-      key:      q.key || `custom_${q.id}`,
+    fields: questions.map((q, i) => ({
+      // Short, stable-within-this-save key (q.id is long → blew past the 40-char
+      // limit). Core fields keep their reserved key; custom ones get custom_N.
+      key:      q.key || `custom_${i}`,
       type:     q.type,
       label:    q.question,
       required: !!q.required,
