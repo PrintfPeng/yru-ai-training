@@ -15,6 +15,15 @@ const CORE_FALLBACK = [
 const inputCls =
   'w-full px-3 py-2 rounded-lg bg-white/70 dark:bg-yrugray-900/40 border border-gray-200 dark:border-yrugray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-yrugray-400 focus:outline-none focus:border-yrupink-500 transition-colors';
 
+// The backend requires these on every participant (phone = identity for the
+// assessment, email = unique key). If an admin's form dropped any of them,
+// re-inject so registration still works.
+const ensureCore = (fields) => {
+  const keys = new Set((fields || []).map((f) => f.key));
+  const missing = CORE_FALLBACK.filter((c) => c.key !== 'organization' && !keys.has(c.key));
+  return missing.length ? [...(fields || []), ...missing] : fields;
+};
+
 const cleanLabel = (s) => String(s || '').replace(/^สมาชิกคนที่\s*\d+\s*·\s*/, '');
 
 const OTHER = '__other__';
@@ -128,7 +137,7 @@ const RegistrationForm = ({ activity, onSuccess }) => {
   // tag; legacy ones duplicated member:1..N, so keep untagged + the first block.
   const memberTemplate = useMemo(() => {
     const t = schemaFields.filter((f) => !f.member || f.member === 1);
-    return t.length ? t : CORE_FALLBACK;
+    return ensureCore(t.length ? t : CORE_FALLBACK);
   }, [schemaFields]);
   // Fixed team size set by the admin — the form shows exactly this many member
   // blocks up front (no add/remove by the applicant).
@@ -141,7 +150,7 @@ const RegistrationForm = ({ activity, onSuccess }) => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const indivFieldsResolved = indivFields.length ? indivFields : CORE_FALLBACK;
+  const indivFieldsResolved = ensureCore(indivFields.length ? indivFields : CORE_FALLBACK);
 
   // Keep the number of member blocks in sync with the admin's configured size
   // (e.g. when the activity row loads/changes after mount).
