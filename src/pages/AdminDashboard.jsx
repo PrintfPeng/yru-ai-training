@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { formatThaiDate as fmtThaiDate } from '../utils/thaiDate';
+import { formatThaiDate as fmtThaiDate, durationText } from '../utils/thaiDate';
 import {
   LayoutDashboard,
   BookOpen,
@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
   Globe,
   Tags,
+  ChevronRight,
 } from 'lucide-react';
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
@@ -31,14 +32,82 @@ const ROLE_LABEL = {
   admin: 'ผู้ดูแลระบบ',
 };
 
+// Labels match the จัดการหลักสูตร page; `dot` is the small leading indicator.
 const STATUS_META = {
-  draft:      { label: 'ร่าง',       cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700' },
-  published:  { label: 'เผยแพร่แล้ว', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60' },
-  completed:  { label: 'สิ้นสุดแล้ว',  cls: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400 border border-sky-200/60 dark:border-sky-800/60' },
-  cancelled:  { label: 'ยกเลิก',     cls: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60' },
+  draft:      { label: 'ร่าง',             dot: 'bg-amber-500',   cls: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/70 dark:border-amber-800/60' },
+  published:  { label: 'เปิดรับสมัคร',      dot: 'bg-emerald-500', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800/60' },
+  assessment: { label: 'เปิดทำแบบประเมิน',  dot: 'bg-sky-500',     cls: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400 border border-sky-200/70 dark:border-sky-800/60' },
+  completed:  { label: 'จบโครงการ',        dot: 'bg-slate-400',   cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700' },
+  cancelled:  { label: 'ปิดรับสมัคร',       dot: 'bg-rose-500',    cls: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/70 dark:border-rose-800/60' },
 };
 
-const STATUS_FALLBACK_CLS = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
+const STATUS_FALLBACK = { dot: 'bg-slate-400', cls: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700' };
+
+const StatusBadge = ({ status }) => {
+  const meta = STATUS_META[status] || { ...STATUS_FALLBACK, label: status };
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold px-2.5 py-1 rounded-full ${meta.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+      {meta.label}
+    </span>
+  );
+};
+
+const CoverThumb = ({ src, alt, className = '' }) => (
+  <div className={`shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-yrupink-500/15 to-yrupink-600/5 border border-slate-200/70 dark:border-yrugray-800 flex items-center justify-center ${className}`}>
+    {src
+      ? <img src={src} alt={alt} loading="lazy" className="w-full h-full object-cover" />
+      : <BookOpen className="w-5 h-5 text-yrupink-500" />}
+  </div>
+);
+
+const CategoryTags = ({ categories }) =>
+  Array.isArray(categories) && categories.length > 0 ? (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {categories.slice(0, 3).map((c) => (
+        <span key={c.id} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yrupink-500/10 text-yrupink-700 dark:text-yrupink-300">
+          {c.name}
+        </span>
+      ))}
+      {categories.length > 3 && (
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-yrugray-800 text-slate-500 dark:text-yrugray-400">
+          +{categories.length - 3}
+        </span>
+      )}
+    </div>
+  ) : null;
+
+// Registered vs capacity; bar turns amber ≥80% and rose when full.
+const SeatsMeter = ({ registered, capacity }) => {
+  const pct = capacity > 0 ? Math.min(100, Math.round((registered / capacity) * 100)) : null;
+  const bar = pct === null ? '' : pct >= 100 ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+  return (
+    <div className="min-w-[96px]">
+      <div className="flex items-baseline justify-between gap-2 tabular-nums">
+        <span className="text-sm font-bold text-slate-900 dark:text-white">
+          {registered.toLocaleString('th-TH')}
+          <span className="text-xs font-medium text-slate-400 dark:text-yrugray-500">
+            {capacity > 0 ? ` / ${capacity.toLocaleString('th-TH')}` : ' คน'}
+          </span>
+        </span>
+        {pct !== null && <span className="text-[11px] text-slate-500 dark:text-yrugray-400">{pct}%</span>}
+      </div>
+      {pct !== null ? (
+        <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 dark:bg-yrugray-800 overflow-hidden">
+          <div className={`h-full rounded-full ${bar}`} style={{ width: `${pct}%` }} />
+        </div>
+      ) : (
+        <p className="mt-1 text-[11px] text-slate-400 dark:text-yrugray-500">ไม่จำกัดจำนวน</p>
+      )}
+    </div>
+  );
+};
+
+const dateRange = (a) => {
+  const start = fmtThaiDate(a.start_date);
+  const end = a.end_date ? fmtThaiDate(a.end_date) : '';
+  return end && end !== start ? `${start} – ${end}` : start;
+};
 
 const TAB_SLUG = {
   'ภาพรวมระบบ': 'overview',
@@ -150,6 +219,12 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
   }, [activities]);
 
   const recent = useMemo(() => activities.slice(0, 8), [activities]);
+
+  // Jump to จัดการหลักสูตร with this activity's detail panel open.
+  const openActivity = (id) => {
+    setOpenActivityId(id);
+    setActiveMenu('จัดการหลักสูตร');
+  };
 
   const adminDisplayName = admin
     ? `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || admin.username
@@ -398,7 +473,13 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
                   ) : loading ? (
                     <div className="p-5 space-y-3">
                       {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="h-12 bg-slate-100 dark:bg-yrugray-800/60 rounded-lg animate-pulse" />
+                        <div key={i} className="flex items-center gap-3 animate-pulse">
+                          <div className="w-16 h-10 rounded-lg bg-slate-100 dark:bg-yrugray-800/60 shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-3.5 w-2/3 rounded bg-slate-100 dark:bg-yrugray-800/60" />
+                            <div className="h-2.5 w-1/3 rounded bg-slate-100 dark:bg-yrugray-800/60" />
+                          </div>
+                        </div>
                       ))}
                     </div>
                   ) : recent.length === 0 ? (
@@ -418,65 +499,97 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
                       </button>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50/70 dark:bg-yrugray-900/70 border-b border-slate-200/80 dark:border-yrugray-800 text-slate-500 dark:text-yrugray-400 text-[11px] uppercase tracking-wider">
-                            <th className="px-5 py-3 font-semibold">หลักสูตร / กิจกรรม</th>
-                            <th className="px-5 py-3 font-semibold hidden md:table-cell">วันที่จัดกิจกรรม</th>
-                            <th className="px-5 py-3 font-semibold hidden lg:table-cell">สถานที่</th>
-                            <th className="px-5 py-3 font-semibold text-center">ผู้ลงทะเบียน</th>
-                            <th className="px-5 py-3 font-semibold text-center">สถานะ</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200/60 dark:divide-yrugray-800 text-xs sm:text-sm">
-                          {recent.map((a) => {
-                            const status = STATUS_META[a.status] || { label: a.status, cls: STATUS_FALLBACK_CLS };
-                            const registered = Number(a.total_registered) || 0;
-                            const capacity   = Number(a.capacity) || 0;
-                            const openDetail = () => {
-                              setOpenActivityId(a.id);
-                              setActiveMenu('จัดการหลักสูตร');
-                            };
-                            return (
-                              <tr
-                                key={a.id}
-                                onClick={openDetail}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); }
-                                }}
-                                tabIndex={0}
-                                title="คลิกเพื่อดูรายละเอียด"
-                                className="group cursor-pointer hover:bg-yrupink-50/60 dark:hover:bg-yrugray-800/40 focus:outline-none focus-visible:bg-yrupink-50/60 dark:focus-visible:bg-yrugray-800/40 transition-colors"
-                              >
-                                <td className="px-5 py-3">
-                                  <p className="font-semibold text-slate-900 dark:text-white line-clamp-1 group-hover:text-yrupink-600 dark:group-hover:text-yrupink-400 transition-colors">{a.title}</p>
-                                  <p className="text-[11px] text-slate-500 dark:text-yrugray-400 mt-0.5 md:hidden">
-                                    {fmtThaiDate(a.start_date)}
-                                  </p>
-                                </td>
-                                <td className="px-5 py-3 text-slate-700 dark:text-yrugray-300 font-medium hidden md:table-cell whitespace-nowrap">
-                                  {fmtThaiDate(a.start_date)}
-                                </td>
-                                <td className="px-5 py-3 text-slate-600 dark:text-yrugray-400 hidden lg:table-cell max-w-xs break-words">
-                                  {a.location || '-'}
-                                </td>
-                                <td className="px-5 py-3 text-center text-slate-700 dark:text-yrugray-200 font-semibold tabular-nums">
-                                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-yrugray-800 text-xs">
-                                    {registered}{capacity > 0 ? ` / ${capacity}` : ''}
+                    <>
+                      {/* Desktop / tablet — table */}
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200/80 dark:border-yrugray-800 text-slate-500 dark:text-yrugray-400 text-[11px] uppercase tracking-wider">
+                              <th className="pl-5 pr-3 py-3 font-semibold">หลักสูตร / กิจกรรม</th>
+                              <th className="px-3 py-3 font-semibold">วันที่จัด</th>
+                              <th className="px-3 py-3 font-semibold hidden xl:table-cell">สถานที่</th>
+                              <th className="px-3 py-3 font-semibold">ผู้ลงทะเบียน</th>
+                              <th className="px-3 py-3 font-semibold">สถานะ</th>
+                              <th className="pr-5 py-3 w-8" aria-hidden="true" />
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200/60 dark:divide-yrugray-800 text-sm">
+                            {recent.map((a) => {
+                              const openDetail = () => openActivity(a.id);
+                              return (
+                                <tr
+                                  key={a.id}
+                                  onClick={openDetail}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); }
+                                  }}
+                                  tabIndex={0}
+                                  title="คลิกเพื่อดูรายละเอียด"
+                                  className="group cursor-pointer hover:bg-yrupink-50/50 dark:hover:bg-yrugray-800/40 focus:outline-none focus-visible:bg-yrupink-50/50 dark:focus-visible:bg-yrugray-800/40 transition-colors"
+                                >
+                                  <td className="pl-5 pr-3 py-3.5">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <CoverThumb src={a.cover_image_url} alt={a.title} className="w-16 h-10" />
+                                      <div className="min-w-0">
+                                        <p className="font-semibold text-slate-900 dark:text-white line-clamp-1 group-hover:text-yrupink-600 dark:group-hover:text-yrupink-400 transition-colors">{a.title}</p>
+                                        <CategoryTags categories={a.categories} />
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3.5 whitespace-nowrap">
+                                    <p className="font-medium text-slate-700 dark:text-yrugray-200">{dateRange(a)}</p>
+                                    {a.start_date && a.end_date && (
+                                      <p className="text-[11px] text-slate-500 dark:text-yrugray-400 mt-0.5">{durationText(a.start_date, a.end_date)}</p>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-3.5 text-slate-600 dark:text-yrugray-400 hidden xl:table-cell max-w-[220px]">
+                                    <span className="line-clamp-2">{a.location || '-'}</span>
+                                  </td>
+                                  <td className="px-3 py-3.5">
+                                    <SeatsMeter registered={Number(a.total_registered) || 0} capacity={Number(a.capacity) || 0} />
+                                  </td>
+                                  <td className="px-3 py-3.5">
+                                    <StatusBadge status={a.status} />
+                                  </td>
+                                  <td className="pr-5 py-3.5 text-right">
+                                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-yrugray-600 group-hover:text-yrupink-500 group-hover:translate-x-0.5 transition-all" />
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile — card list */}
+                      <ul className="md:hidden divide-y divide-slate-200/60 dark:divide-yrugray-800">
+                        {recent.map((a) => (
+                          <li key={a.id}>
+                            <button
+                              type="button"
+                              onClick={() => openActivity(a.id)}
+                              className="w-full text-left p-4 flex gap-3 hover:bg-yrupink-50/50 dark:hover:bg-yrugray-800/40 active:bg-yrupink-50 dark:active:bg-yrugray-800/60 transition-colors"
+                            >
+                              <CoverThumb src={a.cover_image_url} alt={a.title} className="w-20 h-[52px]" />
+                              <div className="flex-1 min-w-0 space-y-1.5">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-2 leading-snug">{a.title}</p>
+                                  <ChevronRight className="w-4 h-4 mt-0.5 shrink-0 text-slate-300 dark:text-yrugray-600" />
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                  <StatusBadge status={a.status} />
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-yrugray-400">
+                                    <CalendarRange className="w-3.5 h-3.5" />
+                                    {dateRange(a)}
                                   </span>
-                                </td>
-                                <td className="px-5 py-3 text-center">
-                                  <span className={`inline-flex items-center justify-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${status.cls}`}>
-                                    {status.label}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                                </div>
+                                <SeatsMeter registered={Number(a.total_registered) || 0} capacity={Number(a.capacity) || 0} />
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
                   )}
                 </div>
               </>
