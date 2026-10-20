@@ -7,3 +7,4 @@ export { assessmentsApi }   from './assessments';
 export { certificatesApi }  from './certificates';
 export { roomsApi }         from './rooms';
 export { portfoliosApi }    from './portfolios';
+export { categoriesApi, categoryPublicUrl } from './categories';

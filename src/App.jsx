@@ -81,6 +81,8 @@ function App() {
       if (currentView !== 'home') params.set('view', currentView);
       else params.delete('view');
     }
+    // ?cat=<slug> (category filter) only means something on the training page.
+    if (eventState || currentView !== 'training') params.delete('cat');
     const qs = params.toString();
     const next = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
     if (next !== window.location.pathname + window.location.search + window.location.hash) {

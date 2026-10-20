@@ -8,6 +8,7 @@ const router = Router();
 
 const listQuery = z.object({
   status: z.enum(['draft', 'published', 'assessment', 'completed', 'cancelled']).optional(),
+  category: z.string().min(1).max(120).optional(),   // category slug
   limit:  z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
@@ -33,6 +34,8 @@ const createBody = z.object({
   capacity:        z.number().int().min(0).default(0),
   status:          z.enum(['draft', 'published', 'assessment', 'completed', 'cancelled']).default('draft'),
   cover_image_url: coverImageUrlSchema.optional(),
+  // หมวดหมู่ (many-to-many) — replaces the full set on update
+  category_ids:    z.array(z.number().int().positive()).max(50).nullable().optional(),
   // ----- richer detail fields (course detail page) -----
   batch_no:            z.number().int().min(1).nullable().optional(),
   title_en:            z.string().max(255).nullable().optional(),

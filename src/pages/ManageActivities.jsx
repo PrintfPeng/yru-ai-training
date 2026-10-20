@@ -27,6 +27,7 @@ import CreateAssessment from './CreateAssessment';
 import AssessmentDashboard from './AssessmentDashboard';
 import BannerUploader from '../components/BannerUploader';
 import AdminPageHeader from '../components/AdminPageHeader';
+import CategoryPicker from '../components/CategoryPicker';
 import RegistrationFormEditor, { schemaToEditorState, editorStateToPayload } from '../components/RegistrationFormEditor';
 import { activitiesApi } from '../api';
 import { formatThaiDate, toDateInputValue, toDateTimeInputValue, toBE } from '../utils/thaiDate';
@@ -78,7 +79,8 @@ const normalize = (r) => ({
   venueLinks:  Array.isArray(r.venue_links) ? r.venue_links : [],
   seats:       r.capacity,
   level:       'เริ่มต้น',
-  category:    '',
+  categories:  Array.isArray(r.categories) ? r.categories : [],
+  categoryIds: Array.isArray(r.categories) ? r.categories.map((c) => c.id) : [],
   image:       r.cover_image_url,
   status:      STATUS_LABEL[r.status] || r.status,
   _apiStatus:  r.status,
@@ -186,6 +188,7 @@ const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSele
         travel_text:     updated.travelText || null,
         note_text:       updated.noteText || null,
         venue_links:     (updated.venueLinks || []).filter((v) => v.label?.trim() && v.url?.trim()),
+        category_ids:    updated.categoryIds || [],
       };
       if (updated.startDate) patch.start_date = `${toBE(updated.startDate)} 09:00:00`;
       if (updated.endDate)   patch.end_date = `${toBE(updated.endDate)} 16:30:00`;
@@ -652,6 +655,10 @@ const InlineEditForm = ({ activity, onSave }) => {
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
         <Field label="ชื่อหลักสูตร" required error={errors.title} className="md:col-span-2">
           <input value={form.title} onChange={(e) => change('title', e.target.value)} className={`${inputCls} ${errors.title ? errBorder : ''}`} />
+        </Field>
+
+        <Field label="หมวดหมู่ (เลือกได้หลายหมวด)" className="md:col-span-2">
+          <CategoryPicker value={form.categoryIds || []} onChange={(ids) => change('categoryIds', ids)} />
         </Field>
 
         <Field label="จำนวนที่รับ" icon={<Users className="w-4 h-4" />}>

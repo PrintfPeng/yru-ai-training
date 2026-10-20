@@ -1,15 +1,33 @@
 import { pool } from '../config/db.js';
 import { AppError } from '../utils/AppError.js';
 import { slugify } from '../utils/slugify.js';
+import {
+  getCategoriesForActivities,
+  setActivityCategories,
+  assertCategoriesExist,
+} from './categories.service.js';
+
+/** Attach `categories: [{ id, name, slug }]` to each activity row (in place). */
+async function withCategories(rows) {
+  const map = await getCategoriesForActivities(rows.map((r) => r.id));
+  for (const r of rows) r.categories = map.get(r.id) || [];
+  return rows;
+}
 
 /**
  * List activities with summary numbers (uses v_activity_summary VIEW).
- * Supports filtering by status and simple pagination.
+ * Supports filtering by status, category slug and simple pagination.
  */
-export async function listActivities({ status, limit = 50, offset = 0 }) {
+export async function listActivities({ status, category, limit = 50, offset = 0 }) {
   const where = [];
   const params = [];
   if (status) { where.push('a.status = ?'); params.push(status); }
+  if (category) {
+    where.push(`EXISTS (SELECT 1 FROM activity_categories ac
+                          JOIN categories c ON c.id = ac.category_id
+                         WHERE ac.activity_id = a.id AND c.slug = ?)`);
+    params.push(category);
+  }
 
   const [rows] = await pool.query(
     `SELECT a.id, a.title, a.slug, a.description, a.location,
@@ -31,7 +49,7 @@ export async function listActivities({ status, limit = 50, offset = 0 }) {
        LIMIT ? OFFSET ?`,
     [...params, Number(limit), Number(offset)]
   );
-  return rows;
+  return withCategories(rows);
 }
 
 // The DATE_FORMAT aliases come AFTER a.* so they override the raw DATETIME
@@ -52,6 +70,7 @@ export async function getActivityBySlug(slug) {
   );
   const row = rows[0];
   if (!row) throw new AppError('NOT_FOUND', 'Activity not found', 404);
+  await withCategories([row]);
   return row;
 }
 
@@ -65,12 +84,15 @@ export async function getActivityById(id) {
   );
   const row = rows[0];
   if (!row) throw new AppError('NOT_FOUND', 'Activity not found', 404);
+  await withCategories([row]);
   return row;
 }
 
 export async function createActivity(input, adminId) {
   const slug = input.slug?.trim() || slugify(input.title);
   if (!slug) throw new AppError('INVALID_SLUG', 'Cannot derive slug from title', 400);
+  // Validate up front so a bad id can't leave a half-created activity behind.
+  if (input.category_ids) await assertCategoriesExist(input.category_ids);
 
   try {
     const [result] = await pool.query(
@@ -109,6 +131,9 @@ export async function createActivity(input, adminId) {
         JSON.stringify(input.register_form_schema ?? null),
       ]
     );
+    if (input.category_ids?.length) {
+      await setActivityCategories(result.insertId, input.category_ids);
+    }
     return getActivityById(result.insertId);
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
@@ -143,6 +168,10 @@ export async function updateActivity(id, patch) {
         params.push(patch[key]);
       }
     }
+  }
+  if (patch.category_ids !== undefined) {
+    await getActivityById(id); // 404 before touching the join table
+    await setActivityCategories(id, patch.category_ids ?? []);
   }
   if (!sets.length) return getActivityById(id);
   params.push(id);

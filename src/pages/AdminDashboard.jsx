@@ -15,11 +15,13 @@ import {
   CalendarRange,
   Image as ImageIcon,
   Globe,
+  Tags,
 } from 'lucide-react';
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
 import RoomBookings from './RoomBookings';
 import ManagePortfolios from './ManagePortfolios';
+import ManageCategories from './ManageCategories';
 import ThemeToggle from '../components/ThemeToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import { activitiesApi } from '../api';
@@ -41,6 +43,7 @@ const STATUS_FALLBACK_CLS = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:
 const TAB_SLUG = {
   'ภาพรวมระบบ': 'overview',
   'จัดการหลักสูตร': 'courses',
+  'จัดการหมวดหมู่': 'categories',
   'จัดการการจองห้อง': 'rooms',
   'จัดการผลงานที่ผ่านมา': 'portfolios',
   'สร้างกิจกรรม': 'create',
@@ -81,6 +84,7 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
   const menuItems = [
     { name: 'ภาพรวมระบบ', icon: <LayoutDashboard className="w-4 h-4" /> },
     { name: 'จัดการหลักสูตร', icon: <BookOpen className="w-4 h-4" /> },
+    { name: 'จัดการหมวดหมู่', icon: <Tags className="w-4 h-4" /> },
     { name: 'จัดการการจองห้อง', icon: <CalendarCheck className="w-4 h-4" /> },
     { name: 'จัดการผลงานที่ผ่านมา', icon: <ImageIcon className="w-4 h-4" /> },
   ];
@@ -316,6 +320,8 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
                 initialSelectedId={openActivityId}
                 onConsumedInitialSelect={() => setOpenActivityId(null)}
               />
+            ) : activeMenu === 'จัดการหมวดหมู่' ? (
+              <ManageCategories />
             ) : activeMenu === 'จัดการการจองห้อง' ? (
               <RoomBookings />
             ) : activeMenu === 'จัดการผลงานที่ผ่านมา' ? (

@@ -11,6 +11,7 @@ import {
   FilePlus2,
 } from 'lucide-react';
 import AdminPageHeader from '../components/AdminPageHeader';
+import CategoryPicker from '../components/CategoryPicker';
 import { makeRegistrationDefaults } from '../components/DynamicFormBuilder';
 import RegistrationFormEditor, { editorStateToPayload } from '../components/RegistrationFormEditor';
 import BannerUploader from '../components/BannerUploader';
@@ -30,7 +31,6 @@ const CreateActivity = ({ onCreated } = {}) => {
   // Activity metadata
   const [activity, setActivity] = useState({
     title: '',
-    category: '',
     level: 'เริ่มต้น',
     description: '',
     startDate: '',
@@ -44,6 +44,7 @@ const CreateActivity = ({ onCreated } = {}) => {
     location: '',
   });
   const [venueLinks, setVenueLinks] = useState([]); // [{label, url}]
+  const [categoryIds, setCategoryIds] = useState([]); // หมวดหมู่ (many-to-many)
 
   // Banner image — cropped 16:9 JPEG data URL (from BannerUploader)
   const [banner, setBanner] = useState('');
@@ -133,6 +134,7 @@ const CreateActivity = ({ onCreated } = {}) => {
         capacity:    Number(activity.seats) || 0,
         status:      'draft',
         cover_image_url: banner || undefined,
+        category_ids: categoryIds.length ? categoryIds : undefined,
         // registration model (registration_type, register_form_schema, team_*)
         ...regPayload,
       });
@@ -183,16 +185,6 @@ const CreateActivity = ({ onCreated } = {}) => {
             />
           </AdminField>
 
-          <AdminField label="หมวดหมู่">
-            <input
-              name="category"
-              value={activity.category}
-              onChange={handleActivityChange}
-              placeholder="เช่น Prompt Engineering"
-              className={adminInputCls}
-            />
-          </AdminField>
-
           <AdminField label="ระดับ">
             <select
               name="level"
@@ -204,6 +196,10 @@ const CreateActivity = ({ onCreated } = {}) => {
               <option value="ปานกลาง">ปานกลาง</option>
               <option value="ขั้นสูง">ขั้นสูง</option>
             </select>
+          </AdminField>
+
+          <AdminField label="หมวดหมู่ (เลือกได้หลายหมวด)" className="md:col-span-2">
+            <CategoryPicker value={categoryIds} onChange={setCategoryIds} />
           </AdminField>
 
           <AdminField label="วันเริ่มอบรม" required icon={<Calendar className="w-4 h-4" />} error={fieldErrors.startDate}>

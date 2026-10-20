@@ -4,6 +4,7 @@ import * as svc from '../services/activities.service.js';
 export const list = asyncHandler(async (req, res) => {
   const data = await svc.listActivities({
     status: req.query.status,
+    category: req.query.category,
     limit: req.query.limit,
     offset: req.query.offset,
   });

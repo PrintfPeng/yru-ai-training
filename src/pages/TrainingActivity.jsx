@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Calendar, Users, MapPin, Search, Filter, ArrowRight, Loader2, ClipboardList } from 'lucide-react';
+import { BookOpen, Calendar, Users, MapPin, Search, Filter, ArrowRight, Loader2, ClipboardList, Tag } from 'lucide-react';
 import ActivityDetail from './ActivityDetail';
 import Navbar from '../components/Navbar';
 import PageBack from '../components/PageBack';
 import Breadcrumb from '../components/Breadcrumb';
-import { activitiesApi } from '../api';
+import { activitiesApi, categoriesApi } from '../api';
 import { formatThaiDate, durationText, registrationWindowState } from '../utils/thaiDate';
 
 // Registration-status chip for a card, based on the real-time window state.
@@ -34,7 +34,7 @@ const normalizeRow = (r) => ({
   registerCloseDateDisplay: r.register_close_date ? formatThaiDate(r.register_close_date) : '',
   image: r.cover_image_url,
   level: 'เริ่มต้น',
-  category: '',
+  categories: Array.isArray(r.categories) ? r.categories : [],
   raw: r,
 });
 
@@ -44,12 +44,37 @@ const readSlugFromUrl = () => {
   return new URLSearchParams(window.location.search).get('a');
 };
 
+// ?cat=<category slug> — the shareable per-category link.
+const readCatFromUrl = () => {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('cat');
+};
+
 const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [catSlug, setCatSlug] = useState(() => readCatFromUrl());
+
+  // Switch category filter and mirror it to ?cat= (pushState → Back works).
+  const selectCategory = useCallback((slug) => {
+    setCatSlug(slug);
+    const params = new URLSearchParams(window.location.search);
+    if (slug) params.set('cat', slug); else params.delete('cat');
+    const qs = params.toString();
+    window.history.pushState({ cat: slug || null }, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    categoriesApi.list()
+      .then((rows) => { if (!cancelled) setCategories(Array.isArray(rows) ? rows : []); })
+      .catch(() => { /* filter bar just stays hidden */ });
+    return () => { cancelled = true; };
+  }, []);
 
   // Mirror selectedActivity to the URL via ?a=<slug> so F5 stays on the
   // detail page and the browser Back button pops back to the grid.
@@ -67,6 +92,7 @@ const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
   // On browser Back/Forward, re-sync local state from the URL.
   useEffect(() => {
     const onPop = () => {
+      setCatSlug(readCatFromUrl());
       const slug = readSlugFromUrl();
       if (!slug) { setSelectedActivity(null); return; }
       const found = activities.find((a) => a.slug === slug);
@@ -97,7 +123,10 @@ const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
     return () => { cancelled = true; };
   }, []);
 
+  const activeCategory = catSlug ? categories.find((c) => c.slug === catSlug) : null;
+
   const filteredActivities = activities.filter((a) => {
+    if (catSlug && !a.categories.some((c) => c.slug === catSlug)) return false;
     const q = searchQuery.toLowerCase();
     return !q ||
       (a.title || '').toLowerCase().includes(q) ||
@@ -143,7 +172,10 @@ const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
           <Breadcrumb
             items={[
               { label: 'หน้าแรก', onClick: () => onNavigate?.('home') },
-              { label: 'หลักสูตรอบรม' },
+              catSlug
+                ? { label: 'หลักสูตรอบรม', onClick: () => selectCategory(null) }
+                : { label: 'หลักสูตรอบรม' },
+              ...(catSlug ? [{ label: activeCategory?.name || 'หมวดหมู่' }] : []),
             ]}
           />
           <PageBack onClick={onBack} className="shrink-0" />
@@ -152,14 +184,16 @@ const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
         {/* Hero Section */}
         <section className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yrupink-500/10 border border-yrupink-500/30 text-yrupink-600 dark:text-yrupink-400 text-xs font-semibold mb-4">
-            <BookOpen className="w-4 h-4" />
-            หลักสูตรอบรม AI ทั้งหมด
+            {catSlug ? <Tag className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
+            {catSlug ? 'หมวดหมู่หลักสูตร' : 'หลักสูตรอบรม AI ทั้งหมด'}
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-4 text-slate-900 dark:text-white">
-            หลักสูตรและกิจกรรมอบรม
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-4 text-slate-900 dark:text-white break-words">
+            {catSlug ? (activeCategory?.name || 'หมวดหมู่') : 'หลักสูตรและกิจกรรมอบรม'}
           </h1>
           <p className="text-sm md:text-base text-slate-600 dark:text-yrugray-400 max-w-2xl mx-auto">
-            ค้นหาหลักสูตรและกิจกรรมอบรมที่ตรงกับความสนใจของคุณ จากศูนย์ AI มหาวิทยาลัยราชภัฏยะลา
+            {catSlug
+              ? (activeCategory?.description || `หลักสูตรและกิจกรรมอบรมในหมวด${activeCategory ? ` "${activeCategory.name}"` : 'นี้'} จากศูนย์ AI มหาวิทยาลัยราชภัฏยะลา`)
+              : 'ค้นหาหลักสูตรและกิจกรรมอบรมที่ตรงกับความสนใจของคุณ จากศูนย์ AI มหาวิทยาลัยราชภัฏยะลา'}
           </p>
         </section>
 
@@ -181,6 +215,35 @@ const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
               <span>พบทั้งหมด {filteredActivities.length} หลักสูตร</span>
             </div>
           </div>
+
+          {/* Category chips — each one is also a shareable link (?cat=<slug>) */}
+          {categories.length > 0 && (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 sm:flex-wrap sm:overflow-visible">
+              {[{ slug: null, name: 'ทั้งหมด' }, ...categories].map((c) => {
+                const on = (catSlug || null) === c.slug;
+                return (
+                  <button
+                    key={c.slug || 'all'}
+                    type="button"
+                    onClick={() => selectCategory(c.slug)}
+                    aria-pressed={on}
+                    className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-sm font-medium transition-colors ${
+                      on
+                        ? 'bg-yrupink-600 border-yrupink-600 text-white shadow-md shadow-yrupink-500/20'
+                        : 'bg-white dark:bg-yrugray-900 border-slate-200 dark:border-yrugray-700 text-slate-700 dark:text-yrugray-200 hover:border-yrupink-500 hover:text-yrupink-600 dark:hover:text-yrupink-400'
+                    }`}
+                  >
+                    {c.name}
+                    {c.slug && (
+                      <span className={`text-xs tabular-nums ${on ? 'text-white/80' : 'text-slate-400 dark:text-yrugray-500'}`}>
+                        {Number(c.activity_count) || 0}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* Activities Grid */}
@@ -195,7 +258,18 @@ const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
             </div>
           ) : filteredActivities.length === 0 ? (
             <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-16 text-center shadow-xs">
-              <p className="text-slate-500 dark:text-yrugray-400 text-sm">ไม่พบหลักสูตรที่ตรงกับการค้นหาของคุณ</p>
+              <p className="text-slate-500 dark:text-yrugray-400 text-sm">
+                {catSlug && !searchQuery ? 'ยังไม่มีหลักสูตรในหมวดหมู่นี้' : 'ไม่พบหลักสูตรที่ตรงกับการค้นหาของคุณ'}
+              </p>
+              {catSlug && (
+                <button
+                  type="button"
+                  onClick={() => selectCategory(null)}
+                  className="mt-4 px-4 py-2 rounded-xl text-sm font-semibold text-yrupink-600 dark:text-yrupink-400 bg-yrupink-500/10 hover:bg-yrupink-500/20 transition-colors"
+                >
+                  ดูหลักสูตรทั้งหมด
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -237,6 +311,20 @@ const TrainingActivity = ({ onBack, onNavigate, isAdmin }) => {
                           <h3 className="text-base font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-yrupink-600 dark:group-hover:text-yrupink-400 transition-colors leading-snug">
                             {a.title}
                           </h3>
+
+                          {a.categories.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {a.categories.map((c) => (
+                                <span
+                                  key={c.id}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-yrupink-500/10 text-yrupink-700 dark:text-yrupink-300"
+                                >
+                                  <Tag className="w-3 h-3" />
+                                  {c.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                            
 
                           {/* สถิติย่อยแบบ 2 กล่อง (จำนวนรับ / สมัครแล้ว) */}
