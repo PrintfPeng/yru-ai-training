@@ -16,6 +16,7 @@ import ThemeToggle from './ThemeToggle';
  *   isAdmin   — toggles the login button into a "dashboard" button
  *   active    — 'home' | 'training' | null : highlights the current link
  */
+
 const NAV_LINKS = [
   { key: 'home', label: 'หน้าแรก', target: 'home', Icon: Home },
   { key: 'training', label: 'หลักสูตรอบรม', target: 'training', Icon: GraduationCap },
