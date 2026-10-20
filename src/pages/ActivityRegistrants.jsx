@@ -43,11 +43,11 @@ const csvEscape = (v) => {
 function exportCsv(activity, rows) {
   const isTeam = (activity?.raw?.registration_type || activity?.registration_type) === 'team';
   const headers = isTeam
-    ? ['ชื่อทีม', 'ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'ชื่อโรงเรียน หรือ หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ']
-    : ['ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'ชื่อโรงเรียน หรือ หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'หมายเหตุ'];
+    ? ['ชื่อทีม', 'ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'ชื่อโรงเรียน หรือ หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'เลขเกียรติบัตร', 'หมายเหตุ']
+    : ['ชื่อ - นามสกุล', 'อีเมล', 'เบอร์โทร', 'ชื่อโรงเรียน หรือ หน่วยงาน', 'ตำแหน่ง', 'วันที่สมัคร', 'สถานะ', 'เลขเกียรติบัตร', 'หมายเหตุ'];
   const body = rows.map((r) => (isTeam
-    ? [r.teamName, r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.note]
-    : [r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.note]
+    ? [r.teamName, r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.certificateCode, r.note]
+    : [r.fullName, r.email, r.phone, r.organization, r.position, r.registeredAt, r.status, r.certificateCode, r.note]
   ).map(csvEscape).join(','));
   const csv = '﻿' + [headers.map(csvEscape).join(','), ...body].join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -84,6 +84,7 @@ const ActivityRegistrants = ({ activity, onBack, embedded = false }) => {
     organization: r.organization,
     position: r.position,
     teamName: r.team_name || '',
+    certificateCode: r.certificate_code || '',
     registeredAt: r.registered_at ? new Date(r.registered_at).toLocaleDateString('th-TH') : '',
     status: STATUS_API_TO_UI[r.registration_status] || r.registration_status,
     note: r.note,

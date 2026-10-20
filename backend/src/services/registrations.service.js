@@ -15,12 +15,13 @@ export async function listRegistrationsForActivity(activityId, { status } = {}) 
   const [rows] = await pool.query(
     `SELECT r.id, r.registration_status, r.note, r.checked_in_at,
             r.registered_at, r.updated_at, r.team_id, r.form_data,
-            t.team_name,
+            t.team_name, c.certificate_code,
             p.id AS participant_id, p.first_name, p.last_name, p.email,
             p.phone, p.organization, p.position
        FROM registrations r
        JOIN participants  p ON p.id = r.participant_id
        LEFT JOIN teams     t ON t.id = r.team_id
+       LEFT JOIN certificates c ON c.registration_id = r.id
       WHERE ${where.join(' AND ')}
       ORDER BY r.registered_at DESC`,
     params
