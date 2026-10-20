@@ -35,7 +35,7 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"Noto Sans Thai"', 'Inter', 'sans-serif'],
+        sans: ['Sarabun', '"Noto Sans Thai"', 'sans-serif'],
       },
     },
   },

@@ -26,6 +26,7 @@ import ActivityRegistrants from './ActivityRegistrants';
 import CreateAssessment from './CreateAssessment';
 import AssessmentDashboard from './AssessmentDashboard';
 import BannerUploader from '../components/BannerUploader';
+import AdminPageHeader from '../components/AdminPageHeader';
 import RegistrationFormEditor, { schemaToEditorState, editorStateToPayload } from '../components/RegistrationFormEditor';
 import { activitiesApi } from '../api';
 import { formatThaiDate, toDateInputValue, toDateTimeInputValue, toBE } from '../utils/thaiDate';
@@ -233,21 +234,20 @@ const ManageActivities = ({ onGoCreate, initialSelectedId, onConsumedInitialSele
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">จัดการหลักสูตร</h2>
-          <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
-            หลักสูตรทั้งหมด {activities.length} รายการ — คลิกการ์ดเพื่อดูรายชื่อผู้ลงทะเบียน / แก้ไข
-          </p>
-        </div>
-        <button
-          onClick={onGoCreate}
-          className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-xl shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          สร้างกิจกรรมใหม่
-        </button>
-      </div> 
+      <AdminPageHeader
+        icon={BookOpen}
+        title="จัดการหลักสูตร"
+        description={<>หลักสูตรทั้งหมด <span className="font-semibold text-slate-700 dark:text-yrugray-200">{activities.length}</span> รายการ — คลิกการ์ดเพื่อดูรายชื่อผู้ลงทะเบียน / แก้ไข</>}
+        actions={
+          <button
+            onClick={onGoCreate}
+            className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm sm:text-[15px] font-semibold rounded-xl shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            สร้างกิจกรรมใหม่
+          </button>
+        }
+      />
 
       {/* Search + Filter */}
       <div className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl p-4 flex flex-col md:flex-row gap-3 shadow-xs">

@@ -18,6 +18,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import BannerUploader from '../components/BannerUploader';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { portfoliosApi } from '../api';
 import { useToast } from '../contexts/ToastContext';
 import { errorMessage } from '../utils/errorMessage';
@@ -77,20 +78,20 @@ const ManagePortfolios = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-0.5">จัดการผลงานที่ผ่านมา</p>
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">ผลงานที่ผ่านมา</h2>
-          <p className="text-xs text-slate-500 dark:text-yrugray-400 mt-0.5">ผลงานที่เปิดใช้งานจะแสดงใน carousel หน้าแรก (เรียงตามลำดับ)</p>
-        </div>
-        <button
-          onClick={() => setEditing('new')}
-          className="px-4 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          เพิ่มผลงาน
-        </button>
-      </div>
+      <AdminPageHeader
+        icon={ImageIcon}
+        title="ผลงานที่ผ่านมา"
+        description="ผลงานที่เปิดใช้งานจะแสดงใน carousel หน้าแรก (เรียงตามลำดับ)"
+        actions={
+          <button
+            onClick={() => setEditing('new')}
+            className="px-5 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm sm:text-[15px] font-semibold rounded-xl shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            เพิ่มผลงาน
+          </button>
+        }
+      />
 
       {/* Grid / states */}
       {loading ? (

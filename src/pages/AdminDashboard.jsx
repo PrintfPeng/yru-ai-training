@@ -14,13 +14,14 @@ import {
   RefreshCw,
   CalendarRange,
   Image as ImageIcon,
-  Home,
+  Globe,
 } from 'lucide-react';
 import CreateActivity from './CreateActivity';
 import ManageActivities from './ManageActivities';
 import RoomBookings from './RoomBookings';
 import ManagePortfolios from './ManagePortfolios';
 import ThemeToggle from '../components/ThemeToggle';
+import Breadcrumb from '../components/Breadcrumb';
 import { activitiesApi } from '../api';
 
 const ROLE_LABEL = {
@@ -152,6 +153,13 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
   const adminRoleLabel = ROLE_LABEL[admin?.role] || 'ผู้ดูแลระบบ';
   const avatarSeed = admin?.username || 'Admin';
 
+  // ภาพรวมระบบ › [จัดการหลักสูตร ›] เมนูปัจจุบัน
+  const breadcrumbItems = [{ label: 'ภาพรวมระบบ', onClick: () => setActiveMenu('ภาพรวมระบบ') }];
+  if (activeMenu === 'สร้างกิจกรรม') {
+    breadcrumbItems.push({ label: 'จัดการหลักสูตร', onClick: () => setActiveMenu('จัดการหลักสูตร') });
+  }
+  if (activeMenu !== 'ภาพรวมระบบ') breadcrumbItems.push({ label: activeMenu });
+
   return (
     <div className="min-h-screen bg-slate-100/70 dark:bg-yrugray-950 flex font-sans text-slate-900 dark:text-white antialiased text-sm">
 
@@ -166,11 +174,21 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
       {/* Sidebar - ปรับขนาดความกว้างให้พอดี w-64 */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-yrugray-900 border-r border-slate-200/80 dark:border-yrugray-800 shadow-xl lg:shadow-none transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
 
-        {/* Section label — brand ตัดออก (ไปแสดงที่ navbar ด้านบนแล้ว) กัน AI CENTER YRU ซ้ำ */}
+        {/* Brand — เหมือนหน้าแรก (Navbar) */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-slate-200/80 dark:border-yrugray-800">
-          <span className="text-xs font-bold text-yrupink-600 dark:text-yrupink-400 tracking-wider uppercase bg-yrupink-500/10 px-2.5 py-1 rounded">
-            เมนูผู้ดูแลระบบ
-          </span>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('home')}
+            className="flex items-center gap-2 group shrink-0"
+            aria-label="กลับหน้าแรก"
+          >
+            <div className="w-8 h-8 bg-gradient-to-br from-yrupink-400 to-yrupink-700 rounded-lg flex items-center justify-center font-bold text-white shadow-lg transition-transform duration-300 group-hover:scale-105">
+              AI
+            </div>
+            <span className="font-bold text-xl tracking-wide text-gray-900 dark:text-white transition-colors duration-300">
+              CENTER <span className="text-yrupink-400">YRU</span>
+            </span>
+          </button>
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="lg:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md"
@@ -203,6 +221,22 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
               </button>
             );
           })}
+
+          {/* เข้าสู่หน้าเว็บไซต์ (เว็บสาธารณะ) */}
+          <div className="pt-3 mt-3 border-t border-slate-200/80 dark:border-yrugray-800">
+            <button
+              onClick={() => {
+                setIsSidebarOpen(false);
+                onNavigate?.('home');
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-150 group text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-yrugray-800/60 font-normal"
+            >
+              <span className="text-slate-400 group-hover:text-yrupink-500">
+                <Globe className="w-4 h-4" />
+              </span>
+              <span className="text-xs sm:text-sm leading-snug text-left">เข้าสู่หน้าเว็บไซต์</span>
+            </button>
+          </div>
         </nav>
 
         {/* Logout */}
@@ -230,26 +264,9 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                <span className="text-slate-400 font-normal hidden md:inline">ภาพรวม</span> 
-                <span className="text-slate-300 dark:text-slate-700 hidden md:inline">/</span> 
-                <span>{activeMenu}</span>
-              </h2>
-            </div>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* กลับสู่หน้าหลัก (เว็บสาธารณะ) */}
-            <button
-              onClick={() => onNavigate?.('home')}
-              title="กลับสู่หน้าหลัก"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 dark:text-yrugray-300 bg-slate-100 dark:bg-yrugray-800 hover:text-yrupink-600 dark:hover:text-yrupink-400 hover:bg-slate-200 dark:hover:bg-yrugray-700 border border-slate-200 dark:border-yrugray-700 transition-colors"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">หน้าหลัก</span>
-            </button>
-
             {/* Theme toggle */}
             <ThemeToggle />
 
@@ -283,6 +300,9 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-[200px] bg-yrupink-500/5 dark:bg-yrupink-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
           <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+            {/* เส้นทางของหน้า (breadcrumb) — หน้าภาพรวมไม่ต้องแสดง */}
+            {activeMenu !== 'ภาพรวมระบบ' && <Breadcrumb items={breadcrumbItems} />}
+
             {activeMenu === 'สร้างกิจกรรม' ? (
               <CreateActivity
                 onCreated={(created) => {
@@ -408,10 +428,23 @@ const AdminDashboard = ({ admin, onLogout, onNavigate }) => {
                             const status = STATUS_META[a.status] || { label: a.status, cls: STATUS_FALLBACK_CLS };
                             const registered = Number(a.total_registered) || 0;
                             const capacity   = Number(a.capacity) || 0;
+                            const openDetail = () => {
+                              setOpenActivityId(a.id);
+                              setActiveMenu('จัดการหลักสูตร');
+                            };
                             return (
-                              <tr key={a.id} className="hover:bg-slate-50/80 dark:hover:bg-yrugray-800/40 transition-colors">
+                              <tr
+                                key={a.id}
+                                onClick={openDetail}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); }
+                                }}
+                                tabIndex={0}
+                                title="คลิกเพื่อดูรายละเอียด"
+                                className="group cursor-pointer hover:bg-yrupink-50/60 dark:hover:bg-yrugray-800/40 focus:outline-none focus-visible:bg-yrupink-50/60 dark:focus-visible:bg-yrugray-800/40 transition-colors"
+                              >
                                 <td className="px-5 py-3">
-                                  <p className="font-semibold text-slate-900 dark:text-white line-clamp-1">{a.title}</p>
+                                  <p className="font-semibold text-slate-900 dark:text-white line-clamp-1 group-hover:text-yrupink-600 dark:group-hover:text-yrupink-400 transition-colors">{a.title}</p>
                                   <p className="text-[11px] text-slate-500 dark:text-yrugray-400 mt-0.5 md:hidden">
                                     {fmtThaiDate(a.start_date)}
                                   </p>

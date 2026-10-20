@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { roomsApi } from '../api';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { errorMessage } from '../utils/errorMessage';
 
 // ลิงก์ Google Sheet/ฟอร์มจองห้อง (เปิดดู/จองเพิ่มได้ — หน้านี้อ่านอย่างเดียว)
@@ -89,21 +90,15 @@ const RoomBookings = () => {
   return (
     <div className="space-y-6">
       {/* Header strip */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-sm text-slate-600 dark:text-yrugray-400 mb-0.5">จัดการการจองห้อง</p>
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">
-            รายการจองห้องประชุม
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-yrugray-400 mt-0.5">
-            ดึงข้อมูลจาก Google Sheet (อ่านอย่างเดียว) — จองเพิ่ม/แก้ไขที่ชีตโดยตรง
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <AdminPageHeader
+        icon={CalendarCheck}
+        title="รายการจองห้องประชุม"
+        description="ดึงข้อมูลจาก Google Sheet (อ่านอย่างเดียว) — จองเพิ่ม/แก้ไขที่ชีตโดยตรง"
+        actions={<>
           <button
             onClick={() => load(true)}
             disabled={loading || refreshing}
-            className="p-2.5 text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 hover:bg-slate-50 dark:hover:bg-yrugray-700 rounded-lg transition-all disabled:opacity-50"
+            className="!flex-none p-2.5 text-slate-600 dark:text-yrugray-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-yrugray-800 border border-slate-300 dark:border-yrugray-700 hover:bg-slate-50 dark:hover:bg-yrugray-700 rounded-lg transition-all disabled:opacity-50"
             title="รีเฟรชข้อมูล"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -112,13 +107,13 @@ const RoomBookings = () => {
             href={SHEET_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-[15px] font-semibold rounded-lg transition-colors flex items-center gap-2"
+            className="px-4 py-2.5 bg-yrupink-600 hover:bg-yrupink-500 text-white text-sm sm:text-[15px] font-semibold rounded-xl shadow-lg shadow-yrupink-500/20 transition-colors flex items-center gap-2"
           >
             <ExternalLink className="w-4 h-4" />
             เปิด Google Sheet
           </a>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

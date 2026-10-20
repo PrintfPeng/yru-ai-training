@@ -8,7 +8,9 @@ import {
   Save,
   X,
   Loader2,
+  FilePlus2,
 } from 'lucide-react';
+import AdminPageHeader from '../components/AdminPageHeader';
 import { makeRegistrationDefaults } from '../components/DynamicFormBuilder';
 import RegistrationFormEditor, { editorStateToPayload } from '../components/RegistrationFormEditor';
 import BannerUploader from '../components/BannerUploader';
@@ -153,12 +155,11 @@ const CreateActivity = ({ onCreated } = {}) => {
     // form row isn't hidden behind it on short viewports.
     <div className="space-y-6 pb-28">
       {/* Header */}
-      <div>
-        <h2 className="text-[22px] md:text-2xl font-bold text-slate-900 dark:text-white leading-tight">สร้างกิจกรรม</h2>
-        <p className="text-sm text-slate-600 dark:text-yrugray-400 mt-1">
-          กรอกรายละเอียดกิจกรรม และออกแบบฟอร์มลงทะเบียนแบบไดนามิก
-        </p>
-      </div>
+      <AdminPageHeader
+        icon={FilePlus2}
+        title="สร้างกิจกรรม"
+        description="กรอกรายละเอียดกิจกรรม และออกแบบฟอร์มลงทะเบียนแบบไดนามิก"
+      />
 
       {/* Section: รายละเอียดกิจกรรม */}
       <section className="bg-white dark:bg-yrugray-900 border border-slate-200 dark:border-yrugray-800 rounded-2xl overflow-hidden">
