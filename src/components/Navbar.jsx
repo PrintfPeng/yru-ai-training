@@ -97,7 +97,7 @@ export default function Navbar({ onNavigate, isAdmin = false, active = null }) {
             className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-yrupink-600 hover:bg-yrupink-500 shadow-md shadow-yrupink-500/20 transition-all"
           >
             {isAdmin ? <LayoutDashboard className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            {isAdmin ? 'แดชบอร์ด' : 'เข้าสู่ระบบผู้ดูแล'}
+            {isAdmin ? 'เข้าสู่หน้าแอดมิน' : 'เข้าสู่ระบบผู้ดูแล'}
           </button>
 
           {/* Mobile toggle */}
@@ -146,7 +146,7 @@ export default function Navbar({ onNavigate, isAdmin = false, active = null }) {
                 className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-yrupink-600 hover:bg-yrupink-500 shadow-md shadow-yrupink-500/20 transition-all"
               >
                 {isAdmin ? <LayoutDashboard className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                {isAdmin ? 'แดชบอร์ด' : 'เข้าสู่ระบบผู้ดูแล'}
+                {isAdmin ? 'เข้าสู่หน้าแอดมิน' : 'เข้าสู่ระบบผู้ดูแล'}
               </button>
               <ThemeToggle variant="solid" />
             </div>
